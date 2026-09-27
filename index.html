@@ -57,6 +57,11 @@
 </div>
 
 <div class="step">
+  <h2>6. Diagnóstico: acceso directo por ID</h2>
+  <button onclick="verifyDirectAccess()">Verificar acceso directo</button>
+</div>
+
+<div class="step">
   <h2>Registro</h2>
   <div id="log">Esperando acciones...</div>
 </div>
@@ -72,6 +77,8 @@ const APP_TAG   = 'finanzas-pwa-test';
 let accessToken = null;
 let tokenClient = null;
 let testFileId = null;
+let lastPickedFileId = null;
+
 
 function log(msg) {
   const el = document.getElementById('log');
@@ -146,6 +153,7 @@ function openPicker() {
       .setDeveloperKey(API_KEY)
       .setCallback((data) => {
         if (data.action === google.picker.Action.PICKED) {
+          lastPickedFileId = data.docs[0].id;
           log('✅ Archivo seleccionado vía Picker: ' + data.docs[0].id + ' (' + data.docs[0].name + ')');
         } else if (data.action === google.picker.Action.CANCEL) {
           log('Picker cancelado');
@@ -154,6 +162,15 @@ function openPicker() {
       .build();
     picker.setVisible(true);
   });
+}
+
+async function verifyDirectAccess() {
+  if (!lastPickedFileId) { log('⚠️ Primero selecciona un archivo con el Picker (paso 5)'); return; }
+  const res = await fetch(`https://www.googleapis.com/drive/v3/files/${lastPickedFileId}?fields=id,name,appProperties`, {
+    headers: { 'Authorization': `Bearer ${accessToken}` }
+  });
+  const data = await res.json();
+  log('🔍 Acceso directo: ' + JSON.stringify(data));
 }
 
 window.onload = () => {
