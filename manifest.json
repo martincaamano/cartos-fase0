@@ -1,0 +1,8 @@
+{
+  "name": "Finanzas - Spike Fase 0",
+  "short_name": "F0 Test",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#111111"
+}

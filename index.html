@@ -1,0 +1,179 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Fase 0 — Test</title>
+<link rel="manifest" href="manifest.json">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<script src="https://apis.google.com/js/api.js"></script>
+<style>
+  :root{color-scheme:light dark;--bg:#fff;--fg:#111;--muted:#666;--line:#ddd}
+  @media (prefers-color-scheme:dark){:root{--bg:#111;--fg:#eee;--muted:#aaa;--line:#333}}
+  body{font-family:-apple-system,system-ui,sans-serif;background:var(--bg);color:var(--fg);margin:0;padding:16px;padding-top:calc(16px + env(safe-area-inset-top,0px));padding-bottom:calc(16px + env(safe-area-inset-bottom,0px))}
+  h1{font-size:18px;margin:0 0 4px}
+  p.sub{color:var(--muted);margin:0 0 16px;font-size:13px}
+  .step{border:1px solid var(--line);border-radius:10px;padding:12px;margin-bottom:10px}
+  .step h2{font-size:14px;margin:0 0 8px}
+  button{width:100%;padding:12px;font-size:15px;border-radius:8px;border:1px solid var(--line);background:var(--fg);color:var(--bg);margin-bottom:6px}
+  button:active{opacity:.7}
+  #gis-button{margin-bottom:6px}
+  #log{white-space:pre-wrap;font-family:ui-monospace,monospace;font-size:12px;background:rgba(128,128,128,.1);border-radius:8px;padding:10px;max-height:220px;overflow-y:auto}
+  .status{font-size:12px;color:var(--muted)}
+</style>
+</head>
+<body>
+
+<h1>Finanzas — Spike Fase 0</h1>
+<p class="sub">Prueba los 4 riesgos técnicos antes de construir la app real. Instálala en pantalla de inicio y abre desde ahí.</p>
+
+<div class="step">
+  <h2>1. Identidad (Sign In With Google)</h2>
+  <div id="gis-button"></div>
+  <div class="status" id="identity-status">Sin identidad todavía.</div>
+</div>
+
+<div class="step">
+  <h2>2. Acceso a Drive (scope drive.file)</h2>
+  <button onclick="requestDriveAccess()">Conceder acceso a Drive</button>
+  <div class="status" id="token-status">Sin token todavía.</div>
+</div>
+
+<div class="step">
+  <h2>3. Crear Sheet de prueba + escribir una fila</h2>
+  <button onclick="createTestSheet()">Crear Sheet de prueba</button>
+</div>
+
+<div class="step">
+  <h2>4. Descubrir mis cuentas (appProperties)</h2>
+  <button onclick="listMyAccounts()">Buscar mis Sheets de prueba</button>
+</div>
+
+<div class="step">
+  <h2>5. Picker (flujo de invitación)</h2>
+  <button onclick="openPicker()">Abrir selector de Google</button>
+</div>
+
+<div class="step">
+  <h2>Registro</h2>
+  <div id="log">Esperando acciones...</div>
+</div>
+
+<script>
+// ======= CONFIGURA ESTO CON TUS PROPIOS VALORES DE GOOGLE CLOUD CONSOLE =======
+const CLIENT_ID = '354443018222-145304faalmk919f6o34q9rt7udprak3.apps.googleusercontent.com';
+const API_KEY   = 'AIzaSyBQCBfDYBFttq1mPsstwEuAXmYd68Vsb6Q'; // Cloud Console > Credenciales > Clave de API (restríngela a Picker API)
+const SCOPES    = 'https://www.googleapis.com/auth/drive.file';
+const APP_TAG   = 'finanzas-pwa-test';
+// ================================================================================
+
+let accessToken = null;
+let tokenClient = null;
+let testFileId = null;
+
+function log(msg) {
+  const el = document.getElementById('log');
+  const time = new Date().toLocaleTimeString();
+  el.textContent = `[${time}] ${msg}\n` + el.textContent;
+}
+
+function parseJwt(token) {
+  try { return JSON.parse(atob(token.split('.')[1])); } catch (e) { return {}; }
+}
+
+function handleCredentialResponse(response) {
+  const payload = parseJwt(response.credential);
+  document.getElementById('identity-status').textContent = `${payload.email} (sub: ${payload.sub})`;
+  log('✅ Identidad obtenida: ' + payload.email);
+}
+
+function requestDriveAccess() {
+  if (!tokenClient) { log('⚠️ Token client no inicializado todavía, espera un segundo y reintenta'); return; }
+  tokenClient.requestAccessToken({ prompt: '' });
+}
+
+async function createTestSheet() {
+  if (!accessToken) { log('⚠️ Primero concede acceso a Drive (paso 2)'); return; }
+  const createRes = await fetch('https://www.googleapis.com/drive/v3/files', {
+    method: 'POST',
+    headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      name: 'Finanzas - Prueba Fase 0',
+      mimeType: 'application/vnd.google-apps.spreadsheet',
+      appProperties: { app: APP_TAG, accountType: 'personal-test' }
+    })
+  });
+  const file = await createRes.json();
+  if (!file.id) { log('❌ Error creando el Sheet: ' + JSON.stringify(file)); return; }
+  testFileId = file.id;
+  log('📄 Sheet creado: ' + file.id);
+
+  const metaRes = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${file.id}?fields=sheets.properties.title`, {
+    headers: { 'Authorization': `Bearer ${accessToken}` }
+  });
+  const meta = await metaRes.json();
+  const sheetTitle = meta.sheets[0].properties.title;
+  const range = `${sheetTitle}!A1:C1`;
+
+  await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${file.id}/values/${encodeURIComponent(range)}?valueInputOption=RAW`, {
+    method: 'PUT',
+    headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ values: [['test', 'gasto', 12.5]] })
+  });
+  log(`✏️ Fila de prueba escrita en "${sheetTitle}". Ábrelo en Google Sheets para comprobarlo.`);
+}
+
+async function listMyAccounts() {
+  if (!accessToken) { log('⚠️ Primero concede acceso a Drive (paso 2)'); return; }
+  const q = encodeURIComponent(`appProperties has { key='app' and value='${APP_TAG}' } and trashed=false`);
+  const res = await fetch(`https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id,name,appProperties)`, {
+    headers: { 'Authorization': `Bearer ${accessToken}` }
+  });
+  const data = await res.json();
+  log('📋 Encontrados: ' + (data.files || []).length + ' → ' + JSON.stringify(data.files));
+}
+
+function openPicker() {
+  if (!accessToken) { log('⚠️ Primero concede acceso a Drive (paso 2)'); return; }
+  gapi.load('picker', () => {
+    const view = new google.picker.DocsView(google.picker.ViewId.SPREADSHEETS)
+      .setMode(google.picker.DocsViewMode.LIST);
+    const picker = new google.picker.PickerBuilder()
+      .addView(view)
+      .setOAuthToken(accessToken)
+      .setDeveloperKey(API_KEY)
+      .setCallback((data) => {
+        if (data.action === google.picker.Action.PICKED) {
+          log('✅ Archivo seleccionado vía Picker: ' + data.docs[0].id + ' (' + data.docs[0].name + ')');
+        } else if (data.action === google.picker.Action.CANCEL) {
+          log('Picker cancelado');
+        }
+      })
+      .build();
+    picker.setVisible(true);
+  });
+}
+
+window.onload = () => {
+  google.accounts.id.initialize({ client_id: CLIENT_ID, callback: handleCredentialResponse });
+  google.accounts.id.renderButton(document.getElementById('gis-button'), { theme: 'outline', size: 'large', text: 'continue_with' });
+
+  tokenClient = google.accounts.oauth2.initTokenClient({
+    client_id: CLIENT_ID,
+    scope: SCOPES,
+    callback: (resp) => {
+      accessToken = resp.access_token;
+      document.getElementById('token-status').textContent = `Token obtenido, expira en ${resp.expires_in}s`;
+      log('✅ Token drive.file obtenido');
+    }
+  });
+
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('sw.js').then(() => log('✅ Service Worker registrado'));
+  }
+};
+</script>
+</body>
+</html>
