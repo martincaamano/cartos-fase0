@@ -1,0 +1,9 @@
+node_modules/
+.DS_Store
+.env
+.env.*
+!.env.example
+.opencode/node_modules/
+.claude/settings.local.json
+CLAUDE.local.md
+.opencode/package-lock.json
