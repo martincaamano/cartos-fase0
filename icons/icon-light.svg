@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" fill="#FAFAF8"/>
+  <text
+    x="246" y="278"
+    text-anchor="middle"
+    font-family="'SFMono-Regular', ui-monospace, 'Menlo', 'Consolas', monospace"
+    font-weight="700"
+    font-size="84"
+    letter-spacing="15"
+    fill="#14181C"
+  >CARTOS</text>
+  <rect x="461" y="228" width="16" height="60" fill="#1F6F5C"/>
+</svg>

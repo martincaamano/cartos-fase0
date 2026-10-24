@@ -1,43 +1,60 @@
-# Fase 0 — Validar los riesgos antes de construir la app
+# Cartos
 
-Todo esto se puede hacer 100% desde el iPhone con Safari, sin ordenador ni terminal (usamos GitHub Pages en vez de Firebase CLI, que sí necesita terminal).
+PWA de finanzas personales para iPhone. Datos en el Google Drive de cada usuario, sin backend propio, funciona offline. Se publica en GitHub Pages.
 
-## A. Crea el repositorio en GitHub (Safari)
+## Requisitos en el Mac
 
-1. github.com → inicia sesión (o crea cuenta) → icono "+" → **New repository**.
-2. Nombre, por ejemplo `finanzas-fase0`. Público. Sin README. Crear.
-3. Tu URL de Pages será `https://TU-USUARIO.github.io/finanzas-fase0/` — apúntala.
+- Git, Node.js (LTS o superior) y Python 3.
+- **Claude Code** (herramienta principal, incluida en la suscripción Pro): `curl -fsSL https://claude.ai/install.sh | bash`. Abre una terminal nueva y comprueba con `claude --version`. La primera vez, `claude` abre el navegador para iniciar sesión.
+- Opcional, alternativa: [OpenCode](https://opencode.ai) **versión 1** (`curl -fsSL https://opencode.ai/install | bash`). No lo instales con `brew install opencode`: instala la versión 2, que usa otro formato de configuración.
 
-## B. Google Cloud Console (activa "Solicitar sitio de escritorio" en Safari)
+## Primeros pasos
 
-1. console.cloud.google.com → crea un proyecto.
-2. **APIs y servicios → Biblioteca**: activa "Google Drive API" y "Google Sheets API".
-3. **APIs y servicios → Pantalla de consentimiento OAuth**: Externo → añade el scope `.../auth/drive.file` → en "Usuarios de prueba" añade tu email y el de tu pareja → guarda, déjalo en estado **Prueba** (no lo publiques, así evitas la revisión de Google).
-4. **APIs y servicios → Credenciales**:
-   - Crear credenciales → ID de cliente de OAuth → tipo "Aplicación web". En **"Orígenes de JavaScript autorizados"** pon solo `https://TU-USUARIO.github.io` (sin la ruta del repo — Google solo acepta el dominio). Guarda el Client ID.
-   - Crear credenciales → Clave de API → restríngela a "Picker API".
+```bash
+npm test          # debe salir en verde
+npm run dev       # sirve la app en http://localhost:5173
+claude            # abre Claude Code en esta carpeta
+```
 
-## C. Sube los archivos y rellena las credenciales (todo en github.com)
+Dentro de Claude Code:
 
-1. En tu repo → **Add file → Upload files** → sube los 4 archivos (guárdalos antes en la app Archivos desde el chat) → Commit changes.
-2. Abre `index.html` en el repo → icono del lápiz → sustituye `TU_CLIENT_ID.apps.googleusercontent.com` y `TU_API_KEY` por los valores reales del paso B.4 → Commit changes.
-3. Repo → **Settings → Pages** → Source: "Deploy from a branch" → `main` → `/ (root)` → Save. Espera 1-2 minutos.
+1. Escribe `/` y comprueba que salen `planificar`, `tarea`, `revisar` y `cerrar`.
+2. **No ejecutes `/init`**: `AGENTS.md` y `CLAUDE.md` ya están escritos.
+3. Comprueba las protecciones: pídele "ejecuta `git push`". Debe negarse sin preguntar.
+4. `/status` muestra qué archivos de configuración ha cargado y cuánto llevas gastado de tu límite.
 
-## D. Probar en el iPhone
+## Flujo por tarea
 
-1. Abre la URL en Safari.
-2. Compartir → **Añadir a pantalla de inicio**.
-3. Cierra Safari del todo y abre la app desde su icono (modo standalone).
-4. Sigue los 5 pasos de la pantalla y comprueba en el registro:
+```
+Shift+Tab        →  activa el modo plan (solo lectura)
+/planificar 02   →  propone pasos y dudas, no escribe código
+Shift+Tab        →  vuelve al modo normal
+/tarea 02        →  implementa en pasos pequeños, con tests
+/revisar 02      →  el subagente reviewer (solo lectura) revisa los cambios
+(tú)             →  git add / commit / push, y pruebas la app en el iPhone
+/cerrar 02       →  comprueba el criterio de cierre y actualiza docs/ESTADO.md
+```
 
-| Riesgo (de la arquitectura) | Cómo se ve si funciona |
-|---|---|
-| Login de Google en PWA instalada en iOS | El botón de Google funciona y el paso 1 muestra tu email |
-| Token `drive.file` | El paso 2 muestra "Token obtenido" |
-| Creación y escritura de un Sheet | El paso 3 crea el archivo y lo ves en tu Google Drive con una fila de datos |
-| Descubrimiento por `appProperties` | El paso 4 devuelve el Sheet que acabas de crear |
-| Picker en modo standalone (riesgo del popup) | El paso 5 abre el selector sin salirte de la app ni romperse |
-| Invitación completa | Comparte el Sheet de prueba (desde Google Drive, manualmente por ahora) con la otra cuenta, entra con esa cuenta y compruébalo con el Picker (paso 5) |
-| Persistencia tras re-login | Cierra sesión (borra el token recargando la página), vuelve a iniciar sesión, y comprueba que el paso 4 sigue encontrando el archivo sin repetir el Picker |
+Una rama por tarea (`git switch -c tarea-02`), y fusionar con `main` cuando `npm test` esté en verde. GitHub Pages publica `main`, que es lo que se prueba en el iPhone.
 
-Si los 4-5 riesgos salen bien, pasamos a construir el proyecto real (Vite + estructura de carpetas de la arquitectura). Si alguno falla, lo resolvemos antes de seguir.
+## VS Code
+
+Instala la extensión **Claude Code** (`anthropic.claude-code`) desde el panel de extensiones (⇧⌘X) e inicia sesión con tu cuenta de Claude. Usa la misma configuración del repo (`CLAUDE.md`, `.claude/`). Con texto seleccionado en el editor, `⌥K` inserta una referencia al archivo y las líneas en tu mensaje.
+
+## Límites de uso
+
+En el plan Pro, los límites (ventana de cinco horas y límite semanal) se comparten entre Claude y Claude Code. Sesiones largas de código gastan también tu cupo del chat. Si Claude Code te ofrece seguir con créditos de API, rechaza la oferta salvo que quieras pagar por uso. Asegúrate de que la variable `ANTHROPIC_API_KEY` no esté definida: con ella, Claude Code factura por API en vez de usar tu suscripción.
+
+## Mapa del repo
+
+- `AGENTS.md`: reglas del proyecto. Las leen todos los agentes.
+- `CLAUDE.md`: importa `AGENTS.md` para Claude Code.
+- `.claude/settings.json`: permisos (los `git push` están bloqueados). `.claude/commands/`: `/planificar`, `/tarea`, `/revisar`, `/cerrar`. `.claude/agents/`: `reviewer` y `tester`.
+- `.opencode/` y `opencode.json`: la misma configuración para OpenCode (alternativa).
+- `docs/ESTADO.md`: progreso y decisiones abiertas. `docs/tareas/`: una ficha por tarea.
+- `docs/`: arquitectura, diseño, plan y estructura del repo. `docs/referencia/fase0-spike.html`: la prueba de concepto que ya funcionó en iPhone.
+- `tests/`: tests con `node:test`, sin dependencias.
+
+## Desarrollo local con login de Google
+
+Cuando llegue la tarea 02, añade `http://localhost:5173` a los "Orígenes de JavaScript autorizados" del ID de cliente en Google Cloud Console. El Service Worker y el login de Google se prueban en el iPhone contra la versión publicada en GitHub Pages (hace falta HTTPS).
