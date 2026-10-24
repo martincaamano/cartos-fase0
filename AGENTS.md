@@ -63,6 +63,9 @@ Lee solo las secciones que necesites para la tarea en curso, no todos los docume
 3. Toda lógica nueva de negocio lleva su test en `tests/` (con `node:test`). Para probar `data/` se simula `fetch`; nunca se llama a Google de verdad desde los tests.
 4. No des una tarea por cerrada. Las pruebas en iPhone las hace el usuario: déjale la lista de comprobaciones lista.
 5. Al terminar, resume en pocas líneas qué cambió y qué debe probar a mano.
+6. Una rama por tarea. Da comandos exactos, listos para pegar, sin huecos que rellenar.
+7. Sé económico con el contexto (el plan del usuario tiene un límite compartido): lee solo lo necesario y usa `/planificar` antes de `/tarea`.
+8. `.claude/` es la configuración principal. `.opencode/` y `opencode.json` son un espejo para OpenCode: no los mantengas salvo que el usuario lo pida.
 
 ## Prohibido sin permiso explícito
 
