@@ -14,8 +14,6 @@
       "Bash(git log *)"
     ],
     "deny": [
-      "Bash(git push)",
-      "Bash(git push *)",
       "Bash(git reset --hard *)",
       "Bash(rm -rf *)",
       "Read(./.env)",
