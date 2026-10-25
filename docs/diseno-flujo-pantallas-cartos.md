@@ -90,7 +90,7 @@ Pantalla con dos bloques, pensada para responder qué categoría se lleva más g
 ### 3.8. Ajustes
 
 Incluye:
-- **Categorías**: gestión de categorías — ver las que vienen por defecto (incluida `Transferencia`, no editable/borrable), y crear o quitar las propias. Vive aquí y no en la barra principal porque se toca pocas veces.
+- **Categorías**: gestión de categorías — ver las del libro agrupadas en Gastos e Ingresos, crear las propias (nombre, emoji y tipo) y quitar cualquiera, también las que vienen por defecto, salvo `Transferencia`, que es fija (decidido el 2026-10-25). Quitar es un borrado lógico: los movimientos que ya la usan la conservan. Vive aquí y no en la barra principal porque se toca pocas veces.
 - Selector de tema: Sistema (por defecto) / Claro / Oscuro.
 - Acceso a la pantalla de Diagnóstico.
 - *(Fuera del MVP: gestión de cuentas compartidas, invitaciones.)*
@@ -103,5 +103,5 @@ Dentro de Ajustes. Lista de las últimas aproximadamente 500 entradas de log (fe
 
 - Pantallas de invitación y aceptación de cuentas compartidas.
 - Selector "¿Quién lo pagó?" en Añadir (aparece solo en cuentas compartidas, con las personas del libro más la opción "Común").
-- Deep link `#/add?tipo=gasto&importe=12` para Apple Shortcuts.
+- Deep link `#/add?type=expense&amount=12` para Apple Shortcuts. La ruta `#/add` y el parámetro `type` ya existen desde la tarea 05; falta leer `amount`.
 - Pantalla o bloque de pagos programados.

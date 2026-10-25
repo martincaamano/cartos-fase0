@@ -1,6 +1,6 @@
 # Tarea 05 — Categorías + Añadir (gasto e ingreso)
 
-Estado: pendiente.
+Estado: hecha (2026-10-25).
 Depende de: 04 cerrada.
 
 ## Objetivo
@@ -23,12 +23,12 @@ Transferencias, edición y borrado de movimientos (tarea 07).
 - Validación de categoría propia: nombre vacío o repetido.
 
 ## Pruebas manuales en iPhone
-- [ ] Creas una categoría propia y aparece en la rejilla.
-- [ ] Registras un gasto y un ingreso reales; el saldo del Dashboard cambia al instante.
-- [ ] Los dos aparecen como filas nuevas en tu Google Sheet.
-- [ ] En modo avión registras un gasto: se guarda, y al recuperar la conexión aparece en el Sheet una sola vez.
-- [ ] La fecha "Ayer" guarda ayer, no hoy.
+- [x] Creas una categoría propia y aparece en la rejilla.
+- [x] Registras un gasto y un ingreso reales; el saldo del Dashboard cambia al instante.
+- [x] Los dos aparecen como filas nuevas en tu Google Sheet.
+- [x] En modo avión registras un gasto: se guarda, y al recuperar la conexión aparece en el Sheet una sola vez.
+- [x] La fecha "Ayer" guarda ayer, no hoy.
 
 ## Criterio de cierre
-- [ ] Puedes crear una categoría propia, registrar un gasto y un ingreso reales, y verlos en el Dashboard y en tu Google Sheet.
-- [ ] `npm test` en verde.
+- [x] Puedes crear una categoría propia, registrar un gasto y un ingreso reales, y verlos en el Dashboard y en tu Google Sheet.
+- [x] `npm test` en verde.

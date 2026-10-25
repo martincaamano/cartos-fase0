@@ -17,7 +17,7 @@ Fuente de verdad del progreso. Los agentes lo leen al empezar una tarea y lo act
 | 02 | Login y acceso a Drive | Hecha (2026-10-25) | Probada en iPhone, incluido «Reconectar». Sin verificar: los logs (tarea 09) |
 | 03 | Capa de datos y dominio del libro | Hecha (2026-10-25) | Probada contra Drive real desde el Mac (localhost); sin pantalla, no aplica iPhone |
 | 04 | Onboarding + Dashboard | Hecha (2026-10-25) | Probada en iPhone con la cuenta real |
-| 05 | Categorías + Añadir (gasto e ingreso) | Pendiente | |
+| 05 | Categorías + Añadir (gasto e ingreso) | Hecha (2026-10-25) | Probada en iPhone, con y sin conexión |
 | 06 | Añadir (transferencia) | Pendiente | La pieza más grande |
 | 07 | Historial | Pendiente | |
 | 08 | Análisis | Pendiente | |
@@ -57,6 +57,17 @@ Transversal: ~~publicar la app de Google Cloud de "Testing" a "Production"~~ Hec
 - Formato al pintar: `1.250,50 €` y negativos con «−» (`js/ui/format.js`), hecho a mano porque `Intl` en es-ES no agrupa los números de cuatro cifras.
 - Barra inferior de texto monoespaciado, sin iconos. Por ahora solo INICIO responde.
 - Se borró la pantalla provisional `js/screens/home.js`. La caché del Service Worker pasó a `cartos-v2` e incluye todos los módulos del arranque.
+
+### Decisiones tomadas en la tarea 05
+- Ajustes mínimo, solo con «Categorías»; tema y Diagnóstico llegan en la tarea 09. La barra activa INICIO, [ + ] y AJUSTES.
+- Navegación por hash: `#/`, `#/add` (admite `?type=income`), `#/settings` y `#/settings/categories`.
+- Categoría propia: nombre, emoji y tipo (Gasto o Ingreso). El nombre no puede estar vacío ni repetirse entre las categorías activas, sin distinguir mayúsculas.
+- «Quitar» es un borrado lógico de la fila, que se busca por id. Se pueden quitar también las categorías por defecto, salvo Transferencia. Crear o quitar categorías va directo al Sheet y necesita conexión.
+- Rejilla de Añadir: las 8 categorías más usadas de ese tipo, más «Ver todas» con buscador. La pestaña Transferencia se ve, pero está desactivada hasta la tarea 06.
+- Al guardar un movimiento se vuelve al Dashboard.
+- Cola de salida en su propia base IndexedDB (`cartos-outbox`), con el id del movimiento como clave. La sincronización lee antes los ids que ya están en el Sheet y sube lo que falta en un único `append`; un fallo deja la cola intacta. Se lanza al guardar, al abrir, al volver a primer plano y al recuperar la conexión.
+- Los movimientos pendientes cuentan ya en el saldo y en «Últimos movimientos», y el Dashboard avisa de cuántos faltan por sincronizar.
+- Caché del Service Worker: `cartos-v3`.
 
 Regla del plan: cada tarea, al cerrarse, deja algo 100% usable en el iPhone. Ninguna queda a medias esperando a la siguiente.
 
