@@ -22,7 +22,9 @@ function line(left, right, rightClass = '') {
   return item;
 }
 
-export function renderDashboard(root, { book, offline }) {
+// book: movements already include the pending ones (mergePending);
+// pendingCount: how many of them are not in the Sheet yet.
+export function renderDashboard(root, { book, offline, pendingCount = 0 }) {
   const t = es.dashboard;
   root.innerHTML = `
     <main class="screen screen-dashboard">
@@ -38,7 +40,10 @@ export function renderDashboard(root, { book, offline }) {
     </main>
   `;
   for (const heading of root.querySelectorAll('[data-text]')) heading.textContent = t[heading.dataset.text];
-  root.querySelector('.dashboard-notice').textContent = offline ? t.offline : '';
+  const pending = pendingCount === 1 ? t.pendingOne : t.pendingMany.replace('{n}', pendingCount);
+  root.querySelector('.dashboard-notice').textContent = [offline ? t.offline : '', pendingCount ? pending : '']
+    .filter(Boolean)
+    .join(' · ');
   root.querySelector('.receipt-total-label').textContent = t.total;
 
   const { accounts, categories, movements } = book;

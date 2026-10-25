@@ -1,6 +1,37 @@
 // Decides which screen to show from the session state. Pure: no DOM access,
 // so it can be imported from the tests.
 
+// Sections inside the app once the book is ready, chosen by the URL hash:
+// #/ (Dashboard), #/add, #/settings, #/settings/categories.
+export const SECTIONS = Object.freeze({
+  HOME: 'home',
+  ADD: 'add',
+  SETTINGS: 'settings',
+  CATEGORIES: 'categories',
+});
+
+const SECTION_BY_PATH = {
+  '': SECTIONS.HOME,
+  add: SECTIONS.ADD,
+  settings: SECTIONS.SETTINGS,
+  'settings/categories': SECTIONS.CATEGORIES,
+};
+
+export const SECTION_HASH = Object.freeze({
+  [SECTIONS.HOME]: '#/',
+  [SECTIONS.ADD]: '#/add',
+  [SECTIONS.SETTINGS]: '#/settings',
+  [SECTIONS.CATEGORIES]: '#/settings/categories',
+});
+
+// "#/add?type=income" → { section: 'add', params: { type: 'income' } }.
+// Anything unknown falls back to the Dashboard.
+export function parseHash(hash) {
+  const [path = '', query = ''] = String(hash ?? '').replace(/^#\/?/, '').split('?');
+  const section = SECTION_BY_PATH[path.replace(/\/+$/, '')] ?? SECTIONS.HOME;
+  return { section, params: Object.fromEntries(new URLSearchParams(query)) };
+}
+
 export const ROUTES = Object.freeze({
   LOGIN: 'login',
   CONNECT: 'connect',

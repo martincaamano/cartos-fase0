@@ -21,7 +21,7 @@ test('login, Drive access and reconnect texts exist and are not empty', () => {
 });
 
 test('every text of the status, onboarding, Dashboard and navbar groups is filled', () => {
-  for (const group of ['status', 'onboarding', 'dashboard', 'navbar']) {
+  for (const group of ['status', 'onboarding', 'dashboard', 'navbar', 'add', 'settings', 'categoryAdmin']) {
     assertTexts(Object.values(es[group]));
   }
 });

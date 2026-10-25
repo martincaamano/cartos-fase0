@@ -7,7 +7,9 @@ import { append, batchGet, batchUpdate, batchUpdateValues } from './sheets.js';
 import { HEADERS, SHEET_NAMES, toRow, rowsToObjects } from './rows.js';
 import { getCurrentUser } from './auth.js';
 import { createAccount, validateAccount } from '../domain/account.js';
-import { buildDefaultCategories } from '../domain/category.js';
+import {
+  buildDefaultCategories, canRemoveCategory, createCategory, validateCategory,
+} from '../domain/category.js';
 import { createMovement, validateMovement } from '../domain/movement.js';
 
 export class ValidationError extends Error {
@@ -69,4 +71,28 @@ export async function addMovement(fileId, fields, book = null) {
   if (errors.length) throw new ValidationError(errors);
   await append(fileId, 'Movements', [toRow('Movements', movement)]);
   return movement;
+}
+
+// existing: the categories already in the book, to reject a repeated name.
+export async function addCategory(fileId, fields, existing) {
+  const category = createCategory(fields);
+  const errors = validateCategory(category, existing);
+  if (errors.length) throw new ValidationError(errors);
+  await append(fileId, 'Categories', [toRow('Categories', category)]);
+  return category;
+}
+
+const columnLetter = (sheet, column) => String.fromCharCode(65 + HEADERS[sheet].indexOf(column));
+
+// Logical delete: finds the row by id (never by a remembered row number)
+// and sets updatedAt and deleted. The row itself is never removed.
+export async function removeCategory(fileId, category, now = new Date()) {
+  if (!canRemoveCategory(category)) throw new ValidationError(['not_removable']);
+  const [idColumn] = await batchGet(fileId, ['Categories!A:A']);
+  const index = idColumn.findIndex((row, i) => i > 0 && row[0] === category.id);
+  if (index === -1) throw new ValidationError(['category_unknown']);
+  const row = index + 1;
+  const from = columnLetter('Categories', 'updatedAt');
+  const to = columnLetter('Categories', 'deleted');
+  await batchUpdateValues(fileId, [{ range: `Categories!${from}${row}:${to}${row}`, values: [[now.toISOString(), true]] }]);
 }
