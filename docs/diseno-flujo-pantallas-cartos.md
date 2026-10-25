@@ -90,6 +90,7 @@ Pantalla con dos bloques, pensada para responder qué categoría se lleva más g
 ### 3.8. Ajustes
 
 Incluye:
+- **Cuentas** (añadido el 2026-10-25, tarea 06): lista de las cuentas del libro con su saldo, como líneas de recibo, y un formulario para crear otra (nombre, emoji y saldo inicial, como en el onboarding). Un nombre repetido se rechaza. En el MVP no se editan ni se borran cuentas.
 - **Categorías**: gestión de categorías — ver las del libro agrupadas en Gastos e Ingresos, crear las propias (nombre, emoji y tipo) y quitar cualquiera, también las que vienen por defecto, salvo `Transferencia`, que es fija (decidido el 2026-10-25). Quitar es un borrado lógico: los movimientos que ya la usan la conservan. Vive aquí y no en la barra principal porque se toca pocas veces.
 - Selector de tema: Sistema (por defecto) / Claro / Oscuro.
 - Acceso a la pantalla de Diagnóstico.

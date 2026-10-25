@@ -1,6 +1,6 @@
 # Tarea 06 — Añadir (transferencia)
 
-Estado: pendiente.
+Estado: hecha (2026-10-25).
 Depende de: 05 cerrada. Es la pieza más grande del MVP.
 
 ## Objetivo
@@ -23,11 +23,11 @@ Transferencias entre libro personal y libro compartido, revertir una mitad si la
 - Reintentar la misma transferencia no crea cuatro filas.
 
 ## Pruebas manuales en iPhone
-- [ ] Transfieres dinero entre dos cuentas tuyas; ambos saldos cambian y el total se mantiene.
-- [ ] En el Sheet aparecen las dos filas.
-- [ ] La transferencia no te deja elegir categoría.
-- [ ] En modo avión, la transferencia queda pendiente y al volver la red se sincroniza una sola vez.
+- [x] Transfieres dinero entre dos cuentas tuyas; ambos saldos cambian y el total se mantiene.
+- [x] En el Sheet aparecen las dos filas.
+- [x] La transferencia no te deja elegir categoría.
+- [x] En modo avión, la transferencia queda pendiente y al volver la red se sincroniza una sola vez.
 
 ## Criterio de cierre
-- [ ] Puedes transferir entre dos cuentas propias y ambos saldos se actualizan correctamente.
-- [ ] `npm test` en verde.
+- [x] Puedes transferir entre dos cuentas propias y ambos saldos se actualizan correctamente.
+- [x] `npm test` en verde.
