@@ -524,3 +524,8 @@ select {
   color: inherit;
   border: 1px solid var(--color-line);
 }
+
+/* `hidden` must win over the display of .field, .form and friends */
+[hidden] {
+  display: none !important;
+}

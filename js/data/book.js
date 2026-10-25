@@ -51,9 +51,10 @@ export async function readBook(fileId) {
   };
 }
 
-export async function addAccount(fileId, fields) {
+// existing: the accounts already in the book, to reject a repeated name.
+export async function addAccount(fileId, fields, existing = []) {
   const account = createAccount(fields);
-  const errors = validateAccount(account);
+  const errors = validateAccount(account, existing);
   if (errors.length) throw new ValidationError(errors);
   await append(fileId, 'Accounts', [toRow('Accounts', account)]);
   return account;

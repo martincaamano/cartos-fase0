@@ -3,7 +3,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { enqueue, planSync, mergePending } from '../js/storage/outbox-logic.js';
-import { configureSync, syncOutbox, queueMovement } from '../js/data/sync.js';
+import { configureSync, syncOutbox, queueMovement, queueTransfer } from '../js/data/sync.js';
 import { ValidationError } from '../js/data/book.js';
 import { HEADERS } from '../js/data/rows.js';
 import { setupGoogleApi } from './helpers/fake-google.js';
@@ -89,7 +89,7 @@ test('two syncs at once share a single run', async () => {
 test('queueMovement validates against the book and stores a valid movement', async () => {
   setupGoogleApi();
   const added = [];
-  configureSync({ add: async (fileId, movement) => { added.push({ fileId, movement }); }, list: async () => [], remove: async () => {} });
+  configureSync({ add: async (fileId, movements) => { for (const movement of movements) added.push({ fileId, movement }); }, list: async () => [], remove: async () => {} });
   const book = {
     accounts: [{ id: 'acc-1', deleted: false }],
     categories: [{ id: 'c', deleted: false }, { id: 'gone', deleted: true }],
@@ -104,3 +104,57 @@ test('queueMovement validates against the book and stores a valid movement', asy
   );
   assert.equal(added.length, 1, 'an invalid movement is never queued');
 });
+
+// An in-memory outbox keyed by movement id, like the IndexedDB store.
+function keyedOutbox() {
+  const items = new Map();
+  configureSync({
+    add: async (fileId, movements) => { for (const movement of movements) items.set(movement.id, { fileId, movement }); },
+    list: async () => [...items.values()],
+    remove: async (ids) => { for (const id of ids) items.delete(id); },
+  });
+  return items;
+}
+
+const book = { accounts: [{ id: 'bank', deleted: false }, { id: 'cash', deleted: false }], categories: [] };
+const transfer = { fromAccountId: 'bank', toAccountId: 'cash', amount: 50, date: '2026-10-25' };
+
+test('both halves of a transfer travel to the Sheet in a single request', async () => {
+  const items = keyedOutbox();
+  const halves = await queueTransfer('f1', transfer, book);
+  assert.equal(items.size, 2);
+
+  const calls = sheetWith([]);
+  await syncOutbox('f1');
+  const writes = calls.filter((c) => c.method === 'POST');
+  assert.equal(writes.length, 1);
+  assert.deepEqual(writes[0].body.values.map((row) => row[0]), halves.map((h) => h.id));
+  assert.equal(items.size, 0);
+});
+
+test('retrying the same transfer does not create four rows', async () => {
+  const items = keyedOutbox();
+  const halves = await queueTransfer('f1', transfer, book);
+  // Saving the same halves again keeps two entries in the queue.
+  await saveAgain(items, halves);
+  assert.equal(items.size, 2);
+
+  // The first upload reached the Sheet but its answer was lost.
+  const calls = sheetWith(halves.map((h) => h.id));
+  await syncOutbox('f1');
+  assert.equal(calls.some((c) => c.method === 'POST'), false);
+  assert.equal(items.size, 0);
+});
+
+test('an invalid transfer is never queued', async () => {
+  const items = keyedOutbox();
+  await assert.rejects(
+    queueTransfer('f1', { ...transfer, toAccountId: 'bank' }, book),
+    (err) => err instanceof ValidationError && err.errors.includes('same_account')
+  );
+  assert.equal(items.size, 0);
+});
+
+async function saveAgain(items, halves) {
+  for (const half of halves) items.set(half.id, { fileId: 'f1', movement: half });
+}

@@ -51,6 +51,7 @@ test('parseHash maps each hash to its section and keeps the query', () => {
   assert.deepEqual(parseHash('#/add?type=income'), { section: SECTIONS.ADD, params: { type: 'income' } });
   assert.deepEqual(parseHash('#/settings'), { section: SECTIONS.SETTINGS, params: {} });
   assert.deepEqual(parseHash('#/settings/categories/'), { section: SECTIONS.CATEGORIES, params: {} });
+  assert.deepEqual(parseHash('#/settings/accounts'), { section: SECTIONS.ACCOUNTS, params: {} });
   assert.deepEqual(parseHash('#/nope'), { section: SECTIONS.HOME, params: {} });
 });
 
