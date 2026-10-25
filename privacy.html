@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Cartos · Política de privacidad</title>
+<link rel="stylesheet" href="styles/main.css">
+<style>
+  .privacy {
+    max-width: 640px;
+    margin: 0 auto;
+    padding:
+      calc(env(safe-area-inset-top) + var(--space-5))
+      calc(env(safe-area-inset-right) + var(--space-3))
+      calc(env(safe-area-inset-bottom) + var(--space-5))
+      calc(env(safe-area-inset-left) + var(--space-3));
+  }
+  .privacy h1 {
+    font-size: 22px;
+    letter-spacing: 0.04em;
+    padding-bottom: var(--space-3);
+    border-bottom: 1px dashed var(--color-line);
+  }
+  .privacy h2 {
+    font-size: 16px;
+    margin-top: var(--space-4);
+    margin-bottom: var(--space-2);
+  }
+  .privacy p, .privacy li {
+    font-size: 14px;
+  }
+  .privacy p + p {
+    margin-top: var(--space-2);
+  }
+  .privacy ul {
+    margin: 0;
+    padding-left: var(--space-4);
+  }
+  .privacy a {
+    color: inherit;
+  }
+</style>
+</head>
+<body>
+<main class="privacy">
+  <h1>CARTOS · PRIVACIDAD</h1>
+  <p class="text-muted" style="margin-top: var(--space-2);">Última actualización: 25 de octubre de 2026</p>
+
+  <h2>Qué es Cartos</h2>
+  <p>Cartos es una app web para apuntar gastos, ingresos y transferencias entre tus propias cuentas. No tiene servidor propio: tus datos se guardan en un archivo de tu Google Drive.</p>
+
+  <h2>Qué datos de Google usa</h2>
+  <ul>
+    <li>Tu identidad de Google (identificador, email y nombre), para saber que la sesión es tuya.</li>
+    <li>El permiso <code>drive.file</code>, que solo da acceso a los archivos que crea o abre la propia app. Cartos no puede ver el resto de tu Drive.</li>
+  </ul>
+
+  <h2>Dónde se guardan tus datos</h2>
+  <ul>
+    <li>Tus movimientos y cuentas: en una hoja de cálculo de tu Google Drive.</li>
+    <li>En tu dispositivo: la sesión (tu identidad y un token de acceso que caduca en una hora) y un registro técnico de diagnóstico. Ese registro no incluye importes, notas ni nombres de categorías, y nunca sale del dispositivo salvo que lo copies tú.</li>
+  </ul>
+
+  <h2>Qué no hace</h2>
+  <ul>
+    <li>No envía tus datos a ningún servidor que no sea Google Drive.</li>
+    <li>No usa analítica, publicidad ni rastreadores.</li>
+    <li>No vende ni comparte tus datos con nadie.</li>
+  </ul>
+  <p>El uso que Cartos hace de la información recibida de las APIs de Google cumple la <a href="https://developers.google.com/terms/api-services-user-data-policy">Política de datos de usuario de los servicios de API de Google</a>, incluidos los requisitos de uso limitado.</p>
+
+  <h2>Cómo retirar el acceso</h2>
+  <p>Puedes revocar el permiso de Cartos en cualquier momento desde <a href="https://myaccount.google.com/permissions">myaccount.google.com/permissions</a>. Tus datos siguen en tu Drive y puedes borrarlos desde allí.</p>
+
+  <h2>Contacto</h2>
+  <p>Para cualquier duda, abre una incidencia en <a href="https://github.com/martincaamano/cartos-fase0/issues">github.com/martincaamano/cartos-fase0</a>.</p>
+</main>
+</body>
+</html>
