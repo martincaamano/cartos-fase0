@@ -7,7 +7,7 @@ Fuente de verdad del progreso. Los agentes lo leen al empezar una tarea y lo act
 - Repositorio: `cartos-fase0` (se queda con ese nombre).
 - GitHub Pages publica `main` (carpeta raíz) en https://martincaamano.github.io/cartos-fase0/. El repo es público: con el plan gratuito, Pages no funciona en repos privados (estuvo sin publicar del 2026-09-27 al 2026-10-24 por eso).
 - Se desarrolla desde un Mac (`npm test`, `npm run dev` en http://localhost:5173). Las pruebas reales se hacen en el iPhone.
-- Siguiente paso: la tarea 08 (Análisis), cuando el usuario lo diga.
+- Siguiente paso: la tarea 09 (Ajustes y Diagnóstico), cuando el usuario lo diga.
 
 ## Tareas del MVP
 
@@ -20,7 +20,7 @@ Fuente de verdad del progreso. Los agentes lo leen al empezar una tarea y lo act
 | 05 | Categorías + Añadir (gasto e ingreso) | Hecha (2026-10-25) | Probada en iPhone, con y sin conexión |
 | 06 | Añadir (transferencia) | Hecha (2026-10-25) | Probada en iPhone, con y sin conexión. Incluye Ajustes → Cuentas |
 | 07 | Historial | Hecha (2026-10-25) | Probada en iPhone, con y sin conexión |
-| 08 | Análisis | Pendiente | |
+| 08 | Análisis | Hecha (2026-10-25) | Probada en iPhone con datos reales, en claro y oscuro |
 | 09 | Ajustes y Diagnóstico | Pendiente | |
 
 Transversal: ~~publicar la app de Google Cloud de "Testing" a "Production"~~ Hecho (2026-10-25). Sin verificación de Google para `drive.file`; exigió la página de marca y una política de privacidad (`privacy.html`).
@@ -87,6 +87,13 @@ Transversal: ~~publicar la app de Google Cloud de "Testing" a "Production"~~ Hec
 - Conflictos entre dispositivos: gana la última escritura, sin aviso. El control por `updatedAt` queda para más adelante.
 - Al editar, una categoría ya quitada sigue disponible para el movimiento que la usa.
 - Caché del Service Worker: `cartos-v5`.
+
+### Decisiones tomadas en la tarea 08
+- Análisis en `#/analysis?month=YYYY-MM`, para el libro entero (sin filtro por cuenta). Un solo selector de mes para los dos bloques, desde el primer mes con movimientos hasta el actual. El mes vive en la URL, así que un repintado tras sincronizar no lo pierde.
+- Gasto por categoría: de mayor a menor, importe en terracota y una barra gris proporcional a la categoría mayor. **Transferencia queda fuera del ranking** (mover dinero entre cuentas propias no es gasto); no es el interruptor «incluir transferencias», que sigue fuera del MVP.
+- Resumen del mes: ingresos (verde), gastos (terracota) y ahorro = ingresos − gastos (tinta normal, «−» si es negativo). Las transferencias cuentan en ambos lados (arquitectura §6) y no cambian el ahorro. Debajo, el ahorro de hasta 6 meses anteriores; tocar uno salta a ese mes.
+- Agregaciones puras en `js/domain/stats.js`, en céntimos. Los nombres de los meses están en `es.months`, compartidos con el Historial.
+- Caché del Service Worker: `cartos-v6`.
 
 Regla del plan: cada tarea, al cerrarse, deja algo 100% usable en el iPhone. Ninguna queda a medias esperando a la siguiente.
 
