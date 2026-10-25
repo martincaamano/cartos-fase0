@@ -1,23 +1,64 @@
-// Settings. For now Cuentas and Categorías; theme and Diagnóstico come in
-// tarea 09.
+// Settings (design §3.8): Cuentas, Categorías and Diagnóstico, the theme
+// picker and signing out. The theme applies at once and stays on the device.
 
 import { es } from '../../i18n/es.js';
 import { SECTION_HASH } from '../ui/router.js';
 import { renderNavbar } from '../ui/navbar.js';
+import { applyTheme, loadTheme, saveTheme, THEMES } from '../ui/theme.js';
+
+const THEME_TEXT = { system: 'themeSystem', light: 'themeLight', dark: 'themeDark' };
 
 const ENTRIES = [
   { label: es.settings.accounts, hash: SECTION_HASH.accounts },
   { label: es.settings.categories, hash: SECTION_HASH.categories },
+  { label: es.settings.diagnostics, hash: SECTION_HASH.diagnostics },
 ];
 
-export function renderSettings(root) {
+function renderThemePicker(row) {
+  const t = es.settings;
+  let current = loadTheme();
+  for (const theme of THEMES) {
+    const chip = document.createElement('button');
+    chip.type = 'button';
+    chip.className = 'chip';
+    chip.dataset.theme = theme;
+    chip.textContent = t[THEME_TEXT[theme]];
+    chip.addEventListener('click', () => {
+      current = theme;
+      saveTheme(theme);
+      applyTheme(theme);
+      mark();
+    });
+    row.appendChild(chip);
+  }
+  const mark = () => {
+    for (const chip of row.children) {
+      const selected = chip.dataset.theme === current;
+      chip.classList.toggle('is-selected', selected);
+      chip.setAttribute('aria-pressed', String(selected));
+    }
+  };
+  mark();
+}
+
+// user: { email } of the signed-in account. pendingCount: changes not in
+// the Sheet yet; signing out with some asks for a second tap.
+export function renderSettings(root, { user = null, pendingCount = 0, onSignOut }) {
+  const t = es.settings;
   root.innerHTML = `
     <main class="screen screen-form screen-with-navbar">
       <h1 class="form-title"></h1>
       <ul class="receipt-list settings-list"></ul>
+      <h2 class="receipt-heading" data-text="theme"></h2>
+      <div class="chip-row theme-picker" role="group"></div>
+      <h2 class="receipt-heading" data-text="account"></h2>
+      <p class="settings-email"></p>
+      <p class="text-muted form-note signout-warning" role="alert" hidden></p>
+      <button type="button" class="link-button settings-signout"></button>
     </main>
   `;
-  root.querySelector('.form-title').textContent = es.settings.title;
+  for (const node of root.querySelectorAll('[data-text]')) node.textContent = t[node.dataset.text];
+  root.querySelector('.form-title').textContent = t.title;
   const list = root.querySelector('.settings-list');
   for (const entry of ENTRIES) {
     const item = document.createElement('li');
@@ -34,5 +75,26 @@ export function renderSettings(root) {
     item.appendChild(link);
     list.appendChild(item);
   }
+
+  const picker = root.querySelector('.theme-picker');
+  picker.setAttribute('aria-label', t.theme);
+  renderThemePicker(picker);
+
+  root.querySelector('.settings-email').textContent = user?.email ?? '';
+  const signOut = root.querySelector('.settings-signout');
+  const warning = root.querySelector('.signout-warning');
+  signOut.textContent = t.signOut;
+  let armed = pendingCount === 0;
+  signOut.addEventListener('click', () => {
+    if (!armed) {
+      armed = true;
+      warning.hidden = false;
+      warning.textContent = pendingCount === 1 ? t.pendingOne : t.pendingMany.replace('{n}', pendingCount);
+      signOut.textContent = t.signOutAnyway;
+      return;
+    }
+    onSignOut();
+  });
+
   renderNavbar(root, { active: 'settings' });
 }

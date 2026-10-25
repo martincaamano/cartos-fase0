@@ -19,6 +19,16 @@ export function formatAmountInput(amount) {
   return `${Math.floor(cents / 100)},${String(cents % 100).padStart(2, '0')}`;
 }
 
+// A log entry as one line: local day and time, type, result and duration.
+// "25/10 13:05:12  api  sheets.append:200  320 ms"
+export function formatLogLine({ at, type, result, durationMs }) {
+  const date = new Date(at);
+  const two = (n) => String(n).padStart(2, '0');
+  const when = `${two(date.getDate())}/${two(date.getMonth() + 1)} ${two(date.getHours())}:${two(date.getMinutes())}:${two(date.getSeconds())}`;
+  const duration = Number.isFinite(durationMs) ? `  ${durationMs} ms` : '';
+  return `${when}  ${type}  ${result}${duration}`;
+}
+
 // "2026-10-25" → "25/10". The year is left out: the list shows recent dates.
 export function formatShortDate(date) {
   const [, month, day] = date.split('-');
