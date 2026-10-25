@@ -14,9 +14,9 @@ Fuente de verdad del progreso. Los agentes lo leen al empezar una tarea y lo act
 | Tarea | Título | Estado | Notas |
 |---|---|---|---|
 | 01 | Esqueleto PWA instalable | Hecha (2026-10-24) | Probada en iPhone. El icono definitivo queda aparte (decisión 3) |
-| 02 | Login y acceso a Drive | Hecha (2026-10-25) | Probada en iPhone. Sin verificar en uso real: «Reconectar» con el token caducado y los logs (tarea 09) |
+| 02 | Login y acceso a Drive | Hecha (2026-10-25) | Probada en iPhone, incluido «Reconectar». Sin verificar: los logs (tarea 09) |
 | 03 | Capa de datos y dominio del libro | Hecha (2026-10-25) | Probada contra Drive real desde el Mac (localhost); sin pantalla, no aplica iPhone |
-| 04 | Onboarding + Dashboard | Pendiente | |
+| 04 | Onboarding + Dashboard | Hecha (2026-10-25) | Probada en iPhone con la cuenta real |
 | 05 | Categorías + Añadir (gasto e ingreso) | Pendiente | |
 | 06 | Añadir (transferencia) | Pendiente | La pieza más grande |
 | 07 | Historial | Pendiente | |
@@ -46,7 +46,17 @@ Transversal: ~~publicar la app de Google Cloud de "Testing" a "Production"~~ Hec
 - El archivo del libro se llama «Cartos · <nombre>» (por ejemplo «Cartos · Personal»).
 - Todas las llamadas a Google pasan por `googleFetch` (`js/data/http.js`). El log guarda la operación y el código HTTP, por ejemplo `sheets.append:200`.
 - `sw.js` no cambia todavía: estos módulos no se cargan al arrancar. Se añaden a `APP_SHELL` en la tarea 04.
-- Para probar en local: `http://localhost:5173` está en los orígenes autorizados del Client ID. En el navegador integrado de Claude Code, el Service Worker no deja cargar los módulos nuevos; las pruebas desde consola se hacen sin él (por ejemplo, desde `privacy.html`).
+- Para probar en local: `http://localhost:5173` está en los orígenes autorizados del Client ID. En el navegador integrado de Claude Code, el Service Worker no deja cargar los módulos nuevos; las pruebas desde consola se hacen sin él (por ejemplo, desde `privacy.html`). Desde la tarea 04, `index.html` no registra el Service Worker en `localhost`, así que ya no hace falta.
+
+### Decisiones tomadas en la tarea 04
+- El libro personal es el archivo más antiguo con `bookType=personal`. Un libro personal sin cuentas activas cuenta como «sin libro», y el onboarding le añade la primera cuenta en vez de crear otro.
+- Copia local del libro (`js/storage/book-cache.js`, en `localStorage`, ligada al `sub` del usuario): el Dashboard se pinta al instante y abre sin conexión, con el aviso «Sin conexión · datos guardados». Nunca sale del dispositivo.
+- Router: login, connect, reconnect, loading, offline (sin conexión y sin copia), onboarding y dashboard. Con conexión y el token caducado se pide «Reconectar» aunque haya copia.
+- Si Google rechaza un token antes de que caduque (401), la app lo descarta y pide «Reconectar».
+- Los importes tecleados se leen en formato español (`parseAmountInput`): un punto seguido de grupos de tres cifras es separador de miles («12.500» son 12.500 €).
+- Formato al pintar: `1.250,50 €` y negativos con «−» (`js/ui/format.js`), hecho a mano porque `Intl` en es-ES no agrupa los números de cuatro cifras.
+- Barra inferior de texto monoespaciado, sin iconos. Por ahora solo INICIO responde.
+- Se borró la pantalla provisional `js/screens/home.js`. La caché del Service Worker pasó a `cartos-v2` e incluye todos los módulos del arranque.
 
 Regla del plan: cada tarea, al cerrarse, deja algo 100% usable en el iPhone. Ninguna queda a medias esperando a la siguiente.
 
