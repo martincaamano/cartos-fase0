@@ -7,7 +7,7 @@ Fuente de verdad del progreso. Los agentes lo leen al empezar una tarea y lo act
 - Repositorio: `cartos-fase0` (se queda con ese nombre).
 - GitHub Pages publica `main` (carpeta raíz) en https://martincaamano.github.io/cartos-fase0/. El repo es público: con el plan gratuito, Pages no funciona en repos privados (estuvo sin publicar del 2026-09-27 al 2026-10-24 por eso).
 - Se desarrolla desde un Mac (`npm test`, `npm run dev` en http://localhost:5173). Las pruebas reales se hacen en el iPhone.
-- Siguiente paso: la tarea 03, cuando el usuario lo diga.
+- Siguiente paso: la tarea 08 (Análisis), cuando el usuario lo diga.
 
 ## Tareas del MVP
 
@@ -19,7 +19,7 @@ Fuente de verdad del progreso. Los agentes lo leen al empezar una tarea y lo act
 | 04 | Onboarding + Dashboard | Hecha (2026-10-25) | Probada en iPhone con la cuenta real |
 | 05 | Categorías + Añadir (gasto e ingreso) | Hecha (2026-10-25) | Probada en iPhone, con y sin conexión |
 | 06 | Añadir (transferencia) | Hecha (2026-10-25) | Probada en iPhone, con y sin conexión. Incluye Ajustes → Cuentas |
-| 07 | Historial | Pendiente | |
+| 07 | Historial | Hecha (2026-10-25) | Probada en iPhone, con y sin conexión |
 | 08 | Análisis | Pendiente | |
 | 09 | Ajustes y Diagnóstico | Pendiente | |
 
@@ -77,6 +77,16 @@ Transversal: ~~publicar la app de Google Cloud de "Testing" a "Production"~~ Hec
 - Con menos de dos cuentas, la pestaña Transferencia explica por qué y enlaza a Cuentas.
 - Corrección de estilos: `[hidden]` oculta siempre, aunque el elemento tenga su propio `display`.
 - Caché del Service Worker: `cartos-v4`.
+
+### Decisiones tomadas en la tarea 07
+- Historial en `#/history`: líneas de recibo agrupadas por mes, de la más reciente a la más antigua (a igual fecha, por `createdAt` y después por id). Filtros en el dispositivo por cuenta, categoría y fechas Desde/Hasta (ambos extremos incluidos). Se pierden al salir de la pantalla. Se pintan 200 líneas y el resto con «Mostrar más». Sin totales encima de la lista.
+- Una transferencia es una línea; aparece al filtrar por cualquiera de sus dos cuentas y por la categoría Transferencia.
+- Tocar una línea abre el formulario de Añadir precargado (`#/history/edit?id=…`). El tipo no se cambia al editar. Borrar pide un segundo toque.
+- Desviación de la ficha: una transferencia del mismo libro se edita y se borra entera (las dos filas), como dice la arquitectura §6. El aviso de «la otra mitad no cambia» queda solo para una mitad suelta, sin pareja.
+- Editar y borrar funcionan sin conexión, a través de la cola de salida. La cola guarda la última versión de cada id; al sincronizar, los ids nuevos se añaden (`append`) y los que ya están en el Sheet se reescriben en su fila, buscada por id en ese momento (`values:batchUpdate`, RAW). Las dos mitades de una transferencia van en la misma petición. Una edición guardada mientras se sincroniza sigue en la cola.
+- Conflictos entre dispositivos: gana la última escritura, sin aviso. El control por `updatedAt` queda para más adelante.
+- Al editar, una categoría ya quitada sigue disponible para el movimiento que la usa.
+- Caché del Service Worker: `cartos-v5`.
 
 Regla del plan: cada tarea, al cerrarse, deja algo 100% usable en el iPhone. Ninguna queda a medias esperando a la siguiente.
 
