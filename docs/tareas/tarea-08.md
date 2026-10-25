@@ -1,6 +1,6 @@
 # Tarea 08 — Análisis
 
-Estado: pendiente.
+Estado: hecha (2026-10-25).
 Depende de: 07 cerrada.
 
 ## Objetivo
@@ -21,10 +21,10 @@ Granularidad semanal o diaria, interruptor "incluir transferencias".
 - Una transferencia entre dos cuentas del mismo libro deja el neto (ingresos − gastos) sin cambios aunque infle los totales brutos (arquitectura §6).
 
 ## Pruebas manuales en iPhone
-- [ ] Con datos reales acumulados, la categoría que más gasto tiene sale arriba.
-- [ ] Cambias de mes hacia atrás y las cifras cambian.
-- [ ] Las barras y las cifras se leen bien en modo claro y oscuro.
+- [x] Con datos reales acumulados, la categoría que más gasto tiene sale arriba.
+- [x] Cambias de mes hacia atrás y las cifras cambian.
+- [x] Las barras y las cifras se leen bien en modo claro y oscuro.
 
 ## Criterio de cierre
-- [ ] Ves de un vistazo qué categoría cuesta más y cómo evoluciona el ahorro mes a mes, con datos reales.
-- [ ] `npm test` en verde.
+- [x] Ves de un vistazo qué categoría cuesta más y cómo evoluciona el ahorro mes a mes, con datos reales.
+- [x] `npm test` en verde.
