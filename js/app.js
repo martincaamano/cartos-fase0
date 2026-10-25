@@ -16,6 +16,8 @@ import { renderStatus } from './screens/status.js';
 import { renderOnboarding } from './screens/onboarding.js';
 import { renderDashboard } from './screens/dashboard.js';
 import { renderAddMovement } from './screens/addMovement.js';
+import { renderHistory } from './screens/history.js';
+import { findEntry } from './domain/history.js';
 import { renderSettings } from './screens/settings.js';
 import { renderCategories } from './screens/categories.js';
 import { renderAccounts } from './screens/accounts.js';
@@ -30,28 +32,39 @@ let currentKey = null;
 let fetching = false;
 
 // Screens that may be repainted with fresh data; a half-filled Add form
-// never is.
+// never is, and neither is the History, so its filters stay put.
 const REPAINTABLE = new Set(
   [SECTIONS.HOME, SECTIONS.CATEGORIES, SECTIONS.ACCOUNTS].map((section) => `${ROUTES.DASHBOARD}:${section}`)
 );
 const repaint = () => show({ force: REPAINTABLE.has(currentKey) });
 
+// Puts what the Add form saved (a movement, or both halves of a transfer)
+// into the in-memory queue, goes to `hash` and starts a sync.
+const afterSave = (hash) => (saved) => {
+  for (const movement of [saved].flat()) pending = enqueue(pending, movement);
+  location.hash = hash;
+  sync();
+};
+
 function showSection(root, { section, params }, offline) {
   const book = { ...personal.book, movements: mergePending(personal.book.movements, pending) };
   switch (section) {
     case SECTIONS.ADD:
-      renderAddMovement(root, {
-        book,
-        fileId: personal.fileId,
-        params,
-        // A movement, or both halves of a transfer.
-        onSaved: (saved) => {
-          for (const movement of [saved].flat()) pending = enqueue(pending, movement);
-          location.hash = SECTION_HASH.home;
-          sync();
-        },
-      });
+      renderAddMovement(root, { book, fileId: personal.fileId, params, onSaved: afterSave(SECTION_HASH.home) });
       break;
+    case SECTIONS.HISTORY:
+      renderHistory(root, { book });
+      break;
+    case SECTIONS.EDIT: {
+      const entry = findEntry(book.movements, params.id);
+      if (!entry) {
+        // Deleted meanwhile, or a stale link.
+        location.replace(SECTION_HASH.history);
+        break;
+      }
+      renderAddMovement(root, { book, fileId: personal.fileId, entry, onSaved: afterSave(SECTION_HASH.history) });
+      break;
+    }
     case SECTIONS.SETTINGS:
       renderSettings(root);
       break;
@@ -137,9 +150,9 @@ async function reloadBook() {
 async function sync() {
   if (personal.status !== 'ready' || !canReachDrive()) return;
   try {
-    const { appended } = await syncOutbox(personal.fileId);
+    const { appended, updated } = await syncOutbox(personal.fileId);
     await loadPending();
-    if (appended > 0) await reloadBook();
+    if (appended + updated > 0) await reloadBook();
     else repaint();
   } catch (err) {
     if (err instanceof TokenExpiredError) show();

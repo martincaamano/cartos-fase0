@@ -2,9 +2,12 @@
 // so it can be imported from the tests.
 
 // Sections inside the app once the book is ready, chosen by the URL hash:
-// #/ (Dashboard), #/add, #/settings, #/settings/categories, #/settings/accounts.
+// #/ (Dashboard), #/history, #/history/edit?id=…, #/add, #/settings,
+// #/settings/categories, #/settings/accounts.
 export const SECTIONS = Object.freeze({
   HOME: 'home',
+  HISTORY: 'history',
+  EDIT: 'edit',
   ADD: 'add',
   SETTINGS: 'settings',
   CATEGORIES: 'categories',
@@ -13,6 +16,8 @@ export const SECTIONS = Object.freeze({
 
 const SECTION_BY_PATH = {
   '': SECTIONS.HOME,
+  history: SECTIONS.HISTORY,
+  'history/edit': SECTIONS.EDIT,
   add: SECTIONS.ADD,
   settings: SECTIONS.SETTINGS,
   'settings/categories': SECTIONS.CATEGORIES,
@@ -21,6 +26,8 @@ const SECTION_BY_PATH = {
 
 export const SECTION_HASH = Object.freeze({
   [SECTIONS.HOME]: '#/',
+  [SECTIONS.HISTORY]: '#/history',
+  [SECTIONS.EDIT]: '#/history/edit',
   [SECTIONS.ADD]: '#/add',
   [SECTIONS.SETTINGS]: '#/settings',
   [SECTIONS.CATEGORIES]: '#/settings/categories',

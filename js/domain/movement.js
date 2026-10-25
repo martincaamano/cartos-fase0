@@ -76,6 +76,21 @@ export function latestMovements(movements, count) {
     .slice(0, count);
 }
 
+// A new version of a saved movement: same id, author, creation time, type
+// and transferId; only the editable fields and updatedAt change. Validate
+// the result with validateMovement.
+export function editMovement(original, fields, now = new Date()) {
+  return {
+    ...original,
+    accountId: fields.accountId,
+    amount: fields.amount,
+    date: fields.date,
+    categoryId: fields.categoryId,
+    note: String(fields.note ?? ''),
+    updatedAt: now.toISOString(),
+  };
+}
+
 export function markDeleted(movement, now = new Date()) {
   return { ...movement, deleted: true, updatedAt: now.toISOString() };
 }

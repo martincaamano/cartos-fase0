@@ -3,7 +3,7 @@
 // income in the destination, same amount and date, category Transferencia,
 // linked by a shared transferId so both halves can be handled together.
 
-import { createMovement, isValidDate } from './movement.js';
+import { createMovement, editMovement, isValidDate, markDeleted } from './movement.js';
 import { hasAtMostTwoDecimals } from './money.js';
 import { TRANSFER_CATEGORY_ID } from './category.js';
 
@@ -34,10 +34,32 @@ export function buildTransfer({ fromAccountId, toAccountId, amount, date, note =
   ];
 }
 
-// Latest activity for the Dashboard, newest first. Both halves of a transfer
-// become one entry { kind: 'transfer', from, to, amount, date }; a half whose
-// pair is missing or deleted shows as an ordinary { kind: 'movement' }.
-export function latestEntries(movements, count) {
+// halves: [outgoing, incoming] of a saved transfer. Editing or deleting a
+// transfer always changes both rows together (architecture §6). Validate
+// the fields first with validateTransfer.
+export function editTransfer([outgoing, incoming], { fromAccountId, toAccountId, amount, date, note = '' }, now = new Date()) {
+  const shared = { amount, date, categoryId: TRANSFER_CATEGORY_ID, note };
+  return [
+    editMovement(outgoing, { ...shared, accountId: fromAccountId }, now),
+    editMovement(incoming, { ...shared, accountId: toAccountId }, now),
+  ];
+}
+
+export function deleteTransfer(halves, now = new Date()) {
+  return halves.map((half) => markDeleted(half, now));
+}
+
+// Newest first by date, then by creation time, then by id so the order
+// never depends on how the rows arrived.
+export function newestFirst(a, b) {
+  return b.date.localeCompare(a.date) || b.createdAt.localeCompare(a.createdAt) || a.id.localeCompare(b.id);
+}
+
+// Active movements as list entries, unsorted. Both halves of a transfer
+// become one entry { kind: 'transfer', from, to, amount, date, halves }; a
+// half whose pair is missing or deleted shows as an ordinary
+// { kind: 'movement' }.
+export function groupEntries(movements) {
   const active = movements.filter((movement) => !movement.deleted);
   const pairs = new Map();
   for (const movement of active) {
@@ -60,12 +82,16 @@ export function latestEntries(movements, count) {
         amount: movement.amount,
         date: movement.date,
         createdAt: movement.createdAt,
+        halves: [pair.expense, pair.income],
       });
     } else {
       entries.push({ kind: 'movement', id: movement.id, movement, date: movement.date, createdAt: movement.createdAt });
     }
   }
-  return entries
-    .sort((a, b) => b.date.localeCompare(a.date) || b.createdAt.localeCompare(a.createdAt))
-    .slice(0, count);
+  return entries;
+}
+
+// Latest activity for the Dashboard, newest first.
+export function latestEntries(movements, count) {
+  return groupEntries(movements).sort(newestFirst).slice(0, count);
 }
