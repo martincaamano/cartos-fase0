@@ -53,3 +53,9 @@ test('building defaults fails loudly when a name is missing', () => {
 test('validateCategory rejects an empty name and an unknown kind', () => {
   assert.deepEqual(validateCategory({ name: ' ', kind: 'gift' }), ['name_required', 'kind_invalid']);
 });
+
+test('validateAccount rejects a repeated name, ignoring case and deleted accounts', () => {
+  const existing = [{ id: 'a', name: 'Abanca', deleted: false }, { id: 'b', name: 'Efectivo', deleted: true }];
+  assert.deepEqual(validateAccount(createAccount({ name: ' abanca ', initialBalance: 0 }, deps), existing), ['name_taken']);
+  assert.deepEqual(validateAccount(createAccount({ name: 'Efectivo', initialBalance: 0 }, deps), existing), []);
+});

@@ -2,12 +2,13 @@
 // so it can be imported from the tests.
 
 // Sections inside the app once the book is ready, chosen by the URL hash:
-// #/ (Dashboard), #/add, #/settings, #/settings/categories.
+// #/ (Dashboard), #/add, #/settings, #/settings/categories, #/settings/accounts.
 export const SECTIONS = Object.freeze({
   HOME: 'home',
   ADD: 'add',
   SETTINGS: 'settings',
   CATEGORIES: 'categories',
+  ACCOUNTS: 'accounts',
 });
 
 const SECTION_BY_PATH = {
@@ -15,6 +16,7 @@ const SECTION_BY_PATH = {
   add: SECTIONS.ADD,
   settings: SECTIONS.SETTINGS,
   'settings/categories': SECTIONS.CATEGORIES,
+  'settings/accounts': SECTIONS.ACCOUNTS,
 };
 
 export const SECTION_HASH = Object.freeze({
@@ -22,6 +24,7 @@ export const SECTION_HASH = Object.freeze({
   [SECTIONS.ADD]: '#/add',
   [SECTIONS.SETTINGS]: '#/settings',
   [SECTIONS.CATEGORIES]: '#/settings/categories',
+  [SECTIONS.ACCOUNTS]: '#/settings/accounts',
 });
 
 // "#/add?type=income" → { section: 'add', params: { type: 'income' } }.

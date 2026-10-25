@@ -3,7 +3,7 @@
 
 import { es } from '../../i18n/es.js';
 import { accountBalance, totalBalance } from '../domain/balance.js';
-import { latestMovements } from '../domain/movement.js';
+import { latestEntries } from '../domain/transfer.js';
 import { formatEuros, formatShortDate } from '../ui/format.js';
 import { renderNavbar } from '../ui/navbar.js';
 
@@ -59,7 +59,7 @@ export function renderDashboard(root, { book, offline, pendingCount = 0 }) {
   }
 
   const movementList = root.querySelector('.receipt-movements');
-  const latest = latestMovements(movements, LATEST_COUNT);
+  const latest = latestEntries(movements, LATEST_COUNT);
   if (latest.length === 0) {
     const empty = document.createElement('li');
     empty.className = 'receipt-empty text-muted';
@@ -67,7 +67,19 @@ export function renderDashboard(root, { book, offline, pendingCount = 0 }) {
     movementList.appendChild(empty);
   }
   const categoryById = new Map(categories.map((category) => [category.id, category]));
-  for (const movement of latest) {
+  const accountById = new Map(accounts.map((account) => [account.id, account]));
+  const accountLabel = (id) => {
+    const account = accountById.get(id);
+    return account ? `${account.emoji} ${account.name}`.trim() : '';
+  };
+  for (const entry of latest) {
+    if (entry.kind === 'transfer') {
+      // Neither expense nor income: plain ink.
+      const label = `${formatShortDate(entry.date)}  ${accountLabel(entry.from)} → ${accountLabel(entry.to)}`;
+      movementList.appendChild(line(label, formatEuros(entry.amount)));
+      continue;
+    }
+    const { movement } = entry;
     const category = categoryById.get(movement.categoryId);
     const label = `${formatShortDate(movement.date)}  ${category ? `${category.emoji} ${category.name}` : ''}`;
     const isExpense = movement.type === 'expense';

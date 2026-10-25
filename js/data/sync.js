@@ -10,6 +10,7 @@ import { planSync } from '../storage/outbox-logic.js';
 import { addPending, listPending, removePending } from '../storage/outbox.js';
 import { logEvent } from '../storage/logs.js';
 import { createMovement, validateMovement } from '../domain/movement.js';
+import { buildTransfer, validateTransfer } from '../domain/transfer.js';
 
 const defaults = { add: addPending, list: listPending, remove: removePending };
 let store = defaults;
@@ -43,8 +44,20 @@ export async function queueMovement(fileId, fields, book) {
     categoryIds: book.categories.filter((c) => !c.deleted).map((c) => c.id),
   });
   if (errors.length) throw new ValidationError(errors);
-  await store.add(fileId, movement);
+  await store.add(fileId, [movement]);
   return movement;
+}
+
+// Validates a transfer and stores both halves in the outbox together; they
+// travel to the Sheet in the same upload.
+export async function queueTransfer(fileId, fields, book) {
+  const errors = validateTransfer(fields, {
+    accountIds: book.accounts.filter((a) => !a.deleted).map((a) => a.id),
+  });
+  if (errors.length) throw new ValidationError(errors);
+  const halves = buildTransfer(fields, { userSub: getCurrentUser()?.sub ?? '' });
+  await store.add(fileId, halves);
+  return halves;
 }
 
 export function syncOutbox(fileId) {

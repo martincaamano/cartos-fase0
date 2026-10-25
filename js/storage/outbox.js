@@ -35,10 +35,11 @@ async function withStore(mode, work) {
   }
 }
 
-// fileId: the book the movement belongs to.
-export function addPending(fileId, movement) {
+// fileId: the book the movements belong to. Several movements (both halves
+// of a transfer) are stored in one transaction: all or none.
+export function addPending(fileId, movements) {
   return withStore('readwrite', (store) => {
-    store.put({ fileId, movement });
+    for (const movement of movements) store.put({ fileId, movement });
   });
 }
 

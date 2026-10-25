@@ -18,6 +18,7 @@ import { renderDashboard } from './screens/dashboard.js';
 import { renderAddMovement } from './screens/addMovement.js';
 import { renderSettings } from './screens/settings.js';
 import { renderCategories } from './screens/categories.js';
+import { renderAccounts } from './screens/accounts.js';
 
 const UNKNOWN = { status: 'unknown', fileId: null, book: null };
 
@@ -30,7 +31,9 @@ let fetching = false;
 
 // Screens that may be repainted with fresh data; a half-filled Add form
 // never is.
-const REPAINTABLE = new Set([`${ROUTES.DASHBOARD}:${SECTIONS.HOME}`, `${ROUTES.DASHBOARD}:${SECTIONS.CATEGORIES}`]);
+const REPAINTABLE = new Set(
+  [SECTIONS.HOME, SECTIONS.CATEGORIES, SECTIONS.ACCOUNTS].map((section) => `${ROUTES.DASHBOARD}:${section}`)
+);
 const repaint = () => show({ force: REPAINTABLE.has(currentKey) });
 
 function showSection(root, { section, params }, offline) {
@@ -41,8 +44,9 @@ function showSection(root, { section, params }, offline) {
         book,
         fileId: personal.fileId,
         params,
-        onSaved: (movement) => {
-          pending = enqueue(pending, movement);
+        // A movement, or both halves of a transfer.
+        onSaved: (saved) => {
+          for (const movement of [saved].flat()) pending = enqueue(pending, movement);
           location.hash = SECTION_HASH.home;
           sync();
         },
@@ -53,6 +57,9 @@ function showSection(root, { section, params }, offline) {
       break;
     case SECTIONS.CATEGORIES:
       renderCategories(root, { book: personal.book, fileId: personal.fileId, onChanged: reloadBook });
+      break;
+    case SECTIONS.ACCOUNTS:
+      renderAccounts(root, { book, fileId: personal.fileId, onChanged: reloadBook });
       break;
     default:
       renderDashboard(root, { book, offline, pendingCount: pending.length });
