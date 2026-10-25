@@ -74,11 +74,19 @@ async function addEntry(entry) {
   }
 }
 
+const defaults = { write: addEntry };
+let sink = defaults;
+
+// Lets the tests capture the entries instead of writing to IndexedDB.
+export function configureLogs(overrides = {}) {
+  sink = { ...defaults, ...overrides };
+}
+
 export async function logEvent(fields) {
   try {
     const entry = buildLogEntry(fields);
-    if (typeof indexedDB === 'undefined') return;
-    await addEntry(entry);
+    if (sink.write === addEntry && typeof indexedDB === 'undefined') return;
+    await sink.write(entry);
   } catch (err) {
     console.warn('Log write failed', err);
   }

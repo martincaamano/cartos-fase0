@@ -2,9 +2,10 @@
    Estética: recibo/ticket, tipografía monoespaciada, blanco y negro casi puro.
    Acentos mínimos: terracota apagado para gastos, verde apagado para ingresos.
    Tema: sigue el sistema (prefers-color-scheme) con posibilidad de forzar
-   manualmente vía atributo data-theme en <html> (ver js/ui theme switch, tarea 9). */
+   manualmente vía atributo data-theme en <html> (js/ui/theme.js). */
 
 :root {
+  color-scheme: light dark;
   --color-bg: #FAFAF8;
   --color-ink: #14181C;
   --color-ink-muted: #6B7278;
@@ -33,6 +34,7 @@
 
 /* Forzado manual de tema, tiene prioridad sobre prefers-color-scheme */
 html[data-theme="light"] {
+  color-scheme: light;
   --color-bg: #FAFAF8;
   --color-ink: #14181C;
   --color-ink-muted: #6B7278;
@@ -40,6 +42,7 @@ html[data-theme="light"] {
 }
 
 html[data-theme="dark"] {
+  color-scheme: dark;
   --color-bg: #14181C;
   --color-ink: #FAFAF8;
   --color-ink-muted: #9A9FA4;
@@ -603,6 +606,39 @@ select {
 
 .stat-month {
   cursor: pointer;
+}
+
+/* Settings and Diagnóstico */
+.settings-email {
+  margin-top: var(--space-2);
+  overflow-wrap: anywhere;
+}
+
+.settings-signout {
+  color: var(--color-expense);
+}
+
+.diagnostics-copy {
+  width: 100%;
+  margin-top: var(--space-3);
+}
+
+.diagnostics-status {
+  margin-top: var(--space-2);
+}
+
+.diagnostics-log {
+  margin: var(--space-3) 0 0;
+  font-family: inherit;
+  font-size: 12px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.offscreen {
+  position: fixed;
+  left: -9999px;
 }
 
 /* `hidden` must win over the display of .field, .form and friends */

@@ -3,7 +3,7 @@
 // antiguas de la app (aprendido en la Fase 0, donde cache-first daba problemas
 // de staleness al actualizar código).
 
-const CACHE_NAME = 'cartos-v6';
+const CACHE_NAME = 'cartos-v7';
 
 const APP_SHELL = [
   './',
@@ -35,6 +35,7 @@ const APP_SHELL = [
   './js/screens/analysis.js',
   './js/screens/categories.js',
   './js/screens/dashboard.js',
+  './js/screens/diagnostics.js',
   './js/screens/history.js',
   './js/screens/login.js',
   './js/screens/onboarding.js',
@@ -49,6 +50,7 @@ const APP_SHELL = [
   './js/ui/components.js',
   './js/ui/navbar.js',
   './js/ui/router.js',
+  './js/ui/theme.js',
 ];
 
 self.addEventListener('install', (event) => {

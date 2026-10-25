@@ -5,10 +5,12 @@
 
 import { es } from '../i18n/es.js';
 import { decideRoute, parseHash, ROUTES, SECTIONS, SECTION_HASH } from './ui/router.js';
-import { getAuthState, TokenExpiredError } from './data/auth.js';
+import { startTheme } from './ui/theme.js';
+import { getAuthState, getCurrentUser, signOut, TokenExpiredError } from './data/auth.js';
 import { cachedPersonalBook, fetchPersonalBook } from './data/personal-book.js';
 import { syncOutbox } from './data/sync.js';
 import { listPending } from './storage/outbox.js';
+import { logEvent } from './storage/logs.js';
 import { enqueue, mergePending } from './storage/outbox-logic.js';
 import { renderLogin } from './screens/login.js';
 import { renderConnect } from './screens/connect.js';
@@ -20,6 +22,7 @@ import { renderHistory } from './screens/history.js';
 import { renderAnalysis } from './screens/analysis.js';
 import { findEntry } from './domain/history.js';
 import { renderSettings } from './screens/settings.js';
+import { renderDiagnostics } from './screens/diagnostics.js';
 import { renderCategories } from './screens/categories.js';
 import { renderAccounts } from './screens/accounts.js';
 
@@ -70,7 +73,20 @@ function showSection(root, { section, params }, offline) {
       break;
     }
     case SECTIONS.SETTINGS:
-      renderSettings(root);
+      renderSettings(root, {
+        user: getCurrentUser(),
+        pendingCount: pending.length,
+        onSignOut: () => {
+          signOut();
+          personal = UNKNOWN;
+          pending = [];
+          location.hash = SECTION_HASH.home;
+          show({ force: true });
+        },
+      });
+      break;
+    case SECTIONS.DIAGNOSTICS:
+      renderDiagnostics(root);
       break;
     case SECTIONS.CATEGORIES:
       renderCategories(root, { book: personal.book, fileId: personal.fileId, onChanged: reloadBook });
@@ -160,7 +176,11 @@ async function sync() {
     else repaint();
   } catch (err) {
     if (err instanceof TokenExpiredError) show();
-    else console.warn('Sync failed', err);
+    else {
+      // Only the error name and code: never the data being synced.
+      logEvent({ type: 'error', result: `sync:${err?.name ?? 'Error'}${err?.status ? `:${err.status}` : ''}` });
+      console.warn('Sync failed', err);
+    }
   }
 }
 
@@ -187,6 +207,7 @@ async function refresh() {
   }
 }
 
+startTheme();
 refresh();
 
 window.addEventListener('hashchange', () => show());

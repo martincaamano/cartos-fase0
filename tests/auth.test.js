@@ -3,8 +3,10 @@ import { test, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   configureAuth, decodeIdToken, getAuthState, getCurrentUser, renderSignInButton,
-  requestDriveAccess, getAccessToken, whenGoogleReady, AuthError, TokenExpiredError, DRIVE_SCOPE,
+  requestDriveAccess, getAccessToken, whenGoogleReady, AuthError, TokenExpiredError, DRIVE_SCOPE, signOut,
 } from '../js/data/auth.js';
+import { saveBookCache, loadBookCache } from '../js/storage/book-cache.js';
+import { configureLogs } from '../js/storage/logs.js';
 
 function fakeStorage() {
   const items = new Map();
@@ -136,4 +138,67 @@ test('whenGoogleReady gives up when the script never loads', async () => {
   assert.equal(await whenGoogleReady(8000), false);
   setup({ tokenResponse: {} });
   assert.equal(await whenGoogleReady(), true);
+});
+
+// --- signOut ---
+
+function signedInWithBookCopy() {
+  storage.setItem('cartos.session', JSON.stringify({
+    user: { sub: 'user-1', email: 'martin@example.com', name: 'Martín' },
+    driveGranted: true,
+    accessToken: 'tok-1',
+    tokenExpiresAt: clock + 3_600_000,
+  }));
+  saveBookCache(storage, { sub: 'user-1', fileId: 'file-1', snapshot: { accounts: [], categories: [], movements: [] } });
+  assert.equal(getAuthState().hasSession, true);
+  assert.notEqual(loadBookCache(storage, 'user-1'), null);
+}
+
+test('signOut forgets the session and the book copy and disables auto-select', () => {
+  const logged = [];
+  configureLogs({ write: async (entry) => { logged.push(entry); } });
+  let disabled = 0;
+  configureAuth({
+    storage: () => storage,
+    google: () => ({ accounts: { id: { disableAutoSelect: () => { disabled += 1; } } } }),
+    now: () => clock,
+  });
+  try {
+    signedInWithBookCopy();
+    signOut();
+    assert.deepEqual(getAuthState(), { hasSession: false, hasDriveAccess: false, tokenExpired: true });
+    assert.equal(getCurrentUser(), null);
+    assert.equal(loadBookCache(storage, 'user-1'), null);
+    assert.equal(storage.getItem('cartos.book'), null);
+    assert.equal(disabled, 1);
+    assert.deepEqual(logged.map((e) => [e.type, e.result]), [['login', 'signed_out']]);
+  } finally {
+    configureLogs();
+  }
+});
+
+test('signOut works when the Google script is missing', () => {
+  configureLogs({ write: async () => {} });
+  configureAuth({ storage: () => storage, google: () => undefined, now: () => clock });
+  try {
+    signedInWithBookCopy();
+    assert.doesNotThrow(() => signOut());
+    assert.equal(getAuthState().hasSession, false);
+    assert.equal(loadBookCache(storage, 'user-1'), null);
+  } finally {
+    configureLogs();
+  }
+});
+
+test('after signOut there is no access token', async () => {
+  configureLogs({ write: async () => {} });
+  configureAuth({ storage: () => storage, google: () => undefined, now: () => clock });
+  try {
+    signedInWithBookCopy();
+    assert.equal(await getAccessToken(), 'tok-1');
+    signOut();
+    await assert.rejects(getAccessToken(), TokenExpiredError);
+  } finally {
+    configureLogs();
+  }
 });

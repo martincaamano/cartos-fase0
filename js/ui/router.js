@@ -3,8 +3,8 @@
 
 // Sections inside the app once the book is ready, chosen by the URL hash:
 // #/ (Dashboard), #/history, #/history/edit?id=…, #/add,
-// #/analysis?month=YYYY-MM, #/settings,
-// #/settings/categories, #/settings/accounts.
+// #/analysis?month=YYYY-MM, #/settings, #/settings/categories,
+// #/settings/accounts, #/settings/diagnostics.
 export const SECTIONS = Object.freeze({
   HOME: 'home',
   HISTORY: 'history',
@@ -14,6 +14,7 @@ export const SECTIONS = Object.freeze({
   SETTINGS: 'settings',
   CATEGORIES: 'categories',
   ACCOUNTS: 'accounts',
+  DIAGNOSTICS: 'diagnostics',
 });
 
 const SECTION_BY_PATH = {
@@ -25,6 +26,7 @@ const SECTION_BY_PATH = {
   settings: SECTIONS.SETTINGS,
   'settings/categories': SECTIONS.CATEGORIES,
   'settings/accounts': SECTIONS.ACCOUNTS,
+  'settings/diagnostics': SECTIONS.DIAGNOSTICS,
 };
 
 export const SECTION_HASH = Object.freeze({
@@ -36,6 +38,7 @@ export const SECTION_HASH = Object.freeze({
   [SECTIONS.SETTINGS]: '#/settings',
   [SECTIONS.CATEGORIES]: '#/settings/categories',
   [SECTIONS.ACCOUNTS]: '#/settings/accounts',
+  [SECTIONS.DIAGNOSTICS]: '#/settings/diagnostics',
 });
 
 // "#/add?type=income" → { section: 'add', params: { type: 'income' } }.

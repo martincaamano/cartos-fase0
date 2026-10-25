@@ -9,7 +9,8 @@
 // Nothing here touches `document` or `google` at import time.
 
 import { GOOGLE_CLIENT_ID } from '../config.js';
-import { emptySession, isTokenExpired, loadSession, saveSession } from '../storage/session.js';
+import { clearSession, emptySession, isTokenExpired, loadSession, saveSession } from '../storage/session.js';
+import { clearBookCache } from '../storage/book-cache.js';
 import { logEvent } from '../storage/logs.js';
 
 export const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.file';
@@ -181,4 +182,18 @@ export async function getAccessToken() {
 export function expireAccessToken() {
   const session = load();
   save({ ...session, accessToken: null, tokenExpiresAt: null });
+}
+
+// Forgets what the device keeps for this account: the session and the copy
+// of the book. Drive access is not revoked, so signing in again needs no
+// permission screen. The outbox stays: it is tied to the book file and is
+// uploaded when the same account signs in again.
+export function signOut() {
+  const storage = deps.storage();
+  clearSession(storage);
+  clearBookCache(storage);
+  tokenClient = null;
+  pending = null;
+  deps.google()?.accounts?.id?.disableAutoSelect?.();
+  logEvent({ type: 'login', result: 'signed_out' });
 }
