@@ -7,7 +7,7 @@ Fuente de verdad del progreso. Los agentes lo leen al empezar una tarea y lo act
 - Repositorio: `cartos-fase0` (se queda con ese nombre).
 - GitHub Pages publica `main` (carpeta raíz) en https://martincaamano.github.io/cartos-fase0/. El repo es público: con el plan gratuito, Pages no funciona en repos privados (estuvo sin publicar del 2026-09-27 al 2026-10-24 por eso).
 - Se desarrolla desde un Mac (`npm test`, `npm run dev` en http://localhost:5173). Las pruebas reales se hacen en el iPhone.
-- Siguiente paso: la tarea 03, cuando el usuario lo diga. Antes hay que resolver la decisión 1.
+- Siguiente paso: la tarea 03, cuando el usuario lo diga.
 
 ## Tareas del MVP
 
@@ -15,7 +15,7 @@ Fuente de verdad del progreso. Los agentes lo leen al empezar una tarea y lo act
 |---|---|---|---|
 | 01 | Esqueleto PWA instalable | Hecha (2026-10-24) | Probada en iPhone. El icono definitivo queda aparte (decisión 3) |
 | 02 | Login y acceso a Drive | Hecha (2026-10-25) | Probada en iPhone. Sin verificar en uso real: «Reconectar» con el token caducado y los logs (tarea 09) |
-| 03 | Capa de datos y dominio del libro | Pendiente | Hay una decisión previa (ver abajo) |
+| 03 | Capa de datos y dominio del libro | Pendiente | Decisión 1 resuelta (`type`, importe positivo, `transferId`) |
 | 04 | Onboarding + Dashboard | Pendiente | |
 | 05 | Categorías + Añadir (gasto e ingreso) | Pendiente | |
 | 06 | Añadir (transferencia) | Pendiente | La pieza más grande |
@@ -38,7 +38,7 @@ Regla del plan: cada tarea, al cerrarse, deja algo 100% usable en el iPhone. Nin
 
 ## Decisiones abiertas
 
-1. **Cómo se guarda la dirección de un movimiento** (antes de la tarea 03). Propuesta: campo `type` con valor `income` o `expense` e importe siempre positivo, como en la especificación original del proyecto. La arquitectura actual no lo fija todavía. Hay que confirmarlo y anotarlo en `docs/arquitectura-app-finanzas.md`.
+1. ~~**Cómo se guarda la dirección de un movimiento.**~~ Decidido (2026-10-25): campo `type` con valor `income` o `expense` e importe siempre positivo. Una transferencia es un `expense` en origen y un `income` en destino. Anotado en `docs/arquitectura-app-finanzas.md` (punto 2, «Dirección e importe de un movimiento»). Además, columna opcional `transferId`: el mismo UUID en las dos filas de una transferencia dentro del mismo libro, para editarlas o borrarlas juntas; vacía entre libros distintos.
 2. **Refinamientos de diseño inspirados en Nothing OS.** Propuestos y sin decidir: estilo de puntos solo en el logo y en el saldo total del Dashboard, tipografía Geist Mono alojada en el repo, tarjetas con contorno en vez de bloques rellenos. Hasta que se decida, los agentes no los aplican.
 3. ~~**Iconos.**~~ Decidido (2026-10-25): «CARTOS» en mayúsculas con la fuente Cutive Mono (SIL OFL 1.1), con su peso original, y un cursor de bloque al final del mismo color que el texto. Sin color de acento. Los SVG maestros (`icons/icon-dark.svg`, `icons/icon-light.svg`) llevan el texto convertido a contornos, así que no dependen de la fuente instalada; los PNG salen de ellos con `sips`. Se descartaron la versión de puntos, el píxel cuadrado y las serif (NType 82 y la serif de Claude son tipografías privativas).
 
