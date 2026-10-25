@@ -178,7 +178,7 @@ Barra de navegación fija inferior (patrón estándar tipo Instagram/Twitter), c
 ## 12.3. Fuera del MVP (fases posteriores, no bloquean el modelo de datos)
 
 - Cuentas compartidas: invitación, Picker, pestaña `Members` (punto 5).
-- Apple Shortcuts: sin backend no pueden escribir en silencio; la vía realista es un enlace tipo `#/add?tipo=gasto&importe=12` que abre la app con el formulario relleno, y el usuario confirma con un toque.
+- Apple Shortcuts: sin backend no pueden escribir en silencio; la vía realista es un enlace tipo `#/add?type=expense&amount=12` que abre la app con el formulario relleno, y el usuario confirma con un toque. La app ya navega por hash (`#/`, `#/add`, `#/settings`, `#/settings/categories`, desde la tarea 05) y `#/add` ya lee `type`; los parámetros van en inglés, como el resto del código.
 - Pagos programados: sin servidor no hay notificaciones push; se generarían al abrir la app, comparando la fecha de vencimiento, con un id determinista (`scheduledId` + fecha) para evitar duplicados entre dispositivos.
 - Backend mínimo de refresco de tokens (punto 8).
 - Interruptor "incluir transferencias" en resúmenes agregados (punto 6).
