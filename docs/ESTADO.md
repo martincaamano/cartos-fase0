@@ -18,7 +18,7 @@ Fuente de verdad del progreso. Los agentes lo leen al empezar una tarea y lo act
 | 03 | Capa de datos y dominio del libro | Hecha (2026-10-25) | Probada contra Drive real desde el Mac (localhost); sin pantalla, no aplica iPhone |
 | 04 | Onboarding + Dashboard | Hecha (2026-10-25) | Probada en iPhone con la cuenta real |
 | 05 | Categorías + Añadir (gasto e ingreso) | Hecha (2026-10-25) | Probada en iPhone, con y sin conexión |
-| 06 | Añadir (transferencia) | Pendiente | La pieza más grande |
+| 06 | Añadir (transferencia) | Hecha (2026-10-25) | Probada en iPhone, con y sin conexión. Incluye Ajustes → Cuentas |
 | 07 | Historial | Pendiente | |
 | 08 | Análisis | Pendiente | |
 | 09 | Ajustes y Diagnóstico | Pendiente | |
@@ -68,6 +68,15 @@ Transversal: ~~publicar la app de Google Cloud de "Testing" a "Production"~~ Hec
 - Cola de salida en su propia base IndexedDB (`cartos-outbox`), con el id del movimiento como clave. La sincronización lee antes los ids que ya están en el Sheet y sube lo que falta en un único `append`; un fallo deja la cola intacta. Se lanza al guardar, al abrir, al volver a primer plano y al recuperar la conexión.
 - Los movimientos pendientes cuentan ya en el saldo y en «Últimos movimientos», y el Dashboard avisa de cuántos faltan por sincronizar.
 - Caché del Service Worker: `cartos-v3`.
+
+### Decisiones tomadas en la tarea 06
+- Una transferencia son dos movimientos con el mismo `transferId` y la categoría `transfer`: un `expense` en la cuenta origen y un `income` en la destino (`js/domain/transfer.js`). Origen y destino deben ser cuentas distintas.
+- Las dos mitades entran en la cola en una sola transacción de IndexedDB y llegan al Sheet en una única petición (`values:append` con las dos filas, igual de atómica que el `batchUpdate` que cita la arquitectura §6). Reintentar nunca crea cuatro filas.
+- En «Últimos movimientos» una transferencia es una sola línea («Abanca → Efectivo»), en tinta normal. Si falta una mitad, se muestra como movimiento suelto.
+- Desviación del plan: se añadió **Ajustes → Cuentas** (`#/settings/accounts`), con saldos y alta de cuentas, porque sin una segunda cuenta no se podía transferir. No se editan ni se borran cuentas. Un nombre repetido se rechaza sin distinguir mayúsculas. Necesita conexión.
+- Con menos de dos cuentas, la pestaña Transferencia explica por qué y enlaza a Cuentas.
+- Corrección de estilos: `[hidden]` oculta siempre, aunque el elemento tenga su propio `display`.
+- Caché del Service Worker: `cartos-v4`.
 
 Regla del plan: cada tarea, al cerrarse, deja algo 100% usable en el iPhone. Ninguna queda a medias esperando a la siguiente.
 
