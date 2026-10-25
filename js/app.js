@@ -1,24 +1,38 @@
-// Cartos — punto de entrada de la app
-// Tarea 1: de momento solo pinta el nombre de la app, sin lógica real todavía.
-// En tareas siguientes, este archivo pasará a decidir qué pantalla mostrar
-// (login / connect / onboarding / dashboard) según el estado de sesión,
-// y a montar el router y la navbar (ver js/ui/router.js, js/ui/navbar.js).
+// Cartos — app entry point. Picks the screen from the session state and
+// re-checks it when the app comes back to the foreground or regains network
+// (an access token lasts about an hour).
 
-function renderSplash() {
+import { decideRoute, ROUTES } from './ui/router.js';
+import { getAuthState, getCurrentUser } from './data/auth.js';
+import { renderLogin } from './screens/login.js';
+import { renderConnect } from './screens/connect.js';
+import { renderHome } from './screens/home.js';
+
+let currentRoute = null;
+
+function show() {
+  const offline = !navigator.onLine;
+  const route = decideRoute({ ...getAuthState(), offline });
+  if (route === currentRoute) return;
+  currentRoute = route;
+
   const root = document.getElementById('app');
-  root.innerHTML = `
-    <div style="
-      flex: 1;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      flex-direction: column;
-      gap: 8px;
-    ">
-      <h1 style="font-size: 28px; letter-spacing: 0.04em;">CARTOS</h1>
-      <p class="text-muted">esqueleto — tarea 1</p>
-    </div>
-  `;
+  switch (route) {
+    case ROUTES.LOGIN:
+      renderLogin(root, { onSignedIn: show });
+      break;
+    case ROUTES.CONNECT:
+    case ROUTES.RECONNECT:
+      renderConnect(root, { mode: route, onConnected: show });
+      break;
+    default:
+      renderHome(root, { email: getCurrentUser()?.email ?? '', offline });
+  }
 }
 
-renderSplash();
+show();
+
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') show();
+});
+window.addEventListener('online', show);

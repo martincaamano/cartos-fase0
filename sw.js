@@ -11,6 +11,15 @@ const APP_SHELL = [
   './manifest.json',
   './styles/main.css',
   './js/app.js',
+  './js/config.js',
+  './js/data/auth.js',
+  './js/storage/session.js',
+  './js/storage/logs.js',
+  './js/ui/router.js',
+  './js/screens/login.js',
+  './js/screens/connect.js',
+  './js/screens/home.js',
+  './i18n/es.js',
 ];
 
 self.addEventListener('install', (event) => {

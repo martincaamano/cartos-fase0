@@ -126,3 +126,49 @@ input {
   padding: var(--space-4) var(--space-3);
   padding-bottom: calc(72px + var(--space-4)); /* deja hueco a la navbar fija */
 }
+
+/* Login, Drive access and the placeholder home: one centred column, no navbar */
+.screen-auth {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-4);
+  text-align: center;
+  padding:
+    calc(env(safe-area-inset-top) + var(--space-4))
+    calc(env(safe-area-inset-right) + var(--space-3))
+    calc(env(safe-area-inset-bottom) + var(--space-4))
+    calc(env(safe-area-inset-left) + var(--space-3));
+}
+
+.auth-title {
+  font-size: 28px;
+  letter-spacing: 0.04em;
+  padding-bottom: var(--space-3);
+  border-bottom: 1px dashed var(--color-line);
+}
+
+.auth-action {
+  min-height: 44px;
+}
+
+.auth-note {
+  max-width: 300px;
+}
+
+.auth-button {
+  min-height: 44px;
+  min-width: 280px;
+}
+
+.auth-button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.auth-status {
+  min-height: 1.5em;
+  font-size: 13px;
+  max-width: 300px;
+}

@@ -1,0 +1,98 @@
+// Diagnostic logs kept on the device (architecture §9). Best effort: iOS may
+// wipe IndexedDB under storage pressure, and a failed write never breaks the app.
+//
+// The pure part (building entries) is separate from the IndexedDB part, which
+// only runs when called, so this module can be imported from Node.
+
+export const MAX_LOGS = 500;
+
+export const LOG_TYPES = Object.freeze(['login', 'token', 'sync', 'api', 'error']);
+
+// Only these fields ever reach storage. Anything else the caller passes
+// (amounts, notes, category names...) is dropped on purpose.
+export function buildLogEntry({ type, result, durationMs = null, ref = null }, now = new Date()) {
+  if (!LOG_TYPES.includes(type)) throw new Error(`Unknown log type: ${type}`);
+  return {
+    at: now.toISOString(),
+    type,
+    result: String(result),
+    durationMs: Number.isFinite(durationMs) ? Math.round(durationMs) : null,
+    // An id (movement, account, file), never free text.
+    ref: typeof ref === 'string' ? ref : null,
+  };
+}
+
+export function countToDrop(total, max = MAX_LOGS) {
+  return Math.max(0, total - max);
+}
+
+const DB_NAME = 'cartos';
+const DB_VERSION = 1;
+const STORE = 'logs';
+
+function openDb() {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open(DB_NAME, DB_VERSION);
+    request.onupgradeneeded = () => {
+      request.result.createObjectStore(STORE, { keyPath: 'seq', autoIncrement: true });
+    };
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+  });
+}
+
+function done(tx) {
+  return new Promise((resolve, reject) => {
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+    tx.onabort = () => reject(tx.error);
+  });
+}
+
+async function addEntry(entry) {
+  const db = await openDb();
+  try {
+    const tx = db.transaction(STORE, 'readwrite');
+    const store = tx.objectStore(STORE);
+    store.add(entry);
+    const countRequest = store.count();
+    countRequest.onsuccess = () => {
+      let toDrop = countToDrop(countRequest.result);
+      if (toDrop === 0) return;
+      // Keys grow with every insert, so the cursor starts at the oldest entry.
+      store.openCursor().onsuccess = (event) => {
+        const cursor = event.target.result;
+        if (!cursor || toDrop === 0) return;
+        cursor.delete();
+        toDrop -= 1;
+        cursor.continue();
+      };
+    };
+    await done(tx);
+  } finally {
+    db.close();
+  }
+}
+
+export async function logEvent(fields) {
+  try {
+    const entry = buildLogEntry(fields);
+    if (typeof indexedDB === 'undefined') return;
+    await addEntry(entry);
+  } catch (err) {
+    console.warn('Log write failed', err);
+  }
+}
+
+export async function readLogs() {
+  const db = await openDb();
+  try {
+    const request = db.transaction(STORE, 'readonly').objectStore(STORE).getAll();
+    return await new Promise((resolve, reject) => {
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+  } finally {
+    db.close();
+  }
+}
