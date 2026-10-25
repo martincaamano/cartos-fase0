@@ -23,4 +23,20 @@ export const es = {
     connected: 'Conectado a Drive',
     offline: 'Sin conexión',
   },
+  // Default categories written into every new book.
+  categories: {
+    groceries: 'Supermercado',
+    restaurants: 'Restaurantes',
+    transport: 'Transporte',
+    home: 'Hogar',
+    bills: 'Facturas',
+    leisure: 'Ocio',
+    health: 'Salud',
+    clothing: 'Ropa',
+    subscriptions: 'Suscripciones',
+    otherExpense: 'Otros gastos',
+    salary: 'Nómina',
+    otherIncome: 'Otros ingresos',
+    transfer: 'Transferencia',
+  },
 };
