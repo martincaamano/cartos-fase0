@@ -12,7 +12,7 @@ const SECTIONS = [
   { id: 'settings', label: es.navbar.settings },
 ];
 
-const ENABLED = ['home', 'history', 'add', 'settings'];
+const ENABLED = ['home', 'history', 'add', 'analysis', 'settings'];
 
 export function renderNavbar(container, { active = 'home' } = {}) {
   const nav = document.createElement('nav');

@@ -3,7 +3,7 @@
 // antiguas de la app (aprendido en la Fase 0, donde cache-first daba problemas
 // de staleness al actualizar código).
 
-const CACHE_NAME = 'cartos-v5';
+const CACHE_NAME = 'cartos-v6';
 
 const APP_SHELL = [
   './',
@@ -27,10 +27,12 @@ const APP_SHELL = [
   './js/domain/history.js',
   './js/domain/money.js',
   './js/domain/movement.js',
+  './js/domain/stats.js',
   './js/domain/transfer.js',
   './js/screens/connect.js',
   './js/screens/accounts.js',
   './js/screens/addMovement.js',
+  './js/screens/analysis.js',
   './js/screens/categories.js',
   './js/screens/dashboard.js',
   './js/screens/history.js',

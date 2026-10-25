@@ -107,7 +107,7 @@ export function renderHistory(root, { book }) {
         const [year, monthNumber] = entryMonth.split('-');
         const heading = document.createElement('h2');
         heading.className = 'receipt-heading';
-        heading.textContent = `${t.months[Number(monthNumber) - 1]} ${year}`;
+        heading.textContent = `${es.months[Number(monthNumber) - 1]} ${year}`;
         ul = document.createElement('ul');
         ul.className = 'receipt-list';
         list.append(heading, ul);
