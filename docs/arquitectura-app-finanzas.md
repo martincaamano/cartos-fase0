@@ -49,6 +49,17 @@ Cada movimiento distingue dos datos independientes:
 
 Ambas columnas se incluyen en `Movements` desde el MVP, aunque de momento el MVP sea solo personal, para no tener que migrar datos cuando se añadan cuentas compartidas.
 
+### Dirección e importe de un movimiento
+
+Decidido el 2026-10-25:
+
+- `type`: `income` o `expense`. Es lo que decide si el movimiento suma o resta al saldo de su cuenta.
+- `amount`: siempre positivo, guardado como número (nunca texto formateado). El signo se aplica al calcular, a partir de `type`: un gasto de 12,50 € se guarda como `type=expense`, `amount=12.5`.
+- Una transferencia son dos movimientos normales (ver punto 6): un `expense` en la cuenta origen y un `income` en la cuenta destino, por el mismo importe.
+- `transferId`: opcional. Vacío en un gasto o ingreso normal. En una transferencia dentro del mismo libro, las dos filas llevan el mismo UUID (generado con `crypto.randomUUID()`, distinto del `id` de cada fila), para que el Historial pueda editar o borrar las dos mitades juntas. Entre libros distintos queda vacío: allí las dos mitades son independientes (punto 6).
+
+Motivo: el formulario de Añadir ya separa Gasto e Ingreso, y en el Sheet es más difícil equivocarse al editar a mano un `type` que un signo.
+
 ## 3. Por qué `drive.file` y no un scope más amplio
 
 Confirmado contra la documentación oficial de Google: `https://www.googleapis.com/auth/drive.file` está clasificado como "Recomendado / No sensible", da acceso solo a los archivos que la app crea o que el usuario le entrega explícitamente, y funciona directo con la API de Sheets — no hace falta el scope amplio `spreadsheets` ("sensible", acceso a todos los Sheets del usuario).
@@ -83,7 +94,7 @@ Límite conocido y aceptado para el MVP de esta fase: el propietario del libro e
 
 La transferencia es un atajo del formulario, no una operación coordinada ni transaccional entre archivos:
 
-- **Entre dos cuentas del mismo libro** (caso típico: cuentas personales propias): una sola llamada `batchUpdate` que escribe las dos filas (salida en origen, entrada en destino), atómica de verdad.
+- **Entre dos cuentas del mismo libro** (caso típico: cuentas personales propias): una sola llamada `batchUpdate` que escribe las dos filas (salida en origen como `expense`, entrada en destino como `income`, ambas con el mismo `transferId`), atómica de verdad. Editar o borrar una transferencia afecta siempre a las dos filas a la vez.
 - **Entre libro personal y libro compartido**: dos movimientos independientes, un gasto en un archivo y un ingreso en el otro, sin enlace, sin estado "pendiente" ni reintentos coordinados. Si una mitad falla al sincronizar, se trata como cualquier otro fallo de sincronización normal — queda en la cola local hasta que se reintente. Editar o borrar una mitad no afecta a la otra; es responsabilidad de quien lo hace.
 
 Ambas filas usan la categoría `Transferencia`, que es una categoría normal a todos los efectos de cálculo (no se excluye de los totales de ingresos/gastos por cuenta: si transfieres a una cuenta, ese dinero sí es un ingreso real para *esa* cuenta). El neto (ingresos menos gastos) siempre sale correcto en cualquier resumen, porque cada transferencia se compensa sola en la resta; lo único que se infla son los totales brutos si se suman varias cuentas de un mismo libro a la vez, y es un efecto conocido y aceptado. Se deja como mejora futura (no en el MVP) un interruptor tipo "incluir transferencias" en el Historial, que simplemente filtre por esa categoría antes de sumar.
@@ -95,12 +106,14 @@ No se contempla revertir una mitad si la otra falla: revertir también puede fal
 1. Google Identity Services, botón "Continuar con Google" → ID token (identidad: email, nombre, `sub`).
 2. Botón separado "Conceder acceso a Drive" (evita el bloqueo de pop-ups de Safari al encadenarlo automáticamente tras el login) → token client aparte pide el scope `drive.file` → access token de en torno a 1 hora, adjuntado a cada llamada a Sheets/Drive API.
 3. Toda obtención de token pasa por una única función (`getAccessToken()`), para poder cambiar la implementación (por ejemplo, añadir un backend de refresco) sin tocar el resto de la app.
+4. La sesión se guarda en el dispositivo (`localStorage`, en `js/storage/session.js`): solo `sub`, email y nombre, si se concedió el acceso a Drive, y el access token con su caducidad. El ID token completo no se guarda. Así, cerrar y reabrir la app no vuelve a pedir nada mientras el token siga vigente. Borrar la app de la pantalla de inicio de iOS borra también esta sesión.
+5. El botón de login es el oficial de Google: Google Identity Services no permite uno con diseño propio.
 
 ## 8. Sincronización, tokens, y por qué no hay backend en el MVP
 
 Sin un servidor propio no existe *refresh token*: el access token dura en torno a una hora, y renovarlo puede requerir un toque de confirmación del usuario, no siempre es silencioso. Consecuencia aceptada para el MVP: **la sincronización solo ocurre con la app abierta**, nunca en segundo plano con la app cerrada. Los momentos de sync son: al abrir la app, al volver a primer plano, al recuperar conexión, o al pulsar "Sincronizar ahora". Si el token caducó, se muestra un botón "Reconectar" en vez de fallar en silencio.
 
-Además, mientras la app de Google Cloud esté en estado "Testing" (no publicada), la propia autorización expira a los 7 días para cualquier scope no básico, incluido `drive.file` — no solo el token de una hora. Publicar la app a "Production" resuelve esto; al ser `drive.file` un scope no sensible, no debería requerir el proceso de verificación manual de Google, pero queda pendiente de confirmar empíricamente en cuanto se despliegue.
+Además, mientras la app de Google Cloud esté en estado "Testing" (no publicada), la propia autorización expira a los 7 días para cualquier scope no básico, incluido `drive.file` — no solo el token de una hora. Publicar la app a "Production" resuelve esto. Confirmado el 2026-10-25: al ser `drive.file` un scope no sensible, Google no pidió verificación manual, pero sí exigió completar la página de marca (nombre, correos de contacto, dominio autorizado `martincaamano.github.io`, página principal y política de privacidad, publicada en `privacy.html`). No se subió logotipo, porque eso activa la verificación de marca.
 
 **Backend mínimo de solo-tokens, evaluado y aplazado (no descartado):** se consideró un servicio pequeño cuya única función sería guardar el refresh token de cada usuario (cifrado) y cambiarlo por access tokens nuevos, sin tocar nunca los datos financieros. Esto permitiría sincronización real en segundo plano y eliminaría el límite de 7 días sin depender de publicar la app. Se descarta para el MVP por varias razones: cambia el flujo de login (pasa a requerir código + servidor, sin validar aún en PWA instalada en iOS), exige que el backend identifique usuarios sin depender de cookies entre dominios (Safari las bloquea), convierte al desarrollador en custodio de una llave de acceso ajena (relaja la garantía de privacidad estructural de "nadie más puede ver tus datos"), y añade una pieza a desplegar y mantener. Se pospone porque:
 
