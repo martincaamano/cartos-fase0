@@ -11,3 +11,11 @@ export function accountBalance(account, movements) {
   }
   return fromCents(cents);
 }
+
+// Sum of the balances of every account not deleted, added in cents.
+export function totalBalance(accounts, movements) {
+  const cents = accounts
+    .filter((account) => !account.deleted)
+    .reduce((sum, account) => sum + toCents(accountBalance(account, movements)), 0);
+  return fromCents(cents);
+}

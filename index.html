@@ -18,7 +18,9 @@
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <script type="module" src="js/app.js"></script>
 <script>
-  if ('serviceWorker' in navigator) {
+  // Not on localhost: during development every reload must load the files
+  // as they are on disk, never a cached copy.
+  if ('serviceWorker' in navigator && location.hostname !== 'localhost') {
     window.addEventListener('load', () => {
       navigator.serviceWorker.register('sw.js').catch((err) => {
         console.error('Service worker registration failed', err);
