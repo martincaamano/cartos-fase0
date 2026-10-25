@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { decideRoute, ROUTES } from '../js/ui/router.js';
+import { decideRoute, ROUTES, parseHash, SECTIONS, SECTION_HASH } from '../js/ui/router.js';
 
 test('decideRoute covers every session / drive / token combination', () => {
   const cases = [
@@ -43,4 +43,17 @@ test('offline, the device copy opens the Dashboard; without one, the offline scr
 
 test('online with an expired token asks to reconnect even with a device copy', () => {
   assert.equal(decideRoute({ ...signedIn, tokenExpired: true, book: 'ready' }), ROUTES.RECONNECT);
+});
+
+test('parseHash maps each hash to its section and keeps the query', () => {
+  assert.deepEqual(parseHash(''), { section: SECTIONS.HOME, params: {} });
+  assert.deepEqual(parseHash('#/'), { section: SECTIONS.HOME, params: {} });
+  assert.deepEqual(parseHash('#/add?type=income'), { section: SECTIONS.ADD, params: { type: 'income' } });
+  assert.deepEqual(parseHash('#/settings'), { section: SECTIONS.SETTINGS, params: {} });
+  assert.deepEqual(parseHash('#/settings/categories/'), { section: SECTIONS.CATEGORIES, params: {} });
+  assert.deepEqual(parseHash('#/nope'), { section: SECTIONS.HOME, params: {} });
+});
+
+test('every section has a hash that parses back to it', () => {
+  for (const [section, hash] of Object.entries(SECTION_HASH)) assert.equal(parseHash(hash).section, section);
 });

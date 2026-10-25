@@ -1,7 +1,9 @@
 // The whole book flow against a faked Google API: no call reaches Google.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { createBook, readBook, addAccount, addMovement, ValidationError } from '../js/data/book.js';
+import {
+  createBook, readBook, addAccount, addMovement, addCategory, removeCategory, ValidationError,
+} from '../js/data/book.js';
 import { HEADERS, toRow } from '../js/data/rows.js';
 import { setupGoogleApi, TOKEN } from './helpers/fake-google.js';
 
@@ -90,4 +92,34 @@ test('addMovement reads the book first when it is not given', async () => {
   const calls = setupGoogleApi(bookResponse);
   await addMovement('file-1', { accountId: 'acc-1', type: 'expense', amount: 1, date: '2026-10-25', categoryId: 'cat-1' });
   assert.deepEqual(calls.map((c) => c.method), ['GET', 'POST']);
+});
+
+test('addCategory appends a valid own category and rejects a repeated name', async () => {
+  const calls = setupGoogleApi();
+  const existing = [{ id: 'cat-1', name: 'Ocio', kind: 'expense', deleted: false }];
+  const category = await addCategory('file-1', { name: 'Gimnasio', emoji: '🏋️', kind: 'expense' }, existing);
+  assert.equal(category.isDefault, false);
+  assert.ok(isWrite(calls[0]));
+  assert.equal(calls[0].url.pathname, '/v4/spreadsheets/file-1/values/Categories:append');
+
+  await assert.rejects(addCategory('file-1', { name: 'ocio', kind: 'expense' }, existing),
+    (err) => err instanceof ValidationError && err.errors.includes('name_taken'));
+  assert.equal(calls.length, 1);
+});
+
+test('removeCategory marks the row found by id as deleted, never removes it', async () => {
+  const calls = setupGoogleApi((call) => (call.method === 'GET'
+    ? { body: { valueRanges: [{ values: [['id'], ['transfer'], ['cat-1'], ['cat-2']] }] } }
+    : {}));
+  await removeCategory('file-1', { id: 'cat-2', deleted: false }, new Date('2026-10-25T10:00:00Z'));
+  const write = calls[1];
+  assert.equal(write.body.valueInputOption, 'RAW');
+  assert.deepEqual(write.body.data, [{ range: 'Categories!F4:G4', values: [['2026-10-25T10:00:00.000Z', true]] }]);
+});
+
+test('removeCategory refuses Transfer and unknown ids', async () => {
+  const calls = setupGoogleApi(() => ({ body: { valueRanges: [{ values: [['id']] }] } }));
+  await assert.rejects(removeCategory('file-1', { id: 'transfer', deleted: false }), (err) => err.errors.includes('not_removable'));
+  assert.equal(calls.length, 0);
+  await assert.rejects(removeCategory('file-1', { id: 'nope', deleted: false }), (err) => err.errors.includes('category_unknown'));
 });

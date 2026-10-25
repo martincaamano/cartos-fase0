@@ -45,9 +45,52 @@ export function buildDefaultCategories(names, deps = {}) {
   });
 }
 
-export function validateCategory(category) {
+// A category created by the user (never a default one).
+export function createCategory({ name, emoji = '', kind }, deps = {}) {
+  const { now, newId } = { ...defaults, ...deps };
+  return {
+    id: newId(),
+    name: String(name ?? '').trim(),
+    emoji: String(emoji ?? '').trim(),
+    kind,
+    isDefault: false,
+    updatedAt: now().toISOString(),
+    deleted: false,
+  };
+}
+
+const sameName = (a, b) => a.trim().toLocaleLowerCase('es') === b.trim().toLocaleLowerCase('es');
+
+// existing: the categories already in the book; a deleted one does not block
+// reusing its name.
+export function validateCategory(category, existing = []) {
   const errors = [];
-  if (!String(category.name ?? '').trim()) errors.push('name_required');
+  const name = String(category.name ?? '').trim();
+  if (!name) errors.push('name_required');
+  else if (existing.some((other) => !other.deleted && other.id !== category.id && sameName(other.name, name))) {
+    errors.push('name_taken');
+  }
   if (!CATEGORY_KINDS.includes(category.kind)) errors.push('kind_invalid');
   return errors;
+}
+
+export function canRemoveCategory(category) {
+  return category.id !== TRANSFER_CATEGORY_ID && !category.deleted;
+}
+
+// Categories offered for a movement type, most used first; ties keep the
+// book order (defaults first). Transfer is never offered by hand.
+export function rankCategories(categories, movements, type) {
+  const uses = new Map();
+  for (const movement of movements) {
+    if (!movement.deleted && movement.type === type) {
+      uses.set(movement.categoryId, (uses.get(movement.categoryId) ?? 0) + 1);
+    }
+  }
+  return categories
+    .map((category, index) => ({ category, index }))
+    .filter(({ category }) => !category.deleted && category.id !== TRANSFER_CATEGORY_ID
+      && (category.kind === type || category.kind === 'both'))
+    .sort((a, b) => (uses.get(b.category.id) ?? 0) - (uses.get(a.category.id) ?? 0) || a.index - b.index)
+    .map(({ category }) => category);
 }

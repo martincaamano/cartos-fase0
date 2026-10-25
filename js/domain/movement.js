@@ -54,6 +54,20 @@ export function validateMovement(movement, { accountIds, categoryIds }) {
   return errors;
 }
 
+// Local calendar day as YYYY-MM-DD (no time zone conversion).
+export function toIsoDate(date) {
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${date.getFullYear()}-${month}-${day}`;
+}
+
+// Hoy / Ayer / Anteayer for the date picker. `today` is passed in so month
+// and year boundaries can be tested.
+export function quickDates(today) {
+  const shift = (days) => toIsoDate(new Date(today.getFullYear(), today.getMonth(), today.getDate() - days));
+  return { today: shift(0), yesterday: shift(1), dayBefore: shift(2) };
+}
+
 // Newest first by date, then by creation time; deleted movements left out.
 export function latestMovements(movements, count) {
   return movements

@@ -5,6 +5,7 @@ import { es } from '../../i18n/es.js';
 import { parseAmountInput } from '../domain/money.js';
 import { createAccount, validateAccount } from '../domain/account.js';
 import { setUpPersonalBook } from '../data/personal-book.js';
+import { setupEmojiPicker } from '../ui/components.js';
 
 const SUGGESTED_EMOJIS = ['🏦', '💶', '💳', '🐷', '💼', '🏠'];
 
@@ -44,25 +45,7 @@ export function renderOnboarding(root, { fileId = null, onDone }) {
   name.placeholder = t.namePlaceholder;
   balance.placeholder = t.balancePlaceholder;
   submit.textContent = t.submit;
-  emoji.value = SUGGESTED_EMOJIS[0];
-
-  const row = root.querySelector('.emoji-row');
-  const markSelected = () => {
-    for (const button of row.children) button.classList.toggle('is-selected', button.textContent === emoji.value);
-  };
-  for (const suggestion of SUGGESTED_EMOJIS) {
-    const button = document.createElement('button');
-    button.type = 'button';
-    button.className = 'emoji-option';
-    button.textContent = suggestion;
-    button.addEventListener('click', () => {
-      emoji.value = suggestion;
-      markSelected();
-    });
-    row.appendChild(button);
-  }
-  emoji.addEventListener('input', markSelected);
-  markSelected();
+  setupEmojiPicker(root.querySelector('.emoji-row'), emoji, SUGGESTED_EMOJIS);
 
   form.addEventListener('submit', (event) => {
     event.preventDefault();
