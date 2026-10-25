@@ -17,6 +17,7 @@ import { renderOnboarding } from './screens/onboarding.js';
 import { renderDashboard } from './screens/dashboard.js';
 import { renderAddMovement } from './screens/addMovement.js';
 import { renderHistory } from './screens/history.js';
+import { renderAnalysis } from './screens/analysis.js';
 import { findEntry } from './domain/history.js';
 import { renderSettings } from './screens/settings.js';
 import { renderCategories } from './screens/categories.js';
@@ -34,7 +35,7 @@ let fetching = false;
 // Screens that may be repainted with fresh data; a half-filled Add form
 // never is, and neither is the History, so its filters stay put.
 const REPAINTABLE = new Set(
-  [SECTIONS.HOME, SECTIONS.CATEGORIES, SECTIONS.ACCOUNTS].map((section) => `${ROUTES.DASHBOARD}:${section}`)
+  [SECTIONS.HOME, SECTIONS.ANALYSIS, SECTIONS.CATEGORIES, SECTIONS.ACCOUNTS].map((section) => `${ROUTES.DASHBOARD}:${section}`)
 );
 const repaint = () => show({ force: REPAINTABLE.has(currentKey) });
 
@@ -54,6 +55,9 @@ function showSection(root, { section, params }, offline) {
       break;
     case SECTIONS.HISTORY:
       renderHistory(root, { book });
+      break;
+    case SECTIONS.ANALYSIS:
+      renderAnalysis(root, { book, params });
       break;
     case SECTIONS.EDIT: {
       const entry = findEntry(book.movements, params.id);

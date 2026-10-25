@@ -556,6 +556,55 @@ select {
   opacity: 0.5;
 }
 
+/* Analysis */
+.month-picker {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px dashed var(--color-line);
+}
+
+.month-step {
+  min-width: 44px;
+  min-height: 44px;
+  font-size: 22px;
+}
+
+.month-step:disabled {
+  color: var(--color-ink-muted);
+  opacity: 0.4;
+  cursor: default;
+}
+
+.month-label {
+  letter-spacing: 0.08em;
+}
+
+.stat-category {
+  flex-wrap: wrap;
+  row-gap: var(--space-1);
+}
+
+.stat-bar {
+  flex-basis: 100%;
+  height: 6px;
+  background: var(--color-line);
+}
+
+.stat-bar-fill {
+  display: block;
+  height: 100%;
+  background: var(--color-ink-muted);
+}
+
+.stat-savings {
+  font-weight: 600;
+}
+
+.stat-month {
+  cursor: pointer;
+}
+
 /* `hidden` must win over the display of .field, .form and friends */
 [hidden] {
   display: none !important;
