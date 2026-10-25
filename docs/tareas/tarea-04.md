@@ -1,6 +1,6 @@
 # Tarea 04 — Onboarding + Dashboard
 
-Estado: pendiente.
+Estado: hecha (2026-10-25).
 Depende de: 03 cerrada.
 
 ## Objetivo
@@ -24,12 +24,12 @@ Añadir movimientos, Historial, Análisis, Ajustes.
 - Las categorías por defecto incluyen `Transferencia` y no tienen ids repetidos.
 
 ## Pruebas manuales en iPhone
-- [ ] Con un Drive sin libro, aparece el onboarding.
-- [ ] Al confirmar se crea el libro (se ve en Drive) y se llega al Dashboard.
-- [ ] El Dashboard muestra el saldo inicial como total y la cuenta como tarjeta.
-- [ ] Cerrar y reabrir lleva directo al Dashboard, sin onboarding.
-- [ ] Modo claro y oscuro se ven bien; el teclado numérico se abre en el campo de saldo.
+- [x] Con un Drive sin libro, aparece el onboarding.
+- [x] Al confirmar se crea el libro (se ve en Drive) y se llega al Dashboard.
+- [x] El Dashboard muestra el saldo inicial como total y la cuenta como tarjeta.
+- [x] Cerrar y reabrir lleva directo al Dashboard, sin onboarding.
+- [x] Modo claro y oscuro se ven bien; el teclado numérico se abre en el campo de saldo.
 
 ## Criterio de cierre
-- [ ] Completas el onboarding en tu iPhone y ves tu cuenta real, con su saldo inicial, en el Dashboard.
-- [ ] `npm test` en verde.
+- [x] Completas el onboarding en tu iPhone y ves tu cuenta real, con su saldo inicial, en el Dashboard.
+- [x] `npm test` en verde.

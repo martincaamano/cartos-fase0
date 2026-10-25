@@ -29,7 +29,7 @@ Antes: en Google Cloud Console añade `http://localhost:5173` a los orígenes au
 - [x] En la PWA instalada, "Continuar con Google" abre el login y vuelve a la app.
 - [x] "Conceder acceso a Drive" pide el permiso `drive.file` y lo obtiene.
 - [x] Cerrar la app del todo y reabrirla no vuelve a pedir ninguna de las dos cosas.
-- [ ] Con el token caducado aparece un botón "Reconectar", no un fallo mudo. *Pendiente de verificar en uso real; cubierto por tests de `decideRoute` y `auth`.*
+- [x] Con el token caducado aparece un botón "Reconectar", no un fallo mudo. *Verificado en el iPhone el 2026-10-25.*
 - [ ] Los logs registran los eventos de login y token (se verán en Diagnóstico en la tarea 09). *Pendiente; se verificará en la tarea 09.*
 
 ## Transversal
