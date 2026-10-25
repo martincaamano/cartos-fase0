@@ -25,10 +25,12 @@
 
 Dentro de un libro, las pestañas son:
 
-- **Accounts**: las cuentas que viven en ese libro (id, nombre, emoji, saldo inicial).
-- **Categories**: categorías disponibles en ese libro, con las por defecto (incluida `Transferencia`) más las que cree el usuario.
-- **Movements**: todos los movimientos de todas las cuentas del libro, con columna `accountId` para saber a cuál pertenece cada uno.
+- **Accounts**: las cuentas que viven en ese libro. Columnas: `id`, `name`, `emoji`, `initialBalance`, `createdAt`, `updatedAt`, `deleted`.
+- **Categories**: categorías disponibles en ese libro, con las por defecto (incluida `Transferencia`, con id fijo `transfer`) más las que cree el usuario. Columnas: `id`, `name`, `emoji`, `kind` (`expense`, `income` o `both`), `isDefault`, `updatedAt`, `deleted`.
+- **Movements**: todos los movimientos de todas las cuentas del libro, con columna `accountId` para saber a cuál pertenece cada uno. Columnas: `id`, `accountId`, `type`, `amount`, `date`, `categoryId`, `note`, `transferId`, `personId`, `createdBy`, `createdAt`, `updatedAt`, `deleted`. Se guarda el id de la categoría, no su nombre, para que renombrarla no rompa nada.
 - **Members** (solo libros compartidos, fase posterior): email, nombre y rol de cada persona con acceso.
+
+La primera fila de cada pestaña es la cabecera, y su orden es un contrato con el código (`js/data/rows.js`): si alguien reordena las columnas a mano, la app se niega a leer el libro en vez de mezclar datos. `createdAt` y `updatedAt` van en ISO 8601; `deleted` e `isDefault` son booleanos; los importes, números.
 
 Motivo del cambio frente al modelo anterior ("un Sheet por cuenta"): dentro de un mismo libro, una transferencia entre dos cuentas propias es un único `batchUpdate` atómico de verdad, y calcular el total entre tus cuentas personales no exige abrir varios archivos. Entre libros distintos (personal ↔ compartido) el cruce de archivos es inevitable en cualquier modelo, porque cambia quién tiene acceso — ver punto 6.
 

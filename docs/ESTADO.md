@@ -15,7 +15,7 @@ Fuente de verdad del progreso. Los agentes lo leen al empezar una tarea y lo act
 |---|---|---|---|
 | 01 | Esqueleto PWA instalable | Hecha (2026-10-24) | Probada en iPhone. El icono definitivo queda aparte (decisión 3) |
 | 02 | Login y acceso a Drive | Hecha (2026-10-25) | Probada en iPhone. Sin verificar en uso real: «Reconectar» con el token caducado y los logs (tarea 09) |
-| 03 | Capa de datos y dominio del libro | Pendiente | Decisión 1 resuelta (`type`, importe positivo, `transferId`) |
+| 03 | Capa de datos y dominio del libro | Hecha (2026-10-25) | Probada contra Drive real desde el Mac (localhost); sin pantalla, no aplica iPhone |
 | 04 | Onboarding + Dashboard | Pendiente | |
 | 05 | Categorías + Añadir (gasto e ingreso) | Pendiente | |
 | 06 | Añadir (transferencia) | Pendiente | La pieza más grande |
@@ -33,6 +33,20 @@ Transversal: ~~publicar la app de Google Cloud de "Testing" a "Production"~~ Hec
 - Sin conexión y con sesión guardada, la app abre igualmente; sin sesión, el login avisa de que no hay conexión.
 - La clave de API del Picker del spike se eliminó en Google Cloud (era visible en el repo público). Cuando haga falta el Picker (cuentas compartidas, fuera del MVP), se crea una nueva restringida al dominio y a la Picker API.
 - Borrar la app de la pantalla de inicio borra su sesión (iOS borra sus datos): al reinstalarla hay que volver a iniciar sesión.
+
+### Decisiones tomadas en la tarea 03
+- Columnas del libro:
+  - `Accounts`: id, name, emoji, initialBalance, createdAt, updatedAt, deleted.
+  - `Categories`: id, name, emoji, kind (`expense`, `income` o `both`), isDefault, updatedAt, deleted.
+  - `Movements`: id, accountId, type, amount, date, categoryId, note, transferId, personId, createdBy, createdAt, updatedAt, deleted.
+
+  El orden de las cabeceras es un contrato (`js/data/rows.js`): si alguien reordena las columnas a mano, la app se niega a leer el libro.
+- Los movimientos guardan el id de la categoría, no su nombre. «Transferencia» tiene el id fijo `transfer`.
+- 13 categorías por defecto (10 de gasto, 2 de ingreso y Transferencia). Sus nombres están en `i18n/es.js`.
+- El archivo del libro se llama «Cartos · <nombre>» (por ejemplo «Cartos · Personal»).
+- Todas las llamadas a Google pasan por `googleFetch` (`js/data/http.js`). El log guarda la operación y el código HTTP, por ejemplo `sheets.append:200`.
+- `sw.js` no cambia todavía: estos módulos no se cargan al arrancar. Se añaden a `APP_SHELL` en la tarea 04.
+- Para probar en local: `http://localhost:5173` está en los orígenes autorizados del Client ID. En el navegador integrado de Claude Code, el Service Worker no deja cargar los módulos nuevos; las pruebas desde consola se hacen sin él (por ejemplo, desde `privacy.html`).
 
 Regla del plan: cada tarea, al cerrarse, deja algo 100% usable en el iPhone. Ninguna queda a medias esperando a la siguiente.
 

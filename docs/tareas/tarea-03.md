@@ -1,10 +1,12 @@
 # Tarea 03 — Capa de datos y dominio del libro
 
-Estado: pendiente.
+Estado: hecha (2026-10-25).
 Depende de: 02 cerrada.
 
 ## Decisión previa (confirmar con el usuario antes de escribir código)
 Cómo se guarda la dirección de un movimiento. Propuesta: `type` (`income` o `expense`) con importe siempre positivo. Una vez confirmado, anotarlo en `docs/arquitectura-app-finanzas.md` §2 y en `docs/ESTADO.md`.
+
+Resuelta (2026-10-25): `type` + importe siempre positivo, más un `transferId` opcional. Anotada en la arquitectura §2 y en `docs/ESTADO.md`.
 
 ## Objetivo
 Sin pantalla nueva. Es la base de todas las tareas siguientes: crear un libro real en Drive y leerlo.
@@ -24,11 +26,11 @@ Pantallas, cola de salida, transferencias.
 - `book` y `sheets` con `fetch` simulado: URL correcta, cabecera `Authorization: Bearer`, `valueInputOption=RAW` presente en cada escritura, ninguna llamada a Google real.
 
 ## Pruebas manuales
-- [ ] Una función (llamada desde la consola o desde un botón temporal de depuración, que no se versiona) crea un libro real en tu Drive con sus tres pestañas.
-- [ ] Otra función lo lee y devuelve las cuentas y los movimientos correctos.
-- [ ] Abres el Sheet a mano en Drive y los datos coinciden.
+- [x] Una función (llamada desde la consola o desde un botón temporal de depuración, que no se versiona) crea un libro real en tu Drive con sus tres pestañas.
+- [x] Otra función lo lee y devuelve las cuentas y los movimientos correctos.
+- [x] Abres el Sheet a mano en Drive y los datos coinciden.
 
 ## Criterio de cierre
-- [ ] Existe una función que crea un libro en tu Drive con las tres pestañas, y otra que lee sus cuentas y movimientos, verificado abriendo el Sheet.
-- [ ] La lógica de `domain/` tiene tests, incluidos casos límite y casos inválidos.
-- [ ] `npm test` en verde.
+- [x] Existe una función que crea un libro en tu Drive con las tres pestañas, y otra que lee sus cuentas y movimientos, verificado abriendo el Sheet.
+- [x] La lógica de `domain/` tiene tests, incluidos casos límite y casos inválidos.
+- [x] `npm test` en verde.
