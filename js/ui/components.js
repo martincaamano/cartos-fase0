@@ -111,8 +111,9 @@ export function renderCategoryPicker(container, { categories, selectedId = null,
 }
 
 // Hoy / Ayer / Anteayer plus a native date field for any other day.
+// initial: YYYY-MM-DD to start with (today when not given).
 // texts: { today, yesterday, dayBefore, other }.
-export function renderDatePicker(container, { today, onChange, texts }) {
+export function renderDatePicker(container, { today, initial = null, onChange, texts }) {
   container.replaceChildren();
   const dates = quickDates(today);
   const row = document.createElement('div');
@@ -141,5 +142,5 @@ export function renderDatePicker(container, { today, onChange, texts }) {
     if (other.value) choose(other.value);
   });
   container.append(row, other);
-  choose(dates.today);
+  choose(initial ?? dates.today);
 }

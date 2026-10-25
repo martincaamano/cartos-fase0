@@ -12,6 +12,13 @@ export function formatEuros(amount) {
   return `${sign}${units},${decimals} €`;
 }
 
+// What the amount field shows when editing: 1250.5 → "1250,50". No
+// thousands dot, so it reads back the same with parseAmountInput.
+export function formatAmountInput(amount) {
+  const cents = toCents(amount);
+  return `${Math.floor(cents / 100)},${String(cents % 100).padStart(2, '0')}`;
+}
+
 // "2026-10-25" → "25/10". The year is left out: the list shows recent dates.
 export function formatShortDate(date) {
   const [, month, day] = date.split('-');

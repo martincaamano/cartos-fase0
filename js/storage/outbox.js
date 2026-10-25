@@ -54,9 +54,16 @@ export async function listPending() {
   return holder.items ?? [];
 }
 
-export function removePending(ids) {
-  if (ids.length === 0) return Promise.resolve();
+// movements: the versions just uploaded. One that was edited again in the
+// meantime (another updatedAt) stays queued for the next sync.
+export function removePending(movements) {
+  if (movements.length === 0) return Promise.resolve();
   return withStore('readwrite', (store) => {
-    for (const id of ids) store.delete(id);
+    for (const movement of movements) {
+      const request = store.get(movement.id);
+      request.onsuccess = () => {
+        if (request.result?.movement.updatedAt === movement.updatedAt) store.delete(movement.id);
+      };
+    }
   });
 }

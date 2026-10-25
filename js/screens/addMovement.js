@@ -1,12 +1,15 @@
 // Add: tabs Gasto / Ingreso / Transferencia. Validation comes from domain/;
 // movements go to the outbox and are uploaded to the Sheet in the
 // background. A transfer has no category: the app sets Transferencia.
+// The same form edits or deletes a saved entry from the History: its type
+// is fixed, and a transfer changes both halves together.
 
 import { es } from '../../i18n/es.js';
 import { parseAmountInput } from '../domain/money.js';
 import { rankCategories } from '../domain/category.js';
-import { queueMovement, queueTransfer } from '../data/sync.js';
+import { queueDelete, queueEdit, queueMovement, queueTransfer, queueTransferEdit } from '../data/sync.js';
 import { createAmountInput, renderCategoryPicker, renderDatePicker } from '../ui/components.js';
+import { formatAmountInput } from '../ui/format.js';
 import { SECTION_HASH } from '../ui/router.js';
 import { renderNavbar } from '../ui/navbar.js';
 
@@ -29,11 +32,15 @@ function fillAccounts(select, accounts) {
   }
 }
 
-export function renderAddMovement(root, { book, fileId, params = {}, today = new Date(), onSaved }) {
+// entry: a History entry to edit (historyEntries / findEntry), or null to
+// add a new movement. onSaved gets what went to the outbox.
+export function renderAddMovement(root, { book, fileId, params = {}, entry = null, today = new Date(), onSaved }) {
   const t = es.add;
   root.innerHTML = `
     <main class="screen screen-form screen-with-navbar">
+      <a class="link-button back-link" hidden></a>
       <div class="tabs" role="tablist"></div>
+      <p class="text-muted form-note loose-half" hidden></p>
       <div class="transfer-blocked" hidden>
         <p class="text-muted form-note"></p>
         <a class="link-button"></a>
@@ -68,6 +75,7 @@ export function renderAddMovement(root, { book, fileId, params = {}, today = new
         </label>
         <p class="form-error" role="alert"></p>
         <button type="submit" class="btn-primary form-submit"></button>
+        <button type="button" class="link-button form-delete" hidden></button>
       </form>
     </main>
   `;
@@ -91,17 +99,30 @@ export function renderAddMovement(root, { book, fileId, params = {}, today = new
   for (const select of [accountSelect, fromSelect, toSelect]) fillAccounts(select, accounts);
   if (accounts.length > 1) toSelect.value = accounts[1].id;
 
+  // What is being edited: one movement, or both halves of a transfer.
+  const original = entry?.kind === 'movement' ? entry.movement : null;
+  const halves = entry?.kind === 'transfer' ? entry.halves : null;
+  const initialType = halves ? 'transfer' : original?.type ?? params.type;
   const state = {
-    type: TYPES.includes(params.type) ? params.type : 'expense',
+    type: TYPES.includes(initialType) ? initialType : 'expense',
     categoryId: null,
     date: null,
+  };
+
+  const categoryChoices = () => {
+    const ranked = rankCategories(book.categories, book.movements, state.type);
+    // A removed category (or Transferencia on a loose half) stays selectable
+    // for the movement that already uses it.
+    const own = original && book.categories.find((c) => c.id === original.categoryId);
+    return own && !ranked.includes(own) ? [own, ...ranked] : ranked;
   };
 
   const paintCategories = () => {
     state.categoryId = null;
     if (state.type === 'transfer') return;
     renderCategoryPicker(root.querySelector('.category-picker'), {
-      categories: rankCategories(book.categories, book.movements, state.type),
+      categories: categoryChoices(),
+      selectedId: original?.categoryId ?? null,
       onSelect: (category) => { state.categoryId = category.id; },
       texts: { seeAll: t.seeAll, search: t.search, empty: t.noMatches },
     });
@@ -130,6 +151,7 @@ export function renderAddMovement(root, { book, fileId, params = {}, today = new
     tab.setAttribute('role', 'tab');
     tab.dataset.type = type;
     tab.textContent = t[type];
+    tab.disabled = Boolean(entry) && type !== state.type;
     tab.addEventListener('click', () => {
       state.type = type;
       applyType();
@@ -138,8 +160,29 @@ export function renderAddMovement(root, { book, fileId, params = {}, today = new
   }
   applyType();
 
+  const saved = original ?? halves?.[0];
+  if (saved) {
+    const back = root.querySelector('.back-link');
+    back.hidden = false;
+    back.href = SECTION_HASH.history;
+    back.textContent = t.back;
+    amount.value = formatAmountInput(saved.amount);
+    form.elements.note.value = saved.note;
+    if (original) accountSelect.value = original.accountId;
+    if (halves) {
+      fromSelect.value = halves[0].accountId;
+      toSelect.value = halves[1].accountId;
+    }
+    if (original?.transferId) {
+      const warning = root.querySelector('.loose-half');
+      warning.hidden = false;
+      warning.textContent = t.looseHalf;
+    }
+  }
+
   renderDatePicker(root.querySelector('.date-picker'), {
     today,
+    initial: saved?.date ?? null,
     onChange: (date) => { state.date = date; },
     texts: { today: t.today, yesterday: t.yesterday, dayBefore: t.dayBefore, other: t.otherDate },
   });
@@ -154,9 +197,13 @@ export function renderAddMovement(root, { book, fileId, params = {}, today = new
       date: state.date,
       note: form.elements.note.value.trim(),
     };
-    const saving = state.type === 'transfer'
-      ? queueTransfer(fileId, { ...common, fromAccountId: fromSelect.value, toAccountId: toSelect.value }, book)
-      : queueMovement(fileId, { ...common, accountId: accountSelect.value, type: state.type, categoryId: state.categoryId }, book);
+    const transfer = { ...common, fromAccountId: fromSelect.value, toAccountId: toSelect.value };
+    const single = { ...common, accountId: accountSelect.value, type: state.type, categoryId: state.categoryId };
+    let saving;
+    if (halves) saving = queueTransferEdit(fileId, halves, transfer, book);
+    else if (original) saving = queueEdit(fileId, original, single, book);
+    else if (state.type === 'transfer') saving = queueTransfer(fileId, transfer, book);
+    else saving = queueMovement(fileId, single, book);
     saving
       .then(onSaved)
       .catch((err) => {
@@ -167,5 +214,30 @@ export function renderAddMovement(root, { book, fileId, params = {}, today = new
       });
   });
 
-  renderNavbar(root, { active: 'add' });
+  if (saved) {
+    // Two taps: the first one asks, the second one deletes.
+    const remove = root.querySelector('.form-delete');
+    remove.hidden = false;
+    remove.textContent = t.delete;
+    let armed = false;
+    remove.addEventListener('click', () => {
+      if (!armed) {
+        armed = true;
+        remove.textContent = t.confirmDelete;
+        return;
+      }
+      remove.disabled = true;
+      remove.textContent = t.deleting;
+      queueDelete(fileId, halves ?? [original])
+        .then(onSaved)
+        .catch(() => {
+          error.textContent = t.failed;
+          remove.disabled = false;
+          armed = false;
+          remove.textContent = t.delete;
+        });
+    });
+  }
+
+  renderNavbar(root, { active: entry ? 'history' : 'add' });
 }
