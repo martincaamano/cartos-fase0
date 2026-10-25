@@ -1,0 +1,72 @@
+// A book is one Google Sheet with the tabs Accounts, Categories and Movements
+// (architecture §2). Everything is validated with domain/ before it is written.
+
+import { es } from '../../i18n/es.js';
+import { createSpreadsheetFile } from './drive.js';
+import { append, batchGet, batchUpdate, batchUpdateValues } from './sheets.js';
+import { HEADERS, SHEET_NAMES, toRow, rowsToObjects } from './rows.js';
+import { getCurrentUser } from './auth.js';
+import { createAccount, validateAccount } from '../domain/account.js';
+import { buildDefaultCategories } from '../domain/category.js';
+import { createMovement, validateMovement } from '../domain/movement.js';
+
+export class ValidationError extends Error {
+  constructor(errors) {
+    super(`Invalid data: ${errors.join(', ')}`);
+    this.errors = errors;
+  }
+}
+
+// A new spreadsheet always starts with one tab whose sheetId is 0.
+const FIRST_SHEET_ID = 0;
+
+export async function createBook({ name = 'Personal', bookType = 'personal', categoryNames = es.categories } = {}) {
+  const bookId = crypto.randomUUID();
+  const file = await createSpreadsheetFile(`Cartos · ${name}`, { app: 'cartos', bookId, bookType, name });
+
+  await batchUpdate(file.id, [
+    { updateSheetProperties: { properties: { sheetId: FIRST_SHEET_ID, title: 'Accounts' }, fields: 'title' } },
+    { addSheet: { properties: { title: 'Categories' } } },
+    { addSheet: { properties: { title: 'Movements' } } },
+  ]);
+
+  const categories = buildDefaultCategories(categoryNames);
+  await batchUpdateValues(file.id, [
+    { range: 'Accounts!A1', values: [HEADERS.Accounts] },
+    { range: 'Categories!A1', values: [HEADERS.Categories, ...categories.map((c) => toRow('Categories', c))] },
+    { range: 'Movements!A1', values: [HEADERS.Movements] },
+  ]);
+
+  return { fileId: file.id, bookId, name, bookType };
+}
+
+export async function readBook(fileId) {
+  const [accounts, categories, movements] = await batchGet(fileId, SHEET_NAMES);
+  return {
+    accounts: rowsToObjects('Accounts', accounts),
+    categories: rowsToObjects('Categories', categories),
+    movements: rowsToObjects('Movements', movements),
+  };
+}
+
+export async function addAccount(fileId, fields) {
+  const account = createAccount(fields);
+  const errors = validateAccount(account);
+  if (errors.length) throw new ValidationError(errors);
+  await append(fileId, 'Accounts', [toRow('Accounts', account)]);
+  return account;
+}
+
+// book: the result of readBook(), to check that the account and category
+// exist. Read again when not given.
+export async function addMovement(fileId, fields, book = null) {
+  const { accounts, categories } = book ?? (await readBook(fileId));
+  const movement = createMovement(fields, { userSub: getCurrentUser()?.sub ?? '' });
+  const errors = validateMovement(movement, {
+    accountIds: accounts.filter((a) => !a.deleted).map((a) => a.id),
+    categoryIds: categories.filter((c) => !c.deleted).map((c) => c.id),
+  });
+  if (errors.length) throw new ValidationError(errors);
+  await append(fileId, 'Movements', [toRow('Movements', movement)]);
+  return movement;
+}
