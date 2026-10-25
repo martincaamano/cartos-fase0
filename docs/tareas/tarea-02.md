@@ -1,6 +1,6 @@
 # Tarea 02 — Login y acceso a Drive
 
-Estado: pendiente.
+Estado: hecha (2026-10-25). Quedan dos comprobaciones manuales por verificar en uso real (ver abajo).
 Depende de: 01 cerrada.
 
 ## Objetivo
@@ -26,16 +26,18 @@ Leer o escribir Sheets, onboarding, navegación inferior.
 
 ## Pruebas manuales en iPhone
 Antes: en Google Cloud Console añade `http://localhost:5173` a los orígenes autorizados si quieres probar en el Mac.
-- [ ] En la PWA instalada, "Continuar con Google" abre el login y vuelve a la app.
-- [ ] "Conceder acceso a Drive" pide el permiso `drive.file` y lo obtiene.
-- [ ] Cerrar la app del todo y reabrirla no vuelve a pedir ninguna de las dos cosas.
-- [ ] Con el token caducado aparece un botón "Reconectar", no un fallo mudo.
-- [ ] Los logs registran los eventos de login y token (se verán en Diagnóstico en la tarea 09).
+- [x] En la PWA instalada, "Continuar con Google" abre el login y vuelve a la app.
+- [x] "Conceder acceso a Drive" pide el permiso `drive.file` y lo obtiene.
+- [x] Cerrar la app del todo y reabrirla no vuelve a pedir ninguna de las dos cosas.
+- [ ] Con el token caducado aparece un botón "Reconectar", no un fallo mudo. *Pendiente de verificar en uso real; cubierto por tests de `decideRoute` y `auth`.*
+- [ ] Los logs registran los eventos de login y token (se verán en Diagnóstico en la tarea 09). *Pendiente; se verificará en la tarea 09.*
 
 ## Transversal
 En cuanto el login funcione, pasar la app de Google Cloud de "Testing" a "Production" para evitar la caducidad de 7 días (arquitectura §8). Comprobar si Google pide algún paso extra con el scope `drive.file`.
 
+Resultado (2026-10-25): publicada. Google no pidió verificación, pero sí completar la página de marca (nombre, correos de contacto, dominio autorizado `martincaamano.github.io`, página principal y política de privacidad en `privacy.html`). Sin logotipo, para no activar la verificación de marca.
+
 ## Criterio de cierre
-- [ ] Puedes iniciar sesión con Google, conceder acceso a Drive, cerrar la app y volver a abrirla sin que te lo pida de nuevo.
-- [ ] La app está publicada en Production.
-- [ ] `npm test` en verde.
+- [x] Puedes iniciar sesión con Google, conceder acceso a Drive, cerrar la app y volver a abrirla sin que te lo pida de nuevo.
+- [x] La app está publicada en Production.
+- [x] `npm test` en verde.
