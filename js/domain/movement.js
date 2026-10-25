@@ -54,6 +54,14 @@ export function validateMovement(movement, { accountIds, categoryIds }) {
   return errors;
 }
 
+// Newest first by date, then by creation time; deleted movements left out.
+export function latestMovements(movements, count) {
+  return movements
+    .filter((movement) => !movement.deleted)
+    .sort((a, b) => b.date.localeCompare(a.date) || b.createdAt.localeCompare(a.createdAt))
+    .slice(0, count);
+}
+
 export function markDeleted(movement, now = new Date()) {
   return { ...movement, deleted: true, updatedAt: now.toISOString() };
 }

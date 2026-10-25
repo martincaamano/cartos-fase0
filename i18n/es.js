@@ -19,9 +19,40 @@ export const es = {
     note: 'El acceso a Drive dura una hora. Toca para renovarlo.',
     button: 'Reconectar',
   },
-  home: {
-    connected: 'Conectado a Drive',
-    offline: 'Sin conexión',
+  status: {
+    loading: 'Abriendo tu libro…',
+    offline: 'Sin conexión. Conéctate a internet para abrir tu libro por primera vez.',
+    loadFailed: 'No se ha podido abrir tu libro en Drive.',
+    retry: 'Reintentar',
+  },
+  onboarding: {
+    title: 'Primera cuenta',
+    note: 'Cartos creará tu libro en tu Google Drive con esta cuenta. Luego podrás añadir más.',
+    nameLabel: 'Nombre',
+    namePlaceholder: 'Banco',
+    emojiLabel: 'Emoji',
+    balanceLabel: 'Saldo inicial',
+    balancePlaceholder: '0,00',
+    submit: 'Crear libro',
+    creating: 'Creando libro…',
+    nameRequired: 'Escribe un nombre para la cuenta.',
+    balanceInvalid: 'Escribe un importe con hasta dos decimales, por ejemplo 1.250,50.',
+    failed: 'No se ha podido crear el libro. Vuelve a intentarlo.',
+  },
+  dashboard: {
+    total: 'TOTAL',
+    accounts: 'CUENTAS',
+    latest: 'ÚLTIMOS MOVIMIENTOS',
+    noMovements: 'Sin movimientos todavía.',
+    offline: 'Sin conexión · datos guardados',
+  },
+  navbar: {
+    home: 'INICIO',
+    history: 'HISTORIAL',
+    add: '+',
+    addLabel: 'Añadir',
+    analysis: 'ANÁLISIS',
+    settings: 'AJUSTES',
   },
   // Default categories written into every new book.
   categories: {

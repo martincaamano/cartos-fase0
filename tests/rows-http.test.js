@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { HEADERS, toRow, fromRow, rowsToObjects, SheetFormatError } from '../js/data/rows.js';
 import { googleFetch, ApiError } from '../js/data/http.js';
-import { TokenExpiredError } from '../js/data/auth.js';
+import { TokenExpiredError, getAuthState } from '../js/data/auth.js';
 import { setupGoogleApi, TOKEN } from './helpers/fake-google.js';
 
 const movement = {
@@ -49,6 +49,7 @@ test('googleFetch sends the Bearer token and JSON body', async () => {
 test('googleFetch maps 401 to an expired token and other errors to ApiError', async () => {
   setupGoogleApi(() => ({ status: 401 }));
   await assert.rejects(googleFetch('https://example.test/x', { op: 'test.op' }), TokenExpiredError);
+  assert.equal(getAuthState().tokenExpired, true, 'a rejected token is dropped');
   setupGoogleApi(() => ({ status: 403 }));
   await assert.rejects(
     googleFetch('https://example.test/x', { op: 'test.op' }),

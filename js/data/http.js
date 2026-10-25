@@ -1,7 +1,7 @@
 // Single entry point for calls to Google REST APIs. Takes the token from
 // getAccessToken() and logs every call (operation and HTTP code only).
 
-import { getAccessToken, TokenExpiredError } from './auth.js';
+import { expireAccessToken, getAccessToken, TokenExpiredError } from './auth.js';
 import { logEvent } from '../storage/logs.js';
 
 export class ApiError extends Error {
@@ -44,7 +44,10 @@ export async function googleFetch(url, { method = 'GET', body, op }) {
   }
 
   logEvent({ type: 'api', result: `${op}:${response.status}`, durationMs: deps.now() - startedAt });
-  if (response.status === 401) throw new TokenExpiredError();
+  if (response.status === 401) {
+    expireAccessToken();
+    throw new TokenExpiredError();
+  }
   if (!response.ok) throw new ApiError(response.status, op);
   return response.status === 204 ? null : response.json();
 }

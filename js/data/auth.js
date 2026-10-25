@@ -175,3 +175,10 @@ export async function getAccessToken() {
   if (!session.accessToken || isTokenExpired(session, deps.now())) throw new TokenExpiredError();
   return session.accessToken;
 }
+
+// Google rejected the token (401) before its expiry, e.g. access revoked:
+// drop it so the app asks to reconnect instead of retrying with it.
+export function expireAccessToken() {
+  const session = load();
+  save({ ...session, accessToken: null, tokenExpiresAt: null });
+}

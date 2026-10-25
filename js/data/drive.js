@@ -19,8 +19,17 @@ export function createSpreadsheetFile(name, appProperties) {
 export async function listBooks() {
   const params = new URLSearchParams({
     q: "appProperties has { key='app' and value='cartos' } and trashed=false",
-    fields: 'files(id,name,appProperties,owners,capabilities)',
+    fields: 'files(id,name,createdTime,appProperties,owners,capabilities)',
   });
   const data = await googleFetch(`${FILES}?${params}`, { op: 'drive.list' });
   return data.files ?? [];
+}
+
+// The personal book is the oldest Cartos file with bookType=personal, so a
+// duplicate created by mistake never replaces the real one.
+export function pickPersonalBook(files) {
+  const personal = files
+    .filter((file) => file.appProperties?.bookType === 'personal')
+    .sort((a, b) => String(a.createdTime).localeCompare(String(b.createdTime)));
+  return personal[0] ?? null;
 }

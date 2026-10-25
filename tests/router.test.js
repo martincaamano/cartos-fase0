@@ -4,14 +4,14 @@ import { decideRoute, ROUTES } from '../js/ui/router.js';
 
 test('decideRoute covers every session / drive / token combination', () => {
   const cases = [
-    // hasSession, hasDriveAccess, tokenExpired, expected
+    // hasSession, hasDriveAccess, tokenExpired, expected (book still unknown)
     [false, false, false, ROUTES.LOGIN],
     [false, false, true, ROUTES.LOGIN],
     [false, true, false, ROUTES.LOGIN],
     [false, true, true, ROUTES.LOGIN],
     [true, false, false, ROUTES.CONNECT],
     [true, false, true, ROUTES.CONNECT],
-    [true, true, false, ROUTES.HOME],
+    [true, true, false, ROUTES.LOADING],
     [true, true, true, ROUTES.RECONNECT],
   ];
   for (const [hasSession, hasDriveAccess, tokenExpired, expected] of cases) {
@@ -23,13 +23,24 @@ test('decideRoute covers every session / drive / token combination', () => {
   }
 });
 
-test('decideRoute opens the app offline instead of asking to reconnect', () => {
-  assert.equal(
-    decideRoute({ hasSession: true, hasDriveAccess: true, tokenExpired: true, offline: true }),
-    ROUTES.HOME
-  );
+const signedIn = { hasSession: true, hasDriveAccess: true, tokenExpired: false };
+
+test('decideRoute goes to onboarding without a personal book and to the Dashboard with one', () => {
+  assert.equal(decideRoute({ ...signedIn, book: 'none' }), ROUTES.ONBOARDING);
+  assert.equal(decideRoute({ ...signedIn, book: 'ready' }), ROUTES.DASHBOARD);
+  assert.equal(decideRoute({ ...signedIn, book: 'unknown' }), ROUTES.LOADING);
+});
+
+test('offline, the device copy opens the Dashboard; without one, the offline screen', () => {
+  assert.equal(decideRoute({ ...signedIn, offline: true, book: 'ready' }), ROUTES.DASHBOARD);
+  assert.equal(decideRoute({ ...signedIn, offline: true, tokenExpired: true, book: 'ready' }), ROUTES.DASHBOARD);
+  assert.equal(decideRoute({ ...signedIn, offline: true, book: 'unknown' }), ROUTES.OFFLINE);
   assert.equal(
     decideRoute({ hasSession: false, hasDriveAccess: false, tokenExpired: false, offline: true }),
     ROUTES.LOGIN
   );
+});
+
+test('online with an expired token asks to reconnect even with a device copy', () => {
+  assert.equal(decideRoute({ ...signedIn, tokenExpired: true, book: 'ready' }), ROUTES.RECONNECT);
 });

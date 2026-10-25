@@ -3,23 +3,39 @@
 // antiguas de la app (aprendido en la Fase 0, donde cache-first daba problemas
 // de staleness al actualizar código).
 
-const CACHE_NAME = 'cartos-v1';
+const CACHE_NAME = 'cartos-v2';
 
 const APP_SHELL = [
   './',
   './index.html',
   './manifest.json',
   './styles/main.css',
+  './i18n/es.js',
   './js/app.js',
   './js/config.js',
   './js/data/auth.js',
-  './js/storage/session.js',
-  './js/storage/logs.js',
-  './js/ui/router.js',
-  './js/screens/login.js',
+  './js/data/book.js',
+  './js/data/drive.js',
+  './js/data/http.js',
+  './js/data/personal-book.js',
+  './js/data/rows.js',
+  './js/data/sheets.js',
+  './js/domain/account.js',
+  './js/domain/balance.js',
+  './js/domain/category.js',
+  './js/domain/money.js',
+  './js/domain/movement.js',
   './js/screens/connect.js',
-  './js/screens/home.js',
-  './i18n/es.js',
+  './js/screens/dashboard.js',
+  './js/screens/login.js',
+  './js/screens/onboarding.js',
+  './js/screens/status.js',
+  './js/storage/book-cache.js',
+  './js/storage/logs.js',
+  './js/storage/session.js',
+  './js/ui/format.js',
+  './js/ui/navbar.js',
+  './js/ui/router.js',
 ];
 
 self.addEventListener('install', (event) => {
