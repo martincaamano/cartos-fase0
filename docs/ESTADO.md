@@ -7,7 +7,7 @@ Fuente de verdad del progreso. Los agentes lo leen al empezar una tarea y lo act
 - Repositorio: `cartos-fase0` (se queda con ese nombre).
 - GitHub Pages publica `main` (carpeta raíz) en https://martincaamano.github.io/cartos-fase0/. El repo es público: con el plan gratuito, Pages no funciona en repos privados (estuvo sin publicar del 2026-09-27 al 2026-10-24 por eso).
 - Se desarrolla desde un Mac (`npm test`, `npm run dev` en http://localhost:5173). Las pruebas reales se hacen en el iPhone.
-- MVP completo (2026-10-25): las nueve tareas están hechas y probadas en iPhone. Siguiente paso: la revisión técnica (tareas 10 a 14), empezando por la tarea 10.
+- MVP completo (2026-10-25): las nueve tareas están hechas y probadas en iPhone. Siguiente paso: la revisión técnica, tarea 11 (Componentes de interfaz).
 
 ## Tareas del MVP
 
@@ -108,11 +108,18 @@ Mejoras de mantenibilidad, estructura y rendimiento sin cambiar lo que ve el usu
 
 | Tarea | Título | Estado | Notas |
 |---|---|---|---|
-| 10 | Limpieza | Pendiente | Código muerto, errores en `data/errors.js`, funciones comunes, búsqueda de fila por id única |
+| 10 | Limpieza | Hecha (2026-10-26) | Probada en iPhone (prueba rápida y arranque sin conexión) |
 | 11 | Componentes de interfaz | Pendiente | `ui/receipt.js` y formulario de cuenta común |
 | 12 | Estilos y paletas | Pendiente | Estilos en varios archivos y tokens en dos niveles, listos para varias paletas. Tiene decisión previa |
 | 13 | Rutas y `app.js` | Pendiente | Una tabla de pantallas; estado y sincronización fuera de `app.js` |
 | 14 | Sincronización | Pendiente | Sin `drive.list` tras guardar; separar la cola de la subida |
+
+### Decisiones tomadas en la tarea 10
+- Borrado el código sin uso: `addMovement` de `data/book.js` (Añadir pasa por la cola desde la tarea 05) y `latestMovements` de `domain/movement.js`.
+- Errores de la capa de datos en `js/data/errors.js` (`ValidationError`, `ApiError`).
+- Funciones comunes: `domain/active.js` (`isActive`, `activeOnly`, `activeIds`) para la regla del borrado lógico; `labelOf` en `ui/format.js` para «emoji + nombre»; `currentUserSub` en `data/auth.js`; `ACCOUNT_EMOJIS` en `ui/components.js`.
+- La búsqueda de fila por id vive solo en `data/rows.js` (`rowsById`, `findRowById`): la usan quitar categoría y la sincronización. `planSync` (`storage/`) recibe el mapa id → fila ya hecho, así `storage/` no conoce la forma del Sheet.
+- Caché del Service Worker: `cartos-v8`. Un módulo nuevo que no esté en `APP_SHELL` rompe el arranque sin conexión; la tarea 13 añade un test que lo vigila.
 
 Regla del plan: cada tarea, al cerrarse, deja algo 100% usable en el iPhone. Ninguna queda a medias esperando a la siguiente.
 
