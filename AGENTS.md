@@ -52,7 +52,7 @@ Lee solo las secciones que necesites para la tarea en curso, no todos los docume
 ## Diseño
 
 - Estética de recibo con aire Nothing OS: tipografía monoespaciada, blanco y negro casi puro, separadores discontinuos, importes alineados a la derecha.
-- Color solo para gastos (terracota apagado) e ingresos (verde apagado). Usa siempre las variables CSS de `styles/main.css` (`--color-bg`, `--color-ink`, `--color-expense`, `--color-income`, `--space-*`...), nunca colores escritos a mano.
+- Color solo para gastos (terracota apagado) e ingresos (verde apagado). Usa siempre las variables semánticas de `styles/tokens.css` (`--color-bg`, `--color-ink`, `--color-expense`, `--color-income`, `--space-*`, `--text-*`...), nunca colores ni tamaños escritos a mano ni las `--palette-*` directamente (ver diseño §1.2).
 - Mobile-first para iPhone: zonas táctiles de al menos 44 px, respeta las áreas seguras de iOS, modo claro/oscuro.
 - No introduzcas el estilo de puntos (dot-matrix) ni nuevas tipografías sin que el usuario lo pida.
 

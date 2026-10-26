@@ -1,0 +1,79 @@
+/* Cartos — design tokens. The only file with raw values.
+
+   Two levels of colour:
+   - Palette (--palette-*): what the colours are. Each one is written once
+     as light-dark(light, dark); color-scheme picks the value, so it follows
+     the system and the theme forced from Ajustes (data-theme).
+   - Semantic (--color-*): what a colour is for. Components and screens
+     only ever use these.
+
+   A new palette is one more block that redefines the --palette-* values:
+
+     html[data-palette="sepia"] {
+       --palette-paper: light-dark(#F6F0E4, #1B1814);
+       ...
+     }
+
+   and data-palette="sepia" on <html>. Nothing else changes. */
+
+:root {
+  color-scheme: light dark;
+
+  /* Default palette: receipt paper, near-black ink, muted accents */
+  --palette-paper: light-dark(#FAFAF8, #14181C);
+  --palette-ink: light-dark(#14181C, #FAFAF8);
+  --palette-ink-soft: light-dark(#6B7278, #9A9FA4);
+  --palette-rule: light-dark(#D8D7D2, #2C3238);
+  --palette-terracotta: #B3492D;
+  --palette-green: #3E7A52;
+
+  /* Semantic colours */
+  --color-bg: var(--palette-paper);
+  --color-ink: var(--palette-ink);
+  --color-ink-muted: var(--palette-ink-soft);
+  --color-line: var(--palette-rule);
+  --color-expense: var(--palette-terracotta);
+  --color-income: var(--palette-green);
+  --color-bar: var(--palette-ink-soft);
+  --color-bar-track: var(--palette-rule);
+
+  /* Lines of the receipt */
+  --rule: 1px dashed var(--color-line);
+  --rule-strong: 2px solid var(--color-ink);
+
+  /* Type */
+  --font-mono: 'SFMono-Regular', ui-monospace, 'Menlo', 'Consolas', monospace;
+  --text-2xs: 11px;
+  --text-xs: 12px;
+  --text-sm: 13px;
+  --text-md: 14px;
+  --text-base: 16px; /* 16px or more stops iOS from zooming in on a field */
+  --text-lg: 22px;
+  --text-xl: 28px;
+  --text-2xl: 32px;
+  --tracking-tight: 0.02em;
+  --tracking: 0.04em;
+  --tracking-wide: 0.06em;
+  --tracking-wider: 0.08em;
+
+  /* Space and sizes */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 16px;
+  --space-4: 24px;
+  --space-5: 32px;
+  --touch: 44px; /* smallest tap target on iOS */
+  --navbar-room: 72px; /* space left at the bottom for the fixed navbar */
+  --radius: 2px;
+  --opacity-disabled: 0.5;
+  --opacity-faint: 0.4;
+}
+
+/* Theme forced from Ajustes; without data-theme the system decides */
+html[data-theme="light"] {
+  color-scheme: light;
+}
+
+html[data-theme="dark"] {
+  color-scheme: dark;
+}

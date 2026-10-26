@@ -1,0 +1,80 @@
+/* Cartos — HTML elements and small utilities. Uses only tokens.css. */
+
+* {
+  box-sizing: border-box;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+}
+
+body {
+  background: var(--color-bg);
+  color: var(--color-ink);
+  font-family: var(--font-mono);
+  font-size: var(--text-base);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+
+#app {
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+}
+
+h1, h2, h3, p {
+  margin: 0;
+}
+
+button {
+  font-family: inherit;
+  font-size: inherit;
+  color: inherit;
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+input {
+  font-family: inherit;
+  font-size: inherit;
+  color: inherit;
+  background: var(--color-bg);
+  border: 1px solid var(--color-line);
+}
+
+select {
+  font-family: inherit;
+  font-size: inherit;
+  color: inherit;
+  border: 1px solid var(--color-line);
+}
+
+.text-muted {
+  color: var(--color-ink-muted);
+  font-size: var(--text-sm);
+}
+
+.amount-expense {
+  color: var(--color-expense);
+}
+
+.amount-income {
+  color: var(--color-income);
+}
+
+/* Off screen but still selectable (copy fallback in Diagnóstico) */
+.offscreen {
+  position: fixed;
+  left: -9999px;
+}
+
+/* `hidden` must win over the display of .field, .form and friends */
+[hidden] {
+  display: none !important;
+}

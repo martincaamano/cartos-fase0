@@ -10,7 +10,10 @@ cartos/
 ├── sw.js
 │
 ├── styles/
-│   └── main.css
+│   ├── tokens.css        (paleta, colores semánticos y escalas)
+│   ├── base.css          (elementos HTML y utilidades)
+│   ├── components.css    (piezas compartidas)
+│   └── screens.css       (lo propio de cada pantalla)
 │
 ├── i18n/
 │   └── es.js

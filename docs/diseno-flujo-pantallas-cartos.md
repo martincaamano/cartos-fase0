@@ -17,6 +17,24 @@ Estética minimalista tipo recibo o ticket de compra, con inspiración en el len
 - El usuario puede forzar un modo distinto al del sistema desde Ajustes.
 - Implementación pensada como variables de tema (colores base definidos una sola vez), ya que la paleta es casi blanco/negro puro: el modo oscuro es, en esencia, invertir esos dos tonos base y mantener igual el resto.
 
+### 1.2. Estilos, tokens y paletas (tarea 12)
+
+Los estilos están en cuatro archivos, enlazados en este orden desde `index.html`:
+
+- `styles/tokens.css`: el único archivo con valores escritos a mano (colores, tamaños de letra, espaciados, zona táctil, radio, opacidades).
+- `styles/base.css`: elementos HTML y utilidades (`.text-muted`, `.amount-expense`, `[hidden]`...).
+- `styles/components.css`: piezas compartidas (pantallas, botones, formularios, líneas de recibo, barra inferior, pestañas, chips, selector de categoría).
+- `styles/screens.css`: solo lo propio de una pantalla.
+
+Los colores tienen dos niveles:
+
+- **Paleta** (`--palette-paper`, `--palette-ink`, `--palette-ink-soft`, `--palette-rule`, `--palette-terracotta`, `--palette-green`): qué colores son. Cada uno se escribe una vez como `light-dark(claro, oscuro)`, y `color-scheme` elige el valor según el sistema o el tema forzado desde Ajustes (`data-theme`). Necesita iOS 17.5 o posterior.
+- **Semánticos** (`--color-bg`, `--color-ink`, `--color-ink-muted`, `--color-line`, `--color-expense`, `--color-income`, `--color-bar`, `--color-bar-track`): para qué se usa cada color. Componentes y pantallas solo usan estos.
+
+**Añadir una paleta** es escribir en `tokens.css` un bloque `html[data-palette="nombre"] { --palette-…: light-dark(…, …); }` con los seis colores, y poner `data-palette="nombre"` en `<html>`. Nada más cambia. Elegir paleta desde Ajustes queda para el futuro.
+
+Tamaños de letra: `--text-2xs` (11 px) … `--text-2xl` (32 px). Un test (`tests/styles.test.js`) impide colores escritos a mano fuera de `tokens.css`, variables sin definir y tamaños de letra fuera de la escala.
+
 ## 2. Navegación
 
 Barra de navegación fija inferior, patrón estándar tipo Instagram o Twitter, con cinco secciones. No hay botón flotante independiente.

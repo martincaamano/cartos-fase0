@@ -1,0 +1,146 @@
+/* Cartos — what belongs to a single screen. Uses only semantic tokens. */
+
+/* Dashboard */
+.dashboard-notice:empty {
+  display: none;
+}
+
+.dashboard-notice {
+  margin-bottom: var(--space-3);
+}
+
+.receipt-total {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--space-3);
+  padding: var(--space-4) 0;
+  border-bottom: var(--rule-strong);
+}
+
+.receipt-total-label {
+  font-size: var(--text-sm);
+  letter-spacing: var(--tracking-wider);
+}
+
+.receipt-total-amount {
+  font-size: var(--text-2xl);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+/* Ajustes */
+.settings-link {
+  color: inherit;
+  text-decoration: none;
+}
+
+.settings-email {
+  margin-top: var(--space-2);
+  overflow-wrap: anywhere;
+}
+
+.settings-signout {
+  color: var(--color-expense);
+}
+
+/* History */
+.history-filters {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-3) var(--space-2);
+}
+
+.history-filters .field-input {
+  width: 100%;
+  min-width: 0;
+}
+
+.history-filters .link-button {
+  grid-column: 1 / -1;
+  justify-self: start;
+}
+
+.history-line {
+  color: inherit;
+  text-decoration: none;
+}
+
+/* Add, in edit mode */
+.form-delete {
+  align-self: center;
+  color: var(--color-expense);
+}
+
+.form-delete:disabled {
+  opacity: var(--opacity-disabled);
+}
+
+/* Analysis */
+.month-picker {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: var(--rule);
+}
+
+.month-step {
+  min-width: var(--touch);
+  min-height: var(--touch);
+  font-size: var(--text-lg);
+}
+
+.month-step:disabled {
+  color: var(--color-ink-muted);
+  opacity: var(--opacity-faint);
+  cursor: default;
+}
+
+.month-label {
+  letter-spacing: var(--tracking-wider);
+}
+
+.stat-category {
+  flex-wrap: wrap;
+  row-gap: var(--space-1);
+}
+
+.stat-bar {
+  flex-basis: 100%;
+  height: 6px;
+  background: var(--color-bar-track);
+}
+
+.stat-bar-fill {
+  display: block;
+  height: 100%;
+  background: var(--color-bar);
+}
+
+.stat-savings {
+  font-weight: 600;
+}
+
+.stat-month {
+  cursor: pointer;
+}
+
+/* Diagnóstico */
+.diagnostics-copy {
+  width: 100%;
+  margin-top: var(--space-3);
+}
+
+.diagnostics-status {
+  margin-top: var(--space-2);
+}
+
+.diagnostics-log {
+  margin: var(--space-3) 0 0;
+  font-family: inherit;
+  font-size: var(--text-xs);
+  line-height: 1.6;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}

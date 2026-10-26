@@ -4,7 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Cartos · Política de privacidad</title>
-<link rel="stylesheet" href="styles/main.css">
+<link rel="stylesheet" href="styles/tokens.css">
+<link rel="stylesheet" href="styles/base.css">
 <style>
   .privacy {
     max-width: 640px;
@@ -16,18 +17,18 @@
       calc(env(safe-area-inset-left) + var(--space-3));
   }
   .privacy h1 {
-    font-size: 22px;
-    letter-spacing: 0.04em;
+    font-size: var(--text-lg);
+    letter-spacing: var(--tracking);
     padding-bottom: var(--space-3);
-    border-bottom: 1px dashed var(--color-line);
+    border-bottom: var(--rule);
   }
   .privacy h2 {
-    font-size: 16px;
+    font-size: var(--text-base);
     margin-top: var(--space-4);
     margin-bottom: var(--space-2);
   }
   .privacy p, .privacy li {
-    font-size: 14px;
+    font-size: var(--text-md);
   }
   .privacy p + p {
     margin-top: var(--space-2);
