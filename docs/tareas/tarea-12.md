@@ -1,6 +1,6 @@
 # Tarea 12 — Revisión técnica: estilos y paletas
 
-Estado: pendiente.
+Estado: hecha (2026-10-26).
 Depende de: 11 cerrada.
 
 ## Objetivo
@@ -41,10 +41,10 @@ Elegir paleta desde Ajustes, paletas nuevas, cambiar tipografía o el aspecto ac
 - Test nuevo de estilos: fuera de `styles/tokens.css` no hay colores escritos a mano (`#...`, `rgb(...)`), y cada `var(--...)` usado en los estilos está definido.
 
 ## Pruebas manuales en iPhone
-- [ ] Todas las pantallas se ven igual que antes, en claro y en oscuro, con «Sistema», «Claro» y «Oscuro».
-- [ ] La barra de estado sigue el tema.
+- [x] Todas las pantallas se ven igual que antes, en claro y en oscuro, con «Sistema», «Claro» y «Oscuro».
+- [x] La barra de estado sigue el tema.
 
 ## Criterio de cierre
-- [ ] Añadir una paleta sería escribir un bloque en `styles/tokens.css` y nada más (se comprueba con una paleta de prueba en local que no se publica).
-- [ ] Nada visible cambia y las pruebas en iPhone pasan.
-- [ ] `npm test` en verde.
+- [x] Añadir una paleta sería escribir un bloque en `styles/tokens.css` y nada más (se comprueba con una paleta de prueba en local que no se publica).
+- [x] Nada visible cambia y las pruebas en iPhone pasan.
+- [x] `npm test` en verde.

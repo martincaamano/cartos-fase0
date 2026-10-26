@@ -7,7 +7,7 @@ Fuente de verdad del progreso. Los agentes lo leen al empezar una tarea y lo act
 - Repositorio: `cartos-fase0` (se queda con ese nombre).
 - GitHub Pages publica `main` (carpeta raíz) en https://martincaamano.github.io/cartos-fase0/. El repo es público: con el plan gratuito, Pages no funciona en repos privados (estuvo sin publicar del 2026-09-27 al 2026-10-24 por eso).
 - Se desarrolla desde un Mac (`npm test`, `npm run dev` en http://localhost:5173). Las pruebas reales se hacen en el iPhone.
-- MVP completo (2026-10-25): las nueve tareas están hechas y probadas en iPhone. Siguiente paso: la revisión técnica, tarea 12 (Estilos y paletas), que tiene una decisión previa.
+- MVP completo (2026-10-25): las nueve tareas están hechas y probadas en iPhone. Siguiente paso: la revisión técnica, tarea 13 (Rutas y `app.js`).
 
 ## Tareas del MVP
 
@@ -110,7 +110,7 @@ Mejoras de mantenibilidad, estructura y rendimiento sin cambiar lo que ve el usu
 |---|---|---|---|
 | 10 | Limpieza | Hecha (2026-10-26) | Probada en iPhone (prueba rápida y arranque sin conexión) |
 | 11 | Componentes de interfaz | Hecha (2026-10-26) | Probada en iPhone (prueba rápida) |
-| 12 | Estilos y paletas | Pendiente | Estilos en varios archivos y tokens en dos niveles, listos para varias paletas. Tiene decisión previa |
+| 12 | Estilos y paletas | Hecha (2026-10-26) | Probada en iPhone (claro, oscuro, Sistema, barra de estado y sin conexión) |
 | 13 | Rutas y `app.js` | Pendiente | Una tabla de pantallas; estado y sincronización fuera de `app.js` |
 | 14 | Sincronización | Pendiente | Sin `drive.list` tras guardar; separar la cola de la subida |
 
@@ -127,6 +127,16 @@ Mejoras de mantenibilidad, estructura y rendimiento sin cambiar lo que ve el usu
 - `fillTexts(root, texts)` rellena los `[data-text]`; títulos y enlaces de vuelta también van por `data-text`.
 - Se comprobó que el HTML de todas las pantallas es el mismo que antes (salvo `data-text` y dos clases internas sin estilo).
 - Caché del Service Worker: `cartos-v9`.
+
+### Decisiones tomadas en la tarea 12
+- Estilos en `styles/tokens.css`, `base.css`, `components.css` y `screens.css`, enlazados en ese orden (sin `@import`). `main.css` desaparece.
+- Colores en dos niveles: paleta (`--palette-paper`, `-ink`, `-ink-soft`, `-rule`, `-terracotta`, `-green`) con cada color escrito una vez como `light-dark(claro, oscuro)`, y semánticos (`--color-*`), que son lo único que usan componentes y pantallas. Requiere iOS 17.5 o posterior (confirmado en el iPhone del usuario).
+- Una paleta nueva es un bloque `html[data-palette="…"]` en `tokens.css` (diseño §1.2). Elegirla desde Ajustes queda para el futuro.
+- Escalas como tokens: `--text-2xs` … `--text-2xl`, `--touch`, `--radius`, `--tracking-*`, `--opacity-*`, `--rule`, `--navbar-room`.
+- La barra de estado de iOS lee el color de fondo de los tokens. `index.html` y `manifest.json` mantienen el valor inicial claro; un test vigila que coincida con la paleta.
+- `tests/styles.test.js` impide colores escritos a mano fuera de `tokens.css`, variables sin definir, uso directo de `--palette-*` y tamaños de letra fuera de la escala.
+- Se comprobó que los estilos calculados de todas las pantallas no cambian (claro, oscuro y temas forzados).
+- Caché del Service Worker: `cartos-v10`.
 
 Regla del plan: cada tarea, al cerrarse, deja algo 100% usable en el iPhone. Ninguna queda a medias esperando a la siguiente.
 
