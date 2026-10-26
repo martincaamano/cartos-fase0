@@ -7,21 +7,21 @@ Fuente de verdad del progreso. Los agentes lo leen al empezar una tarea y lo act
 - Repositorio: `cartos-fase0` (se queda con ese nombre).
 - GitHub Pages publica `main` (carpeta raíz) en https://martincaamano.github.io/cartos-fase0/. El repo es público: con el plan gratuito, Pages no funciona en repos privados (estuvo sin publicar del 2026-09-27 al 2026-10-24 por eso).
 - Se desarrolla desde un Mac (`npm test`, `npm run dev` en http://localhost:5173). Las pruebas reales se hacen en el iPhone.
-- Siguiente paso: la tarea 09 (Ajustes y Diagnóstico), cuando el usuario lo diga.
+- MVP completo (2026-10-25): las nueve tareas están hechas y probadas en iPhone. Siguiente paso: lo que decida el usuario.
 
 ## Tareas del MVP
 
 | Tarea | Título | Estado | Notas |
 |---|---|---|---|
 | 01 | Esqueleto PWA instalable | Hecha (2026-10-24) | Probada en iPhone. El icono definitivo queda aparte (decisión 3) |
-| 02 | Login y acceso a Drive | Hecha (2026-10-25) | Probada en iPhone, incluido «Reconectar». Sin verificar: los logs (tarea 09) |
+| 02 | Login y acceso a Drive | Hecha (2026-10-25) | Probada en iPhone, incluido «Reconectar». Los logs se verificaron en la tarea 09 |
 | 03 | Capa de datos y dominio del libro | Hecha (2026-10-25) | Probada contra Drive real desde el Mac (localhost); sin pantalla, no aplica iPhone |
 | 04 | Onboarding + Dashboard | Hecha (2026-10-25) | Probada en iPhone con la cuenta real |
 | 05 | Categorías + Añadir (gasto e ingreso) | Hecha (2026-10-25) | Probada en iPhone, con y sin conexión |
 | 06 | Añadir (transferencia) | Hecha (2026-10-25) | Probada en iPhone, con y sin conexión. Incluye Ajustes → Cuentas |
 | 07 | Historial | Hecha (2026-10-25) | Probada en iPhone, con y sin conexión |
 | 08 | Análisis | Hecha (2026-10-25) | Probada en iPhone con datos reales, en claro y oscuro |
-| 09 | Ajustes y Diagnóstico | Pendiente | |
+| 09 | Ajustes y Diagnóstico | Hecha (2026-10-25) | Probada en iPhone: tema, Diagnóstico copiado y cerrar sesión |
 
 Transversal: ~~publicar la app de Google Cloud de "Testing" a "Production"~~ Hecho (2026-10-25). Sin verificación de Google para `drive.file`; exigió la página de marca y una política de privacidad (`privacy.html`).
 
@@ -94,6 +94,13 @@ Transversal: ~~publicar la app de Google Cloud de "Testing" a "Production"~~ Hec
 - Resumen del mes: ingresos (verde), gastos (terracota) y ahorro = ingresos − gastos (tinta normal, «−» si es negativo). Las transferencias cuentan en ambos lados (arquitectura §6) y no cambian el ahorro. Debajo, el ahorro de hasta 6 meses anteriores; tocar uno salta a ese mes.
 - Agregaciones puras en `js/domain/stats.js`, en céntimos. Los nombres de los meses están en `es.months`, compartidos con el Historial.
 - Caché del Service Worker: `cartos-v6`.
+
+### Decisiones tomadas en la tarea 09
+- Tema (Sistema / Claro / Oscuro) en Ajustes. Es del dispositivo, no de la cuenta: se guarda en `localStorage` (`cartos.theme`) y nunca va a Drive. Se aplica con `data-theme` en `<html>` desde `app.js` (`js/ui/theme.js`); «Sistema» quita el atributo. La barra de estado de iOS (`theme-color`) y los controles nativos (`color-scheme`) siguen el tema. Sin parpadeo apreciable en el iPhone, así que no hizo falta script en `index.html`.
+- Diagnóstico en `#/settings/diagnostics`: últimas entradas (máx. 500), de la más reciente a la más antigua, una por línea (`25/10 13:05:12  api  sheets.append:200  320 ms`), con botón «Copiar». Sin botón para borrar los logs.
+- Los fallos de sincronización se registran con el tipo `error` (nombre del error y código HTTP, nunca datos). Comprobado en el iPhone que el registro copiado no lleva importes, notas ni nombres de categorías.
+- Cerrar sesión borra la sesión y la copia local del libro y vuelve al Login. No revoca el permiso de Drive (volver a entrar no pide la pantalla de permisos). Los cambios sin subir se quedan en la cola, ligados al archivo del libro, y se suben al volver a entrar con la misma cuenta; si los hay, pide un segundo toque. Ajustes muestra el email de la cuenta.
+- Caché del Service Worker: `cartos-v7`.
 
 Regla del plan: cada tarea, al cerrarse, deja algo 100% usable en el iPhone. Ninguna queda a medias esperando a la siguiente.
 

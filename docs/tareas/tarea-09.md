@@ -1,6 +1,6 @@
 # Tarea 09 — Ajustes y Diagnóstico
 
-Estado: pendiente.
+Estado: hecha (2026-10-25).
 Depende de: 08 cerrada.
 
 ## Objetivo
@@ -21,12 +21,12 @@ Gestión de cuentas compartidas, invitaciones.
 - Ninguna entrada de log contiene importes, notas ni nombres de categorías (comprobar con un movimiento de prueba que lleve valores reconocibles).
 
 ## Pruebas manuales en iPhone
-- [ ] Cambias el tema y se aplica al instante y tras reabrir la app.
-- [ ] "Sistema" vuelve a seguir el modo del iPhone.
-- [ ] Diagnóstico muestra los eventos recientes y "Copiar" deja el texto en el portapapeles.
-- [ ] Cerrar sesión te devuelve al Login.
+- [x] Cambias el tema y se aplica al instante y tras reabrir la app.
+- [x] "Sistema" vuelve a seguir el modo del iPhone.
+- [x] Diagnóstico muestra los eventos recientes y "Copiar" deja el texto en el portapapeles.
+- [x] Cerrar sesión te devuelve al Login.
 
 ## Criterio de cierre
-- [ ] Puedes cambiar el tema manualmente y copiar el registro de logs para depurar.
-- [ ] `npm test` en verde.
-- [ ] Todas las tareas del MVP en `docs/ESTADO.md` están en "Hecha".
+- [x] Puedes cambiar el tema manualmente y copiar el registro de logs para depurar.
+- [x] `npm test` en verde.
+- [x] Todas las tareas del MVP en `docs/ESTADO.md` están en "Hecha".
