@@ -9,7 +9,7 @@ import { parseAmountInput } from '../domain/money.js';
 import { rankCategories } from '../domain/category.js';
 import { activeOnly } from '../domain/active.js';
 import { queueDelete, queueEdit, queueMovement, queueTransfer, queueTransferEdit } from '../data/sync.js';
-import { createAmountInput, renderCategoryPicker, renderDatePicker } from '../ui/components.js';
+import { createAmountInput, fillTexts, renderCategoryPicker, renderDatePicker } from '../ui/components.js';
 import { formatAmountInput, labelOf } from '../ui/format.js';
 import { SECTION_HASH } from '../ui/router.js';
 import { renderNavbar } from '../ui/navbar.js';
@@ -80,7 +80,7 @@ export function renderAddMovement(root, { book, fileId, params = {}, entry = nul
       </form>
     </main>
   `;
-  for (const label of root.querySelectorAll('[data-text]')) label.textContent = t[label.dataset.text];
+  fillTexts(root, t);
 
   const form = root.querySelector('form');
   const error = root.querySelector('.form-error');

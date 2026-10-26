@@ -6,6 +6,7 @@ import { es } from '../../i18n/es.js';
 import { readLogs } from '../storage/logs.js';
 import { formatLogLine } from '../ui/format.js';
 import { SECTION_HASH } from '../ui/router.js';
+import { fillTexts } from '../ui/components.js';
 import { renderNavbar } from '../ui/navbar.js';
 
 // Safari only lets the page write to the clipboard from a tap; older
@@ -30,17 +31,16 @@ export function renderDiagnostics(root) {
   const t = es.diagnostics;
   root.innerHTML = `
     <main class="screen screen-form screen-with-navbar">
-      <a class="link-button back-link"></a>
-      <h1 class="form-title"></h1>
+      <a class="link-button back-link" data-text="back"></a>
+      <h1 class="form-title" data-text="title"></h1>
       <button type="button" class="btn-primary form-submit diagnostics-copy" disabled></button>
       <p class="text-muted diagnostics-status" role="status"></p>
       <pre class="diagnostics-log"></pre>
     </main>
   `;
+  fillTexts(root, t);
   const back = root.querySelector('.back-link');
   back.href = SECTION_HASH.settings;
-  back.textContent = t.back;
-  root.querySelector('.form-title').textContent = t.title;
   const copy = root.querySelector('.diagnostics-copy');
   const status = root.querySelector('.diagnostics-status');
   const log = root.querySelector('.diagnostics-log');

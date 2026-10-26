@@ -7,7 +7,9 @@ import { es } from '../../i18n/es.js';
 import { toIsoDate } from '../domain/movement.js';
 import { monthRange, monthSummary, shiftMonth, spendingByCategory } from '../domain/stats.js';
 import { formatEuros, labelOf } from '../ui/format.js';
+import { receiptLine } from '../ui/receipt.js';
 import { SECTION_HASH } from '../ui/router.js';
+import { fillTexts } from '../ui/components.js';
 import { renderNavbar } from '../ui/navbar.js';
 
 // How many earlier months the savings list shows.
@@ -18,24 +20,10 @@ const monthLabel = (month) => {
   return `${es.months[Number(number) - 1]} ${year}`;
 };
 
-function row(left, right, rightClass = '') {
-  const item = document.createElement('li');
-  item.className = 'receipt-line receipt-row';
-  const start = document.createElement('span');
-  start.className = 'receipt-label';
-  start.textContent = left;
-  const end = document.createElement('span');
-  end.className = `receipt-amount ${rightClass}`.trim();
-  end.textContent = right;
-  item.append(start, end);
-  return item;
-}
-
 // One category: name and amount, with a bar as long as its share of the
 // largest category.
 function categoryRow(label, amount, largest) {
-  const item = row(label, formatEuros(amount), 'amount-expense');
-  item.classList.add('stat-category');
+  const item = receiptLine(label, formatEuros(amount), { tone: 'expense', className: 'stat-category' });
   const bar = document.createElement('span');
   bar.className = 'stat-bar';
   const fill = document.createElement('span');
@@ -53,7 +41,7 @@ export function renderAnalysis(root, { book, params = {}, today = new Date() }) 
   const t = es.analysis;
   root.innerHTML = `
     <main class="screen screen-form screen-with-navbar">
-      <h1 class="form-title"></h1>
+      <h1 class="form-title" data-text="title"></h1>
       <div class="month-picker">
         <button type="button" class="month-step" data-step="-1">‹</button>
         <span class="month-label"></span>
@@ -67,8 +55,7 @@ export function renderAnalysis(root, { book, params = {}, today = new Date() }) 
       <ul class="receipt-list stat-earlier"></ul>
     </main>
   `;
-  for (const node of root.querySelectorAll('[data-text]')) node.textContent = t[node.dataset.text];
-  root.querySelector('.form-title').textContent = t.title;
+  fillTexts(root, t);
   const [previous, next] = root.querySelectorAll('.month-step');
   previous.setAttribute('aria-label', t.previous);
   next.setAttribute('aria-label', t.next);
@@ -100,12 +87,10 @@ export function renderAnalysis(root, { book, params = {}, today = new Date() }) 
     }
 
     const { income, expense, savings } = monthSummary(movements, month);
-    const savingsRow = row(t.savings, formatEuros(savings));
-    savingsRow.classList.add('stat-savings');
     root.querySelector('.stat-summary').replaceChildren(
-      row(t.income, formatEuros(income), 'amount-income'),
-      row(t.expense, formatEuros(expense), 'amount-expense'),
-      savingsRow,
+      receiptLine(t.income, formatEuros(income), { tone: 'income' }),
+      receiptLine(t.expense, formatEuros(expense), { tone: 'expense' }),
+      receiptLine(t.savings, formatEuros(savings), { className: 'stat-savings' }),
     );
 
     // Earlier months, newest first, never before the first one with data.
@@ -113,8 +98,8 @@ export function renderAnalysis(root, { book, params = {}, today = new Date() }) 
     for (let step = 1; step <= EARLIER_MONTHS; step += 1) {
       const other = shiftMonth(month, -step);
       if (other < first) break;
-      const item = row(monthLabel(other), formatEuros(monthSummary(movements, other).savings));
-      item.classList.add('stat-month');
+      const savingsOf = formatEuros(monthSummary(movements, other).savings);
+      const item = receiptLine(monthLabel(other), savingsOf, { className: 'stat-month' });
       item.setAttribute('role', 'button');
       item.addEventListener('click', () => go(other));
       earlier.push(item);

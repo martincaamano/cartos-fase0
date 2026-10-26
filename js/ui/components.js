@@ -1,7 +1,15 @@
-// Shared form pieces: emoji picker, amount field, category grid and quick
-// date picker. They touch the DOM only when called.
+// Shared form pieces: template texts, emoji picker, amount field, account
+// form, category grid and quick date picker. They touch the DOM only when
+// called.
 
 import { quickDates } from '../domain/movement.js';
+import { parseAmountInput } from '../domain/money.js';
+import { createAccount, validateAccount } from '../domain/account.js';
+
+// Fills every [data-text="key"] inside root with texts[key].
+export function fillTexts(root, texts) {
+  for (const node of root.querySelectorAll('[data-text]')) node.textContent = texts[node.dataset.text];
+}
 
 // Emojis offered when creating an account (Onboarding and Ajustes → Cuentas).
 export const ACCOUNT_EMOJIS = Object.freeze(['🏦', '💶', '💳', '🐷', '💼', '🏠']);
@@ -37,6 +45,80 @@ export function createAmountInput(name) {
   input.autocomplete = 'off';
   input.placeholder = '0,00';
   return input;
+}
+
+// The text for the first account error, or null when the account is valid.
+// texts: { nameRequired, nameTaken, balanceInvalid }.
+export function accountErrorText(errors, texts) {
+  if (errors.length === 0) return null;
+  if (errors.includes('name_required')) return texts.nameRequired;
+  if (errors.includes('name_taken')) return texts.nameTaken;
+  return texts.balanceInvalid;
+}
+
+// Name, emoji and initial balance of a new account (Onboarding and
+// Ajustes → Cuentas). Validates with domain/ and hands the fields to
+// onSubmit, which returns a promise; while it runs the button says
+// texts.creating, and if it fails the form says texts.failed (or
+// texts.offline when needsConnection and there is no network).
+// existing: the book's accounts, to reject a repeated name.
+// texts: nameLabel, namePlaceholder, emojiLabel, balanceLabel,
+// balancePlaceholder, submit, creating, failed, nameRequired, nameTaken,
+// balanceInvalid and, with needsConnection, offline.
+export function renderAccountForm(container, { existing = [], texts, needsConnection = false, onSubmit }) {
+  const form = document.createElement('form');
+  form.className = 'form';
+  form.noValidate = true;
+  form.innerHTML = `
+    <label class="field">
+      <span class="field-label" data-text="nameLabel"></span>
+      <input class="field-input" name="name" autocomplete="off" maxlength="40">
+    </label>
+    <div class="field">
+      <span class="field-label" data-text="emojiLabel"></span>
+      <div class="emoji-row"></div>
+      <input class="field-input emoji-input" name="emoji" maxlength="8">
+    </div>
+    <label class="field field-balance">
+      <span class="field-label" data-text="balanceLabel"></span>
+    </label>
+    <p class="form-error" role="alert"></p>
+    <button type="submit" class="btn-primary form-submit"></button>
+  `;
+  fillTexts(form, texts);
+  const { name, emoji } = form.elements;
+  name.placeholder = texts.namePlaceholder;
+  emoji.setAttribute('aria-label', texts.emojiLabel);
+  const balance = createAmountInput('balance');
+  balance.placeholder = texts.balancePlaceholder;
+  form.querySelector('.field-balance').appendChild(balance);
+  const error = form.querySelector('.form-error');
+  const submit = form.querySelector('.form-submit');
+  submit.textContent = texts.submit;
+  setupEmojiPicker(form.querySelector('.emoji-row'), emoji, ACCOUNT_EMOJIS);
+
+  form.addEventListener('submit', (event) => {
+    event.preventDefault();
+    const fields = {
+      name: name.value,
+      emoji: emoji.value,
+      initialBalance: balance.value.trim() === '' ? 0 : parseAmountInput(balance.value),
+    };
+    const problem = accountErrorText(validateAccount(createAccount(fields), existing), texts);
+    if (problem) { error.textContent = problem; return; }
+    if (needsConnection && !navigator.onLine) { error.textContent = texts.offline; return; }
+
+    error.textContent = '';
+    submit.disabled = true;
+    submit.textContent = texts.creating;
+    onSubmit(fields).catch((err) => {
+      console.warn('Account creation failed', err);
+      error.textContent = needsConnection && !navigator.onLine ? texts.offline : texts.failed;
+      submit.disabled = false;
+      submit.textContent = texts.submit;
+    });
+  });
+  container.appendChild(form);
 }
 
 function categoryButton(category, onSelect) {

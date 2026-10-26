@@ -5,23 +5,12 @@ import { es } from '../../i18n/es.js';
 import { accountBalance, totalBalance } from '../domain/balance.js';
 import { latestEntries } from '../domain/transfer.js';
 import { activeOnly } from '../domain/active.js';
-import { formatEuros, formatShortDate, labelOf } from '../ui/format.js';
+import { formatEuros, labelOf } from '../ui/format.js';
+import { lookupsOf, movementLine, receiptLine } from '../ui/receipt.js';
+import { fillTexts } from '../ui/components.js';
 import { renderNavbar } from '../ui/navbar.js';
 
 const LATEST_COUNT = 5;
-
-function line(left, right, rightClass = '') {
-  const item = document.createElement('li');
-  item.className = 'receipt-line receipt-row';
-  const start = document.createElement('span');
-  start.className = 'receipt-label';
-  start.textContent = left;
-  const end = document.createElement('span');
-  end.className = `receipt-amount ${rightClass}`.trim();
-  end.textContent = right;
-  item.append(start, end);
-  return item;
-}
 
 // book: movements already include the pending ones (mergePending);
 // pendingCount: how many of them are not in the Sheet yet.
@@ -40,14 +29,14 @@ export function renderDashboard(root, { book, offline, pendingCount = 0 }) {
       <ul class="receipt-list receipt-movements"></ul>
     </main>
   `;
-  for (const heading of root.querySelectorAll('[data-text]')) heading.textContent = t[heading.dataset.text];
+  fillTexts(root, t);
   const pending = pendingCount === 1 ? t.pendingOne : t.pendingMany.replace('{n}', pendingCount);
   root.querySelector('.dashboard-notice').textContent = [offline ? t.offline : '', pendingCount ? pending : '']
     .filter(Boolean)
     .join(' · ');
   root.querySelector('.receipt-total-label').textContent = t.total;
 
-  const { accounts, categories, movements } = book;
+  const { accounts, movements } = book;
   const active = activeOnly(accounts);
   root.querySelector('.receipt-total-amount').textContent = formatEuros(totalBalance(active, movements));
 
@@ -55,7 +44,7 @@ export function renderDashboard(root, { book, offline, pendingCount = 0 }) {
   for (const account of active) {
     const balance = accountBalance(account, movements);
     accountList.appendChild(
-      line(labelOf(account), formatEuros(balance), balance < 0 ? 'amount-expense' : '')
+      receiptLine(labelOf(account), formatEuros(balance), { tone: balance < 0 ? 'expense' : '' })
     );
   }
 
@@ -67,24 +56,8 @@ export function renderDashboard(root, { book, offline, pendingCount = 0 }) {
     empty.textContent = t.noMovements;
     movementList.appendChild(empty);
   }
-  const categoryById = new Map(categories.map((category) => [category.id, category]));
-  const accountById = new Map(accounts.map((account) => [account.id, account]));
-  const accountLabel = (id) => labelOf(accountById.get(id));
-  for (const entry of latest) {
-    if (entry.kind === 'transfer') {
-      // Neither expense nor income: plain ink.
-      const label = `${formatShortDate(entry.date)}  ${accountLabel(entry.from)} → ${accountLabel(entry.to)}`;
-      movementList.appendChild(line(label, formatEuros(entry.amount)));
-      continue;
-    }
-    const { movement } = entry;
-    const category = categoryById.get(movement.categoryId);
-    const label = `${formatShortDate(movement.date)}  ${labelOf(category)}`;
-    const isExpense = movement.type === 'expense';
-    movementList.appendChild(
-      line(label, formatEuros(isExpense ? -movement.amount : movement.amount), isExpense ? 'amount-expense' : 'amount-income')
-    );
-  }
+  const lookups = lookupsOf(book);
+  for (const entry of latest) movementList.appendChild(movementLine(entry, lookups));
 
   renderNavbar(root, { active: 'home' });
 }
