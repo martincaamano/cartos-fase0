@@ -7,7 +7,7 @@ Fuente de verdad del progreso. Los agentes lo leen al empezar una tarea y lo act
 - Repositorio: `cartos-fase0` (se queda con ese nombre).
 - GitHub Pages publica `main` (carpeta raíz) en https://martincaamano.github.io/cartos-fase0/. El repo es público: con el plan gratuito, Pages no funciona en repos privados (estuvo sin publicar del 2026-09-27 al 2026-10-24 por eso).
 - Se desarrolla desde un Mac (`npm test`, `npm run dev` en http://localhost:5173). Las pruebas reales se hacen en el iPhone.
-- MVP completo (2026-10-25): las nueve tareas están hechas y probadas en iPhone. Siguiente paso: la revisión técnica, tarea 11 (Componentes de interfaz).
+- MVP completo (2026-10-25): las nueve tareas están hechas y probadas en iPhone. Siguiente paso: la revisión técnica, tarea 12 (Estilos y paletas), que tiene una decisión previa.
 
 ## Tareas del MVP
 
@@ -109,7 +109,7 @@ Mejoras de mantenibilidad, estructura y rendimiento sin cambiar lo que ve el usu
 | Tarea | Título | Estado | Notas |
 |---|---|---|---|
 | 10 | Limpieza | Hecha (2026-10-26) | Probada en iPhone (prueba rápida y arranque sin conexión) |
-| 11 | Componentes de interfaz | Pendiente | `ui/receipt.js` y formulario de cuenta común |
+| 11 | Componentes de interfaz | Hecha (2026-10-26) | Probada en iPhone (prueba rápida) |
 | 12 | Estilos y paletas | Pendiente | Estilos en varios archivos y tokens en dos niveles, listos para varias paletas. Tiene decisión previa |
 | 13 | Rutas y `app.js` | Pendiente | Una tabla de pantallas; estado y sincronización fuera de `app.js` |
 | 14 | Sincronización | Pendiente | Sin `drive.list` tras guardar; separar la cola de la subida |
@@ -120,6 +120,13 @@ Mejoras de mantenibilidad, estructura y rendimiento sin cambiar lo que ve el usu
 - Funciones comunes: `domain/active.js` (`isActive`, `activeOnly`, `activeIds`) para la regla del borrado lógico; `labelOf` en `ui/format.js` para «emoji + nombre»; `currentUserSub` en `data/auth.js`; `ACCOUNT_EMOJIS` en `ui/components.js`.
 - La búsqueda de fila por id vive solo en `data/rows.js` (`rowsById`, `findRowById`): la usan quitar categoría y la sincronización. `planSync` (`storage/`) recibe el mapa id → fila ya hecho, así `storage/` no conoce la forma del Sheet.
 - Caché del Service Worker: `cartos-v8`. Un módulo nuevo que no esté en `APP_SHELL` rompe el arranque sin conexión; la tarea 13 añade un test que lo vigila.
+
+### Decisiones tomadas en la tarea 11
+- `js/ui/receipt.js`: `receiptLine(label, right, { tone, href, className })` es la única forma de pintar una línea de recibo; `right` es el importe o un elemento (el «Quitar» de Categorías). `movementLine` pinta un movimiento o una transferencia a partir de `movementLineModel`, que es puro y tiene tests. `lookupsOf(book)` construye los mapas de cuentas y categorías.
+- `renderAccountForm` (`ui/components.js`) es el formulario de cuenta de Onboarding y de Ajustes → Cuentas, con la validación, los textos de error (`accountErrorText`), «Creando…» y el aviso sin conexión. Cada pantalla solo decide qué hace al guardar.
+- `fillTexts(root, texts)` rellena los `[data-text]`; títulos y enlaces de vuelta también van por `data-text`.
+- Se comprobó que el HTML de todas las pantallas es el mismo que antes (salvo `data-text` y dos clases internas sin estilo).
+- Caché del Service Worker: `cartos-v9`.
 
 Regla del plan: cada tarea, al cerrarse, deja algo 100% usable en el iPhone. Ninguna queda a medias esperando a la siguiente.
 
