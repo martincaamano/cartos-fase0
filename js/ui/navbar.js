@@ -1,5 +1,6 @@
-// Fixed bottom bar with the five sections (design §2). Sections not built
-// yet are shown dimmed and do not respond. Touches the DOM only when called.
+// Fixed bottom bar with the five sections (design §2). A section without a
+// screen in the router table is shown dimmed and does not respond. Touches
+// the DOM only when called.
 
 import { es } from '../../i18n/es.js';
 import { SECTION_HASH } from './router.js';
@@ -11,8 +12,6 @@ const SECTIONS = [
   { id: 'analysis', label: es.navbar.analysis },
   { id: 'settings', label: es.navbar.settings },
 ];
-
-const ENABLED = ['home', 'history', 'add', 'analysis', 'settings'];
 
 export function renderNavbar(container, { active = 'home' } = {}) {
   const nav = document.createElement('nav');
@@ -27,7 +26,7 @@ export function renderNavbar(container, { active = 'home' } = {}) {
       button.classList.add('is-active');
       button.setAttribute('aria-current', 'page');
     }
-    button.disabled = !ENABLED.includes(section.id);
+    button.disabled = !(section.id in SECTION_HASH);
     button.addEventListener('click', () => {
       location.hash = SECTION_HASH[section.id];
     });

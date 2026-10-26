@@ -1,13 +1,14 @@
 # Estructura de carpetas — Cartos
 
-Árbol de archivos propuesto para el repositorio `cartos`, siguiendo las tres capas acordadas (datos, dominio, pantallas) con el dominio aislado de infraestructura y de UI.
+Árbol de archivos del repositorio, siguiendo las capas acordadas (datos, dominio, pantallas) con el dominio aislado de infraestructura y de UI. Al día con la tarea 13.
 
 ```
-cartos/
+cartos-fase0/
 │
-├── index.html
+├── index.html            (enlaza los estilos y carga js/app.js)
+├── privacy.html          (política de privacidad, exigida por Google)
 ├── manifest.json
-├── sw.js
+├── sw.js                 (Service Worker: APP_SHELL con todos los módulos)
 │
 ├── styles/
 │   ├── tokens.css        (paleta, colores semánticos y escalas)
@@ -16,43 +17,41 @@ cartos/
 │   └── screens.css       (lo propio de cada pantalla)
 │
 ├── i18n/
-│   └── es.js
+│   └── es.js             (todos los textos visibles)
 │
-└── js/
-    │
-    ├── app.js
-    │
-    ├── domain/
-    │   ├── account.js
-    │   ├── movement.js
-    │   ├── category.js
-    │   ├── transfer.js
-    │   └── balance.js
-    │
-    ├── data/
-    │   ├── auth.js
-    │   ├── drive.js
-    │   ├── sheets.js
-    │   └── book.js
-    │
-    ├── storage/
-    │   ├── outbox.js
-    │   └── logs.js
-    │
-    ├── screens/
-    │   ├── login.js
-    │   ├── connect.js
-    │   ├── onboarding.js
-    │   ├── dashboard.js
-    │   ├── addMovement.js
-    │   ├── history.js
-    │   ├── categories.js
-    │   └── settings.js
-    │
-    └── ui/
-        ├── navbar.js
-        ├── router.js
-        └── components.js
+├── js/
+│   ├── app.js            (arranque, eventos del navegador y qué pantalla se ve)
+│   ├── book-state.js     (libro y cola en memoria; cargar, recargar, sincronizar)
+│   ├── views.js          (cómo se pinta cada pantalla de la tabla de rutas)
+│   ├── config.js         (Client ID público de Google)
+│   │
+│   ├── domain/           (reglas puras, con tests)
+│   │   ├── account.js, category.js, movement.js, transfer.js
+│   │   ├── balance.js, money.js, active.js
+│   │   └── history.js, stats.js
+│   │
+│   ├── data/             (lo único que habla con Google)
+│   │   ├── auth.js, http.js, errors.js
+│   │   ├── drive.js, sheets.js, rows.js
+│   │   ├── book.js, personal-book.js
+│   │   └── sync.js
+│   │
+│   ├── storage/          (lo que vive en el dispositivo)
+│   │   ├── session.js, book-cache.js
+│   │   ├── outbox.js, outbox-logic.js
+│   │   └── logs.js
+│   │
+│   ├── screens/          (una pantalla por archivo)
+│   │   ├── login.js, connect.js, status.js, onboarding.js
+│   │   ├── dashboard.js, addMovement.js, history.js, analysis.js
+│   │   └── settings.js, accounts.js, categories.js, diagnostics.js
+│   │
+│   └── ui/               (piezas compartidas; no tocan el DOM al importarse)
+│       ├── router.js     (tabla de pantallas y decisión de ruta)
+│       ├── navbar.js, receipt.js, components.js
+│       └── format.js, theme.js
+│
+└── tests/                (node:test, uno por módulo; Google siempre simulado)
 ```
 
 ## Por qué cada carpeta
@@ -69,7 +68,16 @@ cartos/
 
 **`i18n/`** — Los textos visibles en español, en un único sitio. El código en sí va en inglés; esto es lo único pensado para poder traducirse el día de mañana sin tocar lógica.
 
-**Raíz** — `index.html` carga el Service Worker, el manifest y `js/app.js` como módulo. `app.js` es el punto de entrada: decide si mostrar login, onboarding o dashboard según el estado, y monta el router y la barra de navegación.
+**Raíz de `js/`** — `app.js` es el punto de entrada: arranca el tema y el libro, escucha al navegador (cambio de URL, volver a primer plano, conexión) y decide si se ve el login, la conexión con Google, el onboarding o la app. `book-state.js` guarda el libro y la cola en memoria y lleva el ciclo cargar → sincronizar → recargar, sin tocar el DOM (tiene tests). `views.js` dice cómo se pinta cada pantalla de la app.
+
+## Cómo se añade una pantalla
+
+1. Una fila en `SCREENS` de `js/ui/router.js` (sección, ruta y si se puede repintar con datos nuevos).
+2. Su función de pintado en `VIEWS` de `js/views.js`. Un test falla si la tabla y `VIEWS` no tienen las mismas secciones.
+3. El archivo en `js/screens/`, con sus textos en `i18n/es.js`.
+4. El archivo en `APP_SHELL` de `sw.js` (y subir `CACHE_NAME`). Un test falla si falta.
+
+Si la pantalla va en la barra inferior, su botón ya existe en `js/ui/navbar.js` y se activa solo al tener ruta.
 
 ## Cómo crece con el tiempo
 

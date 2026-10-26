@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { decideRoute, ROUTES, parseHash, SECTIONS, SECTION_HASH } from '../js/ui/router.js';
+import { readFileSync } from 'node:fs';
+import { decideRoute, ROUTES, parseHash, SECTIONS, SECTION_HASH, SCREENS, isRepaintable } from '../js/ui/router.js';
 
 test('decideRoute covers every session / drive / token combination', () => {
   const cases = [
@@ -57,4 +58,44 @@ test('parseHash maps each hash to its section and keeps the query', () => {
 
 test('every section has a hash that parses back to it', () => {
   for (const [section, hash] of Object.entries(SECTION_HASH)) assert.equal(parseHash(hash).section, section);
+});
+
+test('the screen table produces exactly the same hashes as before', () => {
+  assert.deepEqual(
+    { ...SECTION_HASH },
+    {
+      home: '#/',
+      history: '#/history',
+      edit: '#/history/edit',
+      add: '#/add',
+      analysis: '#/analysis',
+      settings: '#/settings',
+      categories: '#/settings/categories',
+      accounts: '#/settings/accounts',
+      diagnostics: '#/settings/diagnostics',
+    }
+  );
+  assert.deepEqual(SCREENS.map((screen) => screen.section), Object.keys(SECTION_HASH));
+  for (const section of Object.keys(SECTION_HASH)) assert.equal(SECTIONS[section.toUpperCase()], section);
+});
+
+test('parseHash keeps the id of the movement being edited', () => {
+  assert.deepEqual(parseHash('#/history/edit?id=x'), { section: SECTIONS.EDIT, params: { id: 'x' } });
+  assert.deepEqual(parseHash('#/history'), { section: SECTIONS.HISTORY, params: {} });
+  assert.deepEqual(parseHash('#/analysis'), { section: SECTIONS.ANALYSIS, params: {} });
+  assert.deepEqual(parseHash('#/settings/diagnostics'), { section: SECTIONS.DIAGNOSTICS, params: {} });
+});
+
+test('only home, analysis, categories and accounts are repaintable', () => {
+  const repaintable = Object.keys(SECTION_HASH).filter(isRepaintable);
+  assert.deepEqual(repaintable.sort(), ['accounts', 'analysis', 'categories', 'home']);
+  assert.equal(isRepaintable('nope'), false);
+  assert.equal(isRepaintable(undefined), false);
+});
+
+test('every navbar button has a route', () => {
+  const source = readFileSync(new URL('../js/ui/navbar.js', import.meta.url), 'utf8');
+  const ids = [...source.matchAll(/\{\s*id:\s*'([^']+)'/g)].map((match) => match[1]);
+  assert.deepEqual(ids, ['home', 'history', 'add', 'analysis', 'settings']);
+  for (const id of ids) assert.ok(id in SECTION_HASH, `navbar button "${id}" has no route`);
 });

@@ -100,3 +100,24 @@ test('every relative import in js/ and i18n/ resolves to an existing file with .
     }
   }
 });
+
+test('every module in js/ and i18n/ and every stylesheet in styles/ is in APP_SHELL', () => {
+  // A module missing from the shell works online and breaks offline.
+  const sw = read('sw.js');
+  const block = sw.match(/const APP_SHELL = \[([\s\S]*?)\];/);
+  assert.ok(block, 'APP_SHELL not found in sw.js');
+  const entries = new Set([...block[1].matchAll(/'([^']+)'/g)].map((match) => match[1].replace(/^\.\//, '')));
+  const listByExt = (dir, ext) =>
+    readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
+      const full = join(dir, entry.name);
+      if (entry.isDirectory()) return listByExt(full, ext);
+      return entry.name.endsWith(ext) ? [full] : [];
+    });
+  const files = [
+    ...['js', 'i18n'].flatMap((dir) => listByExt(resolve(root, dir), '.js')),
+    ...listByExt(resolve(root, 'styles'), '.css'),
+  ].map((file) => file.slice(root.length + 1).split('\\').join('/'));
+  assert.ok(files.length > 0);
+  const missing = files.filter((file) => !entries.has(file));
+  assert.deepEqual(missing, [], `APP_SHELL is missing: ${missing.join(', ')}`);
+});
