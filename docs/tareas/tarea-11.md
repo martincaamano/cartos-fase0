@@ -1,6 +1,6 @@
 # Tarea 11 — Revisión técnica: componentes de interfaz
 
-Estado: pendiente.
+Estado: hecha (2026-10-26).
 Depende de: 10 cerrada.
 
 ## Objetivo
@@ -21,9 +21,9 @@ Cambiar el aspecto (eso es la tarea 12), rutas y `app.js` (tarea 13).
 - `npm test` en verde. Las partes puras nuevas (por ejemplo, decidir el texto y el tono de una línea a partir de un movimiento) llevan su test.
 
 ## Pruebas manuales en iPhone
-- [ ] Prueba rápida: Dashboard, Historial (con una transferencia), Análisis, Ajustes → Cuentas (crear una) y el Onboarding con una cuenta nueva de prueba si es posible. Se ven igual que antes.
+- [x] Prueba rápida: Dashboard, Historial (con una transferencia), Análisis, Ajustes → Cuentas (crear una) y el Onboarding con una cuenta nueva de prueba si es posible. Se ven igual que antes.
 
 ## Criterio de cierre
-- [ ] Ninguna pantalla construye a mano una línea de recibo ni el formulario de cuenta.
-- [ ] Nada visible cambia y la prueba rápida pasa.
-- [ ] `npm test` en verde.
+- [x] Ninguna pantalla construye a mano una línea de recibo ni el formulario de cuenta.
+- [x] Nada visible cambia y la prueba rápida pasa.
+- [x] `npm test` en verde.
