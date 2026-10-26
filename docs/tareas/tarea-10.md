@@ -1,6 +1,6 @@
 # Tarea 10 — Revisión técnica: limpieza
 
-Estado: pendiente.
+Estado: hecha (2026-10-26).
 Depende de: MVP cerrado (tarea 09).
 
 ## Objetivo
@@ -24,8 +24,8 @@ Componentes de interfaz (tarea 11), estilos (tarea 12), rutas y `app.js` (tarea 
 - Tests de las funciones comunes nuevas («solo activos», `labelOf`, búsqueda de fila por id: primera aparición, id ausente, cabecera ignorada).
 
 ## Pruebas manuales en iPhone
-- [ ] Prueba rápida: abres la app, añades un gasto, lo editas en Historial, miras Análisis y creas una categoría en Ajustes. Todo igual que antes.
+- [x] Prueba rápida: abres la app, añades un gasto, lo editas en Historial, miras Análisis y creas una categoría en Ajustes. Todo igual que antes.
 
 ## Criterio de cierre
-- [ ] Nada visible cambia y la prueba rápida pasa.
-- [ ] `npm test` en verde.
+- [x] Nada visible cambia y la prueba rápida pasa.
+- [x] `npm test` en verde.
