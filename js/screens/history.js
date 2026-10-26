@@ -6,8 +6,10 @@
 import { es } from '../../i18n/es.js';
 import { historyEntries } from '../domain/history.js';
 import { activeOnly } from '../domain/active.js';
-import { formatEuros, formatShortDate, labelOf } from '../ui/format.js';
+import { labelOf } from '../ui/format.js';
+import { lookupsOf, movementLine } from '../ui/receipt.js';
 import { SECTION_HASH } from '../ui/router.js';
+import { fillTexts } from '../ui/components.js';
 import { renderNavbar } from '../ui/navbar.js';
 
 // Lines painted at once; "Mostrar más" adds another page.
@@ -20,38 +22,12 @@ function option(value, text) {
   return item;
 }
 
-function entryLine(entry, { accountById, categoryById }) {
-  const link = document.createElement('a');
-  link.className = 'receipt-line receipt-row history-line';
-  link.href = `${SECTION_HASH.edit}?id=${encodeURIComponent(entry.id)}`;
-  const start = document.createElement('span');
-  start.className = 'receipt-label';
-  const end = document.createElement('span');
-  end.className = 'receipt-amount';
-  if (entry.kind === 'transfer') {
-    // Neither expense nor income: plain ink.
-    start.textContent = `${formatShortDate(entry.date)}  ${labelOf(accountById.get(entry.from))} → ${labelOf(accountById.get(entry.to))}`;
-    end.textContent = formatEuros(entry.amount);
-  } else {
-    const { movement } = entry;
-    const account = labelOf(accountById.get(movement.accountId));
-    start.textContent = `${formatShortDate(movement.date)}  ${labelOf(categoryById.get(movement.categoryId))} · ${account}`;
-    const isExpense = movement.type === 'expense';
-    end.textContent = formatEuros(isExpense ? -movement.amount : movement.amount);
-    end.classList.add(isExpense ? 'amount-expense' : 'amount-income');
-  }
-  link.append(start, end);
-  const item = document.createElement('li');
-  item.appendChild(link);
-  return item;
-}
-
 // book: movements already include the pending ones (mergePending).
 export function renderHistory(root, { book }) {
   const t = es.history;
   root.innerHTML = `
     <main class="screen screen-form screen-with-navbar">
-      <h1 class="form-title"></h1>
+      <h1 class="form-title" data-text="title"></h1>
       <form class="history-filters" novalidate>
         <label class="field">
           <span class="field-label" data-text="account"></span>
@@ -75,12 +51,10 @@ export function renderHistory(root, { book }) {
       <button type="button" class="link-button history-more" data-text="more" hidden></button>
     </main>
   `;
-  for (const node of root.querySelectorAll('[data-text]')) node.textContent = t[node.dataset.text];
-  root.querySelector('.form-title').textContent = t.title;
+  fillTexts(root, t);
 
   const { accounts, categories, movements } = book;
-  const accountById = new Map(accounts.map((account) => [account.id, account]));
-  const categoryById = new Map(categories.map((category) => [category.id, category]));
+  const lookups = lookupsOf(book);
 
   const form = root.querySelector('.history-filters');
   const { account, category, from, to } = form.elements;
@@ -111,7 +85,11 @@ export function renderHistory(root, { book }) {
         ul.className = 'receipt-list';
         list.append(heading, ul);
       }
-      ul.appendChild(entryLine(entry, { accountById, categoryById }));
+      ul.appendChild(movementLine(entry, lookups, {
+        withAccount: true,
+        href: `${SECTION_HASH.edit}?id=${encodeURIComponent(entry.id)}`,
+        className: 'history-line',
+      }));
     }
     shown += page.length;
     more.hidden = shown >= entries.length;

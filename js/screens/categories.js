@@ -6,42 +6,37 @@ import { es } from '../../i18n/es.js';
 import { canRemoveCategory, createCategory, validateCategory } from '../domain/category.js';
 import { activeOnly } from '../domain/active.js';
 import { addCategory, removeCategory } from '../data/book.js';
-import { setupEmojiPicker } from '../ui/components.js';
+import { fillTexts, setupEmojiPicker } from '../ui/components.js';
 import { labelOf } from '../ui/format.js';
+import { receiptLine } from '../ui/receipt.js';
 import { SECTION_HASH } from '../ui/router.js';
 import { renderNavbar } from '../ui/navbar.js';
 
 const SUGGESTED_EMOJIS = ['🛍️', '☕', '🐶', '🎁', '✈️', '🏋️'];
 
+// Removable categories end with "Quitar"; Transferencia says it is fixed.
 function categoryLine(category, { onRemove, t }) {
-  const item = document.createElement('li');
-  item.className = 'receipt-line receipt-row';
-  const label = document.createElement('span');
-  label.className = 'receipt-label';
-  label.textContent = labelOf(category);
-  item.appendChild(label);
+  let action;
   if (canRemoveCategory(category)) {
-    const remove = document.createElement('button');
-    remove.type = 'button';
-    remove.className = 'link-button';
-    remove.textContent = t.remove;
-    remove.addEventListener('click', () => onRemove(category));
-    item.appendChild(remove);
+    action = document.createElement('button');
+    action.type = 'button';
+    action.className = 'link-button';
+    action.textContent = t.remove;
+    action.addEventListener('click', () => onRemove(category));
   } else {
-    const fixed = document.createElement('span');
-    fixed.className = 'text-muted';
-    fixed.textContent = t.fixed;
-    item.appendChild(fixed);
+    action = document.createElement('span');
+    action.className = 'text-muted';
+    action.textContent = t.fixed;
   }
-  return item;
+  return receiptLine(labelOf(category), action);
 }
 
 export function renderCategories(root, { book, fileId, onChanged }) {
   const t = es.categoryAdmin;
   root.innerHTML = `
     <main class="screen screen-form screen-with-navbar">
-      <a class="link-button back-link"></a>
-      <h1 class="form-title"></h1>
+      <a class="link-button back-link" data-text="back"></a>
+      <h1 class="form-title" data-text="title"></h1>
       <p class="form-error categories-error" role="alert"></p>
       <h2 class="receipt-heading" data-text="expenses"></h2>
       <ul class="receipt-list list-expense"></ul>
@@ -67,11 +62,9 @@ export function renderCategories(root, { book, fileId, onChanged }) {
       </form>
     </main>
   `;
-  for (const label of root.querySelectorAll('[data-text]')) label.textContent = t[label.dataset.text];
+  fillTexts(root, t);
   const back = root.querySelector('.back-link');
   back.href = SECTION_HASH.settings;
-  back.textContent = t.back;
-  root.querySelector('.form-title').textContent = t.title;
   const listError = root.querySelector('.categories-error');
 
   const fail = (target, err) => {

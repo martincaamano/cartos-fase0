@@ -3,6 +3,7 @@
 
 import { es } from '../../i18n/es.js';
 import { SECTION_HASH } from '../ui/router.js';
+import { fillTexts } from '../ui/components.js';
 import { renderNavbar } from '../ui/navbar.js';
 import { applyTheme, loadTheme, saveTheme, THEMES } from '../ui/theme.js';
 
@@ -47,7 +48,7 @@ export function renderSettings(root, { user = null, pendingCount = 0, onSignOut 
   const t = es.settings;
   root.innerHTML = `
     <main class="screen screen-form screen-with-navbar">
-      <h1 class="form-title"></h1>
+      <h1 class="form-title" data-text="title"></h1>
       <ul class="receipt-list settings-list"></ul>
       <h2 class="receipt-heading" data-text="theme"></h2>
       <div class="chip-row theme-picker" role="group"></div>
@@ -57,8 +58,7 @@ export function renderSettings(root, { user = null, pendingCount = 0, onSignOut 
       <button type="button" class="link-button settings-signout"></button>
     </main>
   `;
-  for (const node of root.querySelectorAll('[data-text]')) node.textContent = t[node.dataset.text];
-  root.querySelector('.form-title').textContent = t.title;
+  fillTexts(root, t);
   const list = root.querySelector('.settings-list');
   for (const entry of ENTRIES) {
     const item = document.createElement('li');
