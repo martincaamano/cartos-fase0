@@ -7,7 +7,7 @@ Fuente de verdad del progreso. Los agentes lo leen al empezar una tarea y lo act
 - Repositorio: `cartos-fase0` (se queda con ese nombre).
 - GitHub Pages publica `main` (carpeta raíz) en https://martincaamano.github.io/cartos-fase0/. El repo es público: con el plan gratuito, Pages no funciona en repos privados (estuvo sin publicar del 2026-09-27 al 2026-10-24 por eso).
 - Se desarrolla desde un Mac (`npm test`, `npm run dev` en http://localhost:5173). Las pruebas reales se hacen en el iPhone.
-- MVP completo (2026-10-25): las nueve tareas están hechas y probadas en iPhone. Siguiente paso: lo que decida el usuario.
+- MVP completo (2026-10-25): las nueve tareas están hechas y probadas en iPhone. Siguiente paso: la revisión técnica (tareas 10 a 14), empezando por la tarea 10.
 
 ## Tareas del MVP
 
@@ -101,6 +101,18 @@ Transversal: ~~publicar la app de Google Cloud de "Testing" a "Production"~~ Hec
 - Los fallos de sincronización se registran con el tipo `error` (nombre del error y código HTTP, nunca datos). Comprobado en el iPhone que el registro copiado no lleva importes, notas ni nombres de categorías.
 - Cerrar sesión borra la sesión y la copia local del libro y vuelve al Login. No revoca el permiso de Drive (volver a entrar no pide la pantalla de permisos). Los cambios sin subir se quedan en la cola, ligados al archivo del libro, y se suben al volver a entrar con la misma cuenta; si los hay, pide un segundo toque. Ajustes muestra el email de la cuenta.
 - Caché del Service Worker: `cartos-v7`.
+
+## Revisión técnica (después del MVP)
+
+Mejoras de mantenibilidad, estructura y rendimiento sin cambiar lo que ve el usuario. Principios SOLID donde aportan, sin sobreingeniería: ni framework, ni empaquetador, ni dependencias. Cada tarea se prueba en el iPhone con una prueba rápida (abrir, añadir, editar en Historial, Análisis y Ajustes).
+
+| Tarea | Título | Estado | Notas |
+|---|---|---|---|
+| 10 | Limpieza | Pendiente | Código muerto, errores en `data/errors.js`, funciones comunes, búsqueda de fila por id única |
+| 11 | Componentes de interfaz | Pendiente | `ui/receipt.js` y formulario de cuenta común |
+| 12 | Estilos y paletas | Pendiente | Estilos en varios archivos y tokens en dos niveles, listos para varias paletas. Tiene decisión previa |
+| 13 | Rutas y `app.js` | Pendiente | Una tabla de pantallas; estado y sincronización fuera de `app.js` |
+| 14 | Sincronización | Pendiente | Sin `drive.list` tras guardar; separar la cola de la subida |
 
 Regla del plan: cada tarea, al cerrarse, deja algo 100% usable en el iPhone. Ninguna queda a medias esperando a la siguiente.
 
