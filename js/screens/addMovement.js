@@ -7,9 +7,10 @@
 import { es } from '../../i18n/es.js';
 import { parseAmountInput } from '../domain/money.js';
 import { rankCategories } from '../domain/category.js';
+import { activeOnly } from '../domain/active.js';
 import { queueDelete, queueEdit, queueMovement, queueTransfer, queueTransferEdit } from '../data/sync.js';
 import { createAmountInput, renderCategoryPicker, renderDatePicker } from '../ui/components.js';
-import { formatAmountInput } from '../ui/format.js';
+import { formatAmountInput, labelOf } from '../ui/format.js';
 import { SECTION_HASH } from '../ui/router.js';
 import { renderNavbar } from '../ui/navbar.js';
 
@@ -27,7 +28,7 @@ function fillAccounts(select, accounts) {
   for (const account of accounts) {
     const option = document.createElement('option');
     option.value = account.id;
-    option.textContent = `${account.emoji} ${account.name}`.trim();
+    option.textContent = labelOf(account);
     select.appendChild(option);
   }
 }
@@ -94,7 +95,7 @@ export function renderAddMovement(root, { book, fileId, params = {}, entry = nul
   createLink.href = SECTION_HASH.accounts;
   createLink.textContent = t.createAccount;
 
-  const accounts = book.accounts.filter((account) => !account.deleted);
+  const accounts = activeOnly(book.accounts);
   const { account: accountSelect, from: fromSelect, to: toSelect } = form.elements;
   for (const select of [accountSelect, fromSelect, toSelect]) fillAccounts(select, accounts);
   if (accounts.length > 1) toSelect.value = accounts[1].id;

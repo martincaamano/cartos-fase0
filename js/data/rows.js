@@ -46,3 +46,19 @@ export function rowsToObjects(sheet, values = []) {
   if (expected.some((column, i) => header[i] !== column)) throw new SheetFormatError(sheet);
   return rows.filter((row) => row.length > 0 && row[0] !== '').map((row) => fromRow(sheet, row));
 }
+
+// idColumn: column A of a tab as the Sheets API returns it (header
+// included). Maps each id to its 1-based row number; the first row wins if
+// an id were repeated. Rows are always found by id, never remembered.
+export function rowsById(idColumn = []) {
+  const rows = new Map();
+  idColumn.forEach((row, index) => {
+    const id = String(row?.[0] ?? '');
+    if (index > 0 && id && !rows.has(id)) rows.set(id, index + 1);
+  });
+  return rows;
+}
+
+export function findRowById(idColumn, id) {
+  return rowsById(idColumn).get(id) ?? null;
+}

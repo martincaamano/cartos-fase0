@@ -5,9 +5,7 @@ import { es } from '../../i18n/es.js';
 import { parseAmountInput } from '../domain/money.js';
 import { createAccount, validateAccount } from '../domain/account.js';
 import { setUpPersonalBook } from '../data/personal-book.js';
-import { setupEmojiPicker } from '../ui/components.js';
-
-const SUGGESTED_EMOJIS = ['🏦', '💶', '💳', '🐷', '💼', '🏠'];
+import { ACCOUNT_EMOJIS, setupEmojiPicker } from '../ui/components.js';
 
 export function renderOnboarding(root, { fileId = null, onDone }) {
   const t = es.onboarding;
@@ -45,7 +43,7 @@ export function renderOnboarding(root, { fileId = null, onDone }) {
   name.placeholder = t.namePlaceholder;
   balance.placeholder = t.balancePlaceholder;
   submit.textContent = t.submit;
-  setupEmojiPicker(root.querySelector('.emoji-row'), emoji, SUGGESTED_EMOJIS);
+  setupEmojiPicker(root.querySelector('.emoji-row'), emoji, ACCOUNT_EMOJIS);
 
   form.addEventListener('submit', (event) => {
     event.preventDefault();

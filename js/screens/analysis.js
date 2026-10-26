@@ -6,7 +6,7 @@
 import { es } from '../../i18n/es.js';
 import { toIsoDate } from '../domain/movement.js';
 import { monthRange, monthSummary, shiftMonth, spendingByCategory } from '../domain/stats.js';
-import { formatEuros } from '../ui/format.js';
+import { formatEuros, labelOf } from '../ui/format.js';
 import { SECTION_HASH } from '../ui/router.js';
 import { renderNavbar } from '../ui/navbar.js';
 
@@ -95,8 +95,7 @@ export function renderAnalysis(root, { book, params = {}, today = new Date() }) 
     }
     const largest = spending[0]?.amount ?? 0;
     for (const { categoryId, amount } of spending) {
-      const category = categoryById.get(categoryId);
-      const label = category ? `${category.emoji} ${category.name}`.trim() : categoryId;
+      const label = labelOf(categoryById.get(categoryId)) || categoryId;
       categoryList.appendChild(categoryRow(label, amount, largest));
     }
 

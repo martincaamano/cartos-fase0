@@ -2,15 +2,8 @@
 // getAccessToken() and logs every call (operation and HTTP code only).
 
 import { expireAccessToken, getAccessToken, TokenExpiredError } from './auth.js';
+import { ApiError } from './errors.js';
 import { logEvent } from '../storage/logs.js';
-
-export class ApiError extends Error {
-  constructor(status, op) {
-    super(`Google API ${op} failed with ${status}`);
-    this.status = status;
-    this.op = op;
-  }
-}
 
 const defaults = {
   fetch: (...args) => globalThis.fetch(...args),

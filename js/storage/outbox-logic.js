@@ -7,15 +7,11 @@ export function enqueue(queue, movement) {
   return [...queue.filter((pending) => pending.id !== movement.id), movement];
 }
 
-// existingIds: column A of the Movements tab below the header, in order, so
-// existingIds[i] lives in row i + 2. Returns the new movements to append and
-// the edited or deleted ones to write over their row. The row number is read
-// right before writing, never remembered.
-export function planSync(queue, existingIds) {
-  const rowById = new Map();
-  existingIds.forEach((id, i) => {
-    if (id && !rowById.has(id)) rowById.set(id, i + 2);
-  });
+// rowById: the Movements rows already in the Sheet, id → row number
+// (rowsById in data/rows.js), read right before writing, never remembered.
+// Returns the new movements to append and the edited or deleted ones to
+// write over their row.
+export function planSync(queue, rowById) {
   const latest = new Map();
   for (const movement of queue) latest.set(movement.id, movement);
 

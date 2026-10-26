@@ -5,14 +5,15 @@
 // gets the same run.
 
 import { append, batchGet, batchUpdateValues } from './sheets.js';
-import { HEADERS, toRow } from './rows.js';
-import { getCurrentUser } from './auth.js';
-import { ValidationError } from './book.js';
+import { HEADERS, rowsById, toRow } from './rows.js';
+import { currentUserSub } from './auth.js';
+import { ValidationError } from './errors.js';
 import { planSync } from '../storage/outbox-logic.js';
 import { addPending, listPending, removePending } from '../storage/outbox.js';
 import { logEvent } from '../storage/logs.js';
 import { createMovement, editMovement, markDeleted, validateMovement } from '../domain/movement.js';
 import { buildTransfer, deleteTransfer, editTransfer, validateTransfer } from '../domain/transfer.js';
+import { activeIds } from '../domain/active.js';
 
 const defaults = { add: addPending, list: listPending, remove: removePending };
 let store = defaults;
@@ -26,15 +27,12 @@ export function configureSync(overrides = {}) {
 
 const LAST_COLUMN = String.fromCharCode(64 + HEADERS.Movements.length);
 
-const activeIds = (items) => items.filter((item) => !item.deleted).map((item) => item.id);
-
 async function run(fileId) {
   const pending = (await store.list()).filter((item) => item.fileId === fileId).map((item) => item.movement);
   if (pending.length === 0) return { appended: 0, updated: 0, pending: 0 };
 
   const [idColumn] = await batchGet(fileId, ['Movements!A:A']);
-  const existingIds = idColumn.slice(1).map((row) => String(row[0] ?? ''));
-  const { toAppend, toUpdate } = planSync(pending, existingIds);
+  const { toAppend, toUpdate } = planSync(pending, rowsById(idColumn));
   if (toUpdate.length > 0) {
     await batchUpdateValues(fileId, toUpdate.map(({ movement, row }) => ({
       range: `Movements!A${row}:${LAST_COLUMN}${row}`,
@@ -50,7 +48,7 @@ async function run(fileId) {
 // Validates a new movement against the book and stores it in the outbox at
 // once; syncOutbox() uploads it when there is a connection.
 export async function queueMovement(fileId, fields, book) {
-  const movement = createMovement(fields, { userSub: getCurrentUser()?.sub ?? '' });
+  const movement = createMovement(fields, { userSub: currentUserSub() });
   const errors = validateMovement(movement, {
     accountIds: activeIds(book.accounts),
     categoryIds: activeIds(book.categories),
@@ -65,7 +63,7 @@ export async function queueMovement(fileId, fields, book) {
 export async function queueTransfer(fileId, fields, book) {
   const errors = validateTransfer(fields, { accountIds: activeIds(book.accounts) });
   if (errors.length) throw new ValidationError(errors);
-  const halves = buildTransfer(fields, { userSub: getCurrentUser()?.sub ?? '' });
+  const halves = buildTransfer(fields, { userSub: currentUserSub() });
   await store.add(fileId, halves);
   return halves;
 }

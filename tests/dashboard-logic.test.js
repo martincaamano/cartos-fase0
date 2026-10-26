@@ -3,8 +3,7 @@ import assert from 'node:assert/strict';
 import { parseAmountInput } from '../js/domain/money.js';
 import { createAccount, validateAccount } from '../js/domain/account.js';
 import { totalBalance } from '../js/domain/balance.js';
-import { latestMovements } from '../js/domain/movement.js';
-import { formatEuros, formatShortDate } from '../js/ui/format.js';
+import { formatEuros, formatShortDate, labelOf } from '../js/ui/format.js';
 
 test('parseAmountInput reads Spanish-style amounts', () => {
   const cases = [
@@ -46,17 +45,6 @@ test('totalBalance ignores deleted accounts and is 0 with none', () => {
   assert.equal(totalBalance([], []), 0);
 });
 
-test('latestMovements sorts newest first and skips deleted ones', () => {
-  const movements = [
-    move('a', 'expense', 1, { id: 'old', date: '2026-10-01', createdAt: '2026-10-01T09:00:00Z' }),
-    move('a', 'expense', 1, { id: 'same-day-early', date: '2026-10-20', createdAt: '2026-10-20T08:00:00Z' }),
-    move('a', 'expense', 1, { id: 'same-day-late', date: '2026-10-20', createdAt: '2026-10-20T20:00:00Z' }),
-    move('a', 'expense', 1, { id: 'gone', date: '2026-10-25', createdAt: '2026-10-25T09:00:00Z', deleted: true }),
-  ];
-  assert.deepEqual(latestMovements(movements, 2).map((m) => m.id), ['same-day-late', 'same-day-early']);
-  assert.deepEqual(latestMovements([], 5), []);
-});
-
 test('formatEuros uses dot thousands, comma decimals and a real minus', () => {
   assert.equal(formatEuros(0), '0,00 €');
   assert.equal(formatEuros(1250.5), '1.250,50 €');
@@ -68,4 +56,14 @@ test('formatEuros uses dot thousands, comma decimals and a real minus', () => {
 
 test('formatShortDate shows day and month', () => {
   assert.equal(formatShortDate('2026-10-05'), '05/10');
+});
+
+test('labelOf joins emoji and name, without a stray space when one is missing', () => {
+  assert.equal(labelOf({ emoji: '🏦', name: 'Abanca' }), '🏦 Abanca');
+  assert.equal(labelOf({ name: 'Abanca' }), 'Abanca');
+  assert.equal(labelOf({ emoji: '', name: 'Abanca' }), 'Abanca');
+  assert.equal(labelOf({ emoji: '🏦' }), '🏦');
+  assert.equal(labelOf({}), '');
+  assert.equal(labelOf(undefined), '');
+  assert.equal(labelOf(null), '');
 });

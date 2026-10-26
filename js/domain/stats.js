@@ -4,6 +4,7 @@
 
 import { TRANSFER_CATEGORY_ID } from './category.js';
 import { fromCents, toCents } from './money.js';
+import { activeOnly } from './active.js';
 
 export const monthOf = (date) => date.slice(0, 7);
 
@@ -15,7 +16,7 @@ export function shiftMonth(month, delta) {
 }
 
 const inMonth = (movements, month) =>
-  movements.filter((movement) => !movement.deleted && monthOf(movement.date) === month);
+  activeOnly(movements).filter((movement) => monthOf(movement.date) === month);
 
 // Expenses of the month per category, largest first (ties by category id).
 // Transferencia is left out: moving money between own accounts is not
@@ -47,8 +48,7 @@ export function monthSummary(movements, month) {
 // the current one. today: the local current day as YYYY-MM-DD.
 export function monthRange(movements, today) {
   const last = monthOf(today);
-  const first = movements
-    .filter((movement) => !movement.deleted)
+  const first = activeOnly(movements)
     .map((movement) => monthOf(movement.date))
     .reduce((min, month) => (month < min ? month : min), last);
   return { first, last };

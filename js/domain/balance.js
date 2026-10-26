@@ -1,6 +1,7 @@
 // A balance is always computed (initial balance + movements), never stored.
 
 import { toCents, fromCents } from './money.js';
+import { isActive } from './active.js';
 
 export function accountBalance(account, movements) {
   let cents = toCents(account.initialBalance);
@@ -15,7 +16,7 @@ export function accountBalance(account, movements) {
 // Sum of the balances of every account not deleted, added in cents.
 export function totalBalance(accounts, movements) {
   const cents = accounts
-    .filter((account) => !account.deleted)
+    .filter(isActive)
     .reduce((sum, account) => sum + toCents(accountBalance(account, movements)), 0);
   return fromCents(cents);
 }

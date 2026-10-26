@@ -4,6 +4,7 @@ import assert from 'node:assert/strict';
 import {
   configureAuth, decodeIdToken, getAuthState, getCurrentUser, renderSignInButton,
   requestDriveAccess, getAccessToken, whenGoogleReady, AuthError, TokenExpiredError, DRIVE_SCOPE, signOut,
+  currentUserSub,
 } from '../js/data/auth.js';
 import { saveBookCache, loadBookCache } from '../js/storage/book-cache.js';
 import { configureLogs } from '../js/storage/logs.js';
@@ -201,4 +202,13 @@ test('after signOut there is no access token', async () => {
   } finally {
     configureLogs();
   }
+});
+
+test('currentUserSub is empty without a session and the sub once signed in', () => {
+  const calls = setup({ tokenResponse: {} });
+  assert.equal(currentUserSub(), '');
+  signIn(calls, { sub: 'user-42', email: 'a@example.com', name: 'A' });
+  assert.equal(currentUserSub(), 'user-42');
+  signOut();
+  assert.equal(currentUserSub(), '');
 });

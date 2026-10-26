@@ -2,9 +2,10 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  createBook, readBook, addAccount, addMovement, addCategory, removeCategory, ValidationError,
+  createBook, readBook, addAccount, addCategory, removeCategory,
 } from '../js/data/book.js';
 import { HEADERS, toRow } from '../js/data/rows.js';
+import { ValidationError } from '../js/data/errors.js';
 import { setupGoogleApi, TOKEN } from './helpers/fake-google.js';
 
 const isWrite = (call) => call.method === 'POST' && call.url.hostname === 'sheets.googleapis.com'
@@ -67,31 +68,6 @@ test('addAccount appends a valid account and rejects an invalid one', async () =
 
   await assert.rejects(addAccount('file-1', { name: '' }), (err) => err instanceof ValidationError);
   assert.equal(calls.length, 1, 'nothing written for an invalid account');
-});
-
-test('addMovement checks account and category before appending', async () => {
-  const calls = setupGoogleApi(bookResponse);
-  const book = await readBook('file-1');
-
-  const movement = await addMovement('file-1', { accountId: 'acc-1', type: 'income', amount: 0.3, date: '2026-10-25', categoryId: 'cat-1', note: '=1+1' }, book);
-  assert.equal(movement.createdBy, 'user-1');
-  const write = calls.at(-1);
-  assert.ok(isWrite(write));
-  assert.equal(write.url.searchParams.get('valueInputOption'), 'RAW');
-  assert.equal(write.body.values[0][HEADERS.Movements.indexOf('note')], '=1+1');
-
-  const before = calls.length;
-  await assert.rejects(
-    addMovement('file-1', { accountId: 'acc-old', type: 'expense', amount: 5, date: '2026-10-25', categoryId: 'cat-1' }, book),
-    (err) => err instanceof ValidationError && err.errors.includes('account_unknown')
-  );
-  assert.equal(calls.length, before, 'nothing written for a deleted account');
-});
-
-test('addMovement reads the book first when it is not given', async () => {
-  const calls = setupGoogleApi(bookResponse);
-  await addMovement('file-1', { accountId: 'acc-1', type: 'expense', amount: 1, date: '2026-10-25', categoryId: 'cat-1' });
-  assert.deepEqual(calls.map((c) => c.method), ['GET', 'POST']);
 });
 
 test('addCategory appends a valid own category and rejects a repeated name', async () => {

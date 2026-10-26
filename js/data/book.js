@@ -3,21 +3,13 @@
 
 import { es } from '../../i18n/es.js';
 import { createSpreadsheetFile } from './drive.js';
+import { ValidationError } from './errors.js';
 import { append, batchGet, batchUpdate, batchUpdateValues } from './sheets.js';
-import { HEADERS, SHEET_NAMES, toRow, rowsToObjects } from './rows.js';
-import { getCurrentUser } from './auth.js';
+import { findRowById, HEADERS, SHEET_NAMES, toRow, rowsToObjects } from './rows.js';
 import { createAccount, validateAccount } from '../domain/account.js';
 import {
   buildDefaultCategories, canRemoveCategory, createCategory, validateCategory,
 } from '../domain/category.js';
-import { createMovement, validateMovement } from '../domain/movement.js';
-
-export class ValidationError extends Error {
-  constructor(errors) {
-    super(`Invalid data: ${errors.join(', ')}`);
-    this.errors = errors;
-  }
-}
 
 // A new spreadsheet always starts with one tab whose sheetId is 0.
 const FIRST_SHEET_ID = 0;
@@ -60,20 +52,6 @@ export async function addAccount(fileId, fields, existing = []) {
   return account;
 }
 
-// book: the result of readBook(), to check that the account and category
-// exist. Read again when not given.
-export async function addMovement(fileId, fields, book = null) {
-  const { accounts, categories } = book ?? (await readBook(fileId));
-  const movement = createMovement(fields, { userSub: getCurrentUser()?.sub ?? '' });
-  const errors = validateMovement(movement, {
-    accountIds: accounts.filter((a) => !a.deleted).map((a) => a.id),
-    categoryIds: categories.filter((c) => !c.deleted).map((c) => c.id),
-  });
-  if (errors.length) throw new ValidationError(errors);
-  await append(fileId, 'Movements', [toRow('Movements', movement)]);
-  return movement;
-}
-
 // existing: the categories already in the book, to reject a repeated name.
 export async function addCategory(fileId, fields, existing) {
   const category = createCategory(fields);
@@ -90,9 +68,8 @@ const columnLetter = (sheet, column) => String.fromCharCode(65 + HEADERS[sheet].
 export async function removeCategory(fileId, category, now = new Date()) {
   if (!canRemoveCategory(category)) throw new ValidationError(['not_removable']);
   const [idColumn] = await batchGet(fileId, ['Categories!A:A']);
-  const index = idColumn.findIndex((row, i) => i > 0 && row[0] === category.id);
-  if (index === -1) throw new ValidationError(['category_unknown']);
-  const row = index + 1;
+  const row = findRowById(idColumn, category.id);
+  if (row === null) throw new ValidationError(['category_unknown']);
   const from = columnLetter('Categories', 'updatedAt');
   const to = columnLetter('Categories', 'deleted');
   await batchUpdateValues(fileId, [{ range: `Categories!${from}${row}:${to}${row}`, values: [[now.toISOString(), true]] }]);

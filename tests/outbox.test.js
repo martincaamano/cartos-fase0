@@ -12,8 +12,8 @@ import {
   queueTransferEdit,
   queueDelete,
 } from '../js/data/sync.js';
-import { ValidationError } from '../js/data/book.js';
-import { HEADERS, toRow } from '../js/data/rows.js';
+import { ValidationError } from '../js/data/errors.js';
+import { HEADERS, toRow, rowsById } from '../js/data/rows.js';
 import { setupGoogleApi, TOKEN } from './helpers/fake-google.js';
 
 const OLD = '2026-10-01T08:00:00.000Z';
@@ -53,31 +53,39 @@ test('enqueue replaces the older version of the same id with the new one', () =>
 
 // --- planSync ---
 
+// The id column as the Sheets API returns it: header first, then one id per row.
+const sheetIds = (...ids) => rowsById([['id'], ...ids.map((id) => [id])]);
+
 test('planSync appends new ids and rewrites the row of ids already in the Sheet', () => {
-  // existingIds[i] lives in row i + 2 (row 1 is the header).
-  const { toAppend, toUpdate } = planSync([m('a'), m('b'), m('c')], ['x', 'b', 'y', 'c']);
+  // ids[i] lives in row i + 2 (row 1 is the header).
+  const { toAppend, toUpdate } = planSync([m('a'), m('b'), m('c')], sheetIds('x', 'b', 'y', 'c'));
   assert.deepEqual(toAppend.map((x) => x.id), ['a']);
   assert.deepEqual(toUpdate.map(({ movement, row }) => [movement.id, row]), [['b', 3], ['c', 5]]);
 });
 
 test('planSync: the first data row is row 2', () => {
-  const { toAppend, toUpdate } = planSync([m('a')], ['a']);
+  const { toAppend, toUpdate } = planSync([m('a')], sheetIds('a'));
   assert.deepEqual(toAppend, []);
   assert.equal(toUpdate[0].row, 2);
+});
+
+test('planSync uses the row number given in the map as is', () => {
+  const { toUpdate } = planSync([m('a')], new Map([['a', 1000]]));
+  assert.deepEqual(toUpdate.map(({ movement, row }) => [movement.id, row]), [['a', 1000]]);
 });
 
 test('planSync keeps the last version when an id repeats in the queue', () => {
   const v1 = m('a', { amount: 1 });
   const v2 = m('a', { amount: 2 });
-  const fresh = planSync([v1, v2], []);
+  const fresh = planSync([v1, v2], new Map());
   assert.deepEqual(fresh.toAppend, [v2]);
-  const existing = planSync([v1, v2], ['a']);
+  const existing = planSync([v1, v2], sheetIds('a'));
   assert.deepEqual(existing.toUpdate, [{ movement: v2, row: 2 }]);
   assert.deepEqual(existing.toAppend, []);
 });
 
 test('planSync on an empty queue plans nothing', () => {
-  assert.deepEqual(planSync([], ['a', 'b']), { toAppend: [], toUpdate: [] });
+  assert.deepEqual(planSync([], sheetIds('a', 'b')), { toAppend: [], toUpdate: [] });
 });
 
 // --- mergePending ---
