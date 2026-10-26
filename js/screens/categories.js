@@ -4,8 +4,10 @@
 
 import { es } from '../../i18n/es.js';
 import { canRemoveCategory, createCategory, validateCategory } from '../domain/category.js';
+import { activeOnly } from '../domain/active.js';
 import { addCategory, removeCategory } from '../data/book.js';
 import { setupEmojiPicker } from '../ui/components.js';
+import { labelOf } from '../ui/format.js';
 import { SECTION_HASH } from '../ui/router.js';
 import { renderNavbar } from '../ui/navbar.js';
 
@@ -16,7 +18,7 @@ function categoryLine(category, { onRemove, t }) {
   item.className = 'receipt-line receipt-row';
   const label = document.createElement('span');
   label.className = 'receipt-label';
-  label.textContent = `${category.emoji} ${category.name}`.trim();
+  label.textContent = labelOf(category);
   item.appendChild(label);
   if (canRemoveCategory(category)) {
     const remove = document.createElement('button');
@@ -83,7 +85,7 @@ export function renderCategories(root, { book, fileId, onChanged }) {
     removeCategory(fileId, category).then(onChanged).catch((err) => fail(listError, err));
   };
 
-  const active = book.categories.filter((c) => !c.deleted);
+  const active = activeOnly(book.categories);
   for (const category of active) {
     const list = root.querySelector(category.kind === 'income' ? '.list-income' : '.list-expense');
     list.appendChild(categoryLine(category, { onRemove, t }));

@@ -6,13 +6,12 @@ import { es } from '../../i18n/es.js';
 import { parseAmountInput } from '../domain/money.js';
 import { createAccount, validateAccount } from '../domain/account.js';
 import { accountBalance } from '../domain/balance.js';
+import { activeOnly } from '../domain/active.js';
 import { addAccount } from '../data/book.js';
-import { formatEuros } from '../ui/format.js';
-import { createAmountInput, setupEmojiPicker } from '../ui/components.js';
+import { formatEuros, labelOf } from '../ui/format.js';
+import { ACCOUNT_EMOJIS, createAmountInput, setupEmojiPicker } from '../ui/components.js';
 import { SECTION_HASH } from '../ui/router.js';
 import { renderNavbar } from '../ui/navbar.js';
-
-const SUGGESTED_EMOJIS = ['🏦', '💶', '💳', '🐷', '💼', '🏠'];
 
 // book: movements already include the pending ones, so balances match the
 // Dashboard.
@@ -53,12 +52,12 @@ export function renderAccounts(root, { book, fileId, onChanged }) {
   root.querySelector('.balance-label').textContent = form.balanceLabel;
 
   const list = root.querySelector('.account-list');
-  for (const account of book.accounts.filter((a) => !a.deleted)) {
+  for (const account of activeOnly(book.accounts)) {
     const item = document.createElement('li');
     item.className = 'receipt-line receipt-row';
     const label = document.createElement('span');
     label.className = 'receipt-label';
-    label.textContent = `${account.emoji} ${account.name}`.trim();
+    label.textContent = labelOf(account);
     const amount = document.createElement('span');
     const balance = accountBalance(account, book.movements);
     amount.className = balance < 0 ? 'receipt-amount amount-expense' : 'receipt-amount';
@@ -74,7 +73,7 @@ export function renderAccounts(root, { book, fileId, onChanged }) {
   root.querySelector('.field-balance').appendChild(balance);
   formEl.elements.name.placeholder = form.namePlaceholder;
   submit.textContent = t.create;
-  setupEmojiPicker(root.querySelector('.emoji-row'), formEl.elements.emoji, SUGGESTED_EMOJIS);
+  setupEmojiPicker(root.querySelector('.emoji-row'), formEl.elements.emoji, ACCOUNT_EMOJIS);
 
   formEl.addEventListener('submit', (event) => {
     event.preventDefault();

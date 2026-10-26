@@ -3,6 +3,9 @@
 
 import { quickDates } from '../domain/movement.js';
 
+// Emojis offered when creating an account (Onboarding and Ajustes → Cuentas).
+export const ACCOUNT_EMOJIS = Object.freeze(['🏦', '💶', '💳', '🐷', '💼', '🏠']);
+
 // Row of suggested emojis that fill `input`; typing any other emoji works too.
 export function setupEmojiPicker(row, input, suggestions) {
   input.value = input.value || suggestions[0];

@@ -29,6 +29,12 @@ export function formatLogLine({ at, type, result, durationMs }) {
   return `${when}  ${type}  ${result}${duration}`;
 }
 
+// How an account or a category is named on screen: "🏦 Abanca". Empty when
+// the item is missing (for example, a removed category not in the book).
+export function labelOf(item) {
+  return item ? `${item.emoji ?? ''} ${item.name ?? ''}`.trim() : '';
+}
+
 // "2026-10-25" → "25/10". The year is left out: the list shows recent dates.
 export function formatShortDate(date) {
   const [, month, day] = date.split('-');

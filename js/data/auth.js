@@ -89,6 +89,12 @@ export function getCurrentUser() {
   return load().user;
 }
 
+// The signed-in user's Google id, or '' when nobody is signed in. Stored in
+// createdBy and used to bind the device copy of the book to its owner.
+export function currentUserSub() {
+  return getCurrentUser()?.sub ?? '';
+}
+
 function handleCredential(response, onSignedIn) {
   const user = decodeIdToken(response?.credential ?? '');
   if (!user) {

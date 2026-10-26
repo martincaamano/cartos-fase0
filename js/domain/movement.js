@@ -68,14 +68,6 @@ export function quickDates(today) {
   return { today: shift(0), yesterday: shift(1), dayBefore: shift(2) };
 }
 
-// Newest first by date, then by creation time; deleted movements left out.
-export function latestMovements(movements, count) {
-  return movements
-    .filter((movement) => !movement.deleted)
-    .sort((a, b) => b.date.localeCompare(a.date) || b.createdAt.localeCompare(a.createdAt))
-    .slice(0, count);
-}
-
 // A new version of a saved movement: same id, author, creation time, type
 // and transferId; only the editable fields and updatedAt change. Validate
 // the result with validateMovement.

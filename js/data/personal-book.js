@@ -4,8 +4,9 @@
 
 import { listBooks, pickPersonalBook } from './drive.js';
 import { addAccount, createBook, readBook } from './book.js';
-import { getCurrentUser } from './auth.js';
+import { currentUserSub } from './auth.js';
 import { loadBookCache, saveBookCache } from '../storage/book-cache.js';
+import { isActive } from '../domain/active.js';
 
 const defaults = { storage: () => globalThis.localStorage };
 let deps = defaults;
@@ -15,17 +16,17 @@ export function configurePersonalBook(overrides = {}) {
   deps = { ...defaults, ...overrides };
 }
 
-const hasActiveAccounts = (book) => book.accounts.some((account) => !account.deleted);
+const hasActiveAccounts = (book) => book.accounts.some(isActive);
 
 // Device copy only, no network: lets the app paint at once and offline.
 export function cachedPersonalBook() {
-  const cache = loadBookCache(deps.storage(), getCurrentUser()?.sub);
+  const cache = loadBookCache(deps.storage(), currentUserSub());
   if (!cache || !hasActiveAccounts(cache.snapshot)) return null;
   return { status: 'ready', fileId: cache.fileId, book: cache.snapshot, savedAt: cache.savedAt };
 }
 
 function remember(fileId, book) {
-  saveBookCache(deps.storage(), { sub: getCurrentUser()?.sub, fileId, snapshot: book });
+  saveBookCache(deps.storage(), { sub: currentUserSub(), fileId, snapshot: book });
 }
 
 // Reads the personal book from Drive and refreshes the device copy.

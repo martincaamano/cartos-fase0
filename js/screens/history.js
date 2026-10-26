@@ -5,7 +5,8 @@
 
 import { es } from '../../i18n/es.js';
 import { historyEntries } from '../domain/history.js';
-import { formatEuros, formatShortDate } from '../ui/format.js';
+import { activeOnly } from '../domain/active.js';
+import { formatEuros, formatShortDate, labelOf } from '../ui/format.js';
 import { SECTION_HASH } from '../ui/router.js';
 import { renderNavbar } from '../ui/navbar.js';
 
@@ -18,8 +19,6 @@ function option(value, text) {
   item.textContent = text;
   return item;
 }
-
-const labelOf = (item) => (item ? `${item.emoji} ${item.name}`.trim() : '');
 
 function entryLine(entry, { accountById, categoryById }) {
   const link = document.createElement('a');
@@ -86,9 +85,9 @@ export function renderHistory(root, { book }) {
   const form = root.querySelector('.history-filters');
   const { account, category, from, to } = form.elements;
   account.appendChild(option('', t.all));
-  for (const item of accounts.filter((a) => !a.deleted)) account.appendChild(option(item.id, labelOf(item)));
+  for (const item of activeOnly(accounts)) account.appendChild(option(item.id, labelOf(item)));
   category.appendChild(option('', t.all));
-  for (const item of categories.filter((c) => !c.deleted)) category.appendChild(option(item.id, labelOf(item)));
+  for (const item of activeOnly(categories)) category.appendChild(option(item.id, labelOf(item)));
 
   const list = root.querySelector('.history-list');
   const more = root.querySelector('.history-more');

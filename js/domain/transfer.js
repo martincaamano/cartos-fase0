@@ -6,6 +6,7 @@
 import { createMovement, editMovement, isValidDate, markDeleted } from './movement.js';
 import { hasAtMostTwoDecimals } from './money.js';
 import { TRANSFER_CATEGORY_ID } from './category.js';
+import { activeOnly } from './active.js';
 
 const defaults = {
   now: () => new Date(),
@@ -60,7 +61,7 @@ export function newestFirst(a, b) {
 // half whose pair is missing or deleted shows as an ordinary
 // { kind: 'movement' }.
 export function groupEntries(movements) {
-  const active = movements.filter((movement) => !movement.deleted);
+  const active = activeOnly(movements);
   const pairs = new Map();
   for (const movement of active) {
     if (!movement.transferId) continue;
