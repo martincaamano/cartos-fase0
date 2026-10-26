@@ -112,6 +112,7 @@ No se contempla revertir una mitad si la otra falla: revertir también puede fal
 3. Toda obtención de token pasa por una única función (`getAccessToken()`), para poder cambiar la implementación (por ejemplo, añadir un backend de refresco) sin tocar el resto de la app.
 4. La sesión se guarda en el dispositivo (`localStorage`, en `js/storage/session.js`): solo `sub`, email y nombre, si se concedió el acceso a Drive, y el access token con su caducidad. El ID token completo no se guarda. Así, cerrar y reabrir la app no vuelve a pedir nada mientras el token siga vigente. Borrar la app de la pantalla de inicio de iOS borra también esta sesión.
 5. El botón de login es el oficial de Google: Google Identity Services no permite uno con diseño propio.
+6. Cerrar sesión (en Ajustes) borra la sesión y la copia local del libro. No revoca el permiso `drive.file`, así que volver a entrar no pide la pantalla de permisos. Los cambios sin subir se quedan en la cola de salida y se suben al volver a entrar con la misma cuenta.
 
 ## 8. Sincronización, tokens, y por qué no hay backend en el MVP
 
@@ -173,7 +174,7 @@ Barra de navegación fija inferior (patrón estándar tipo Instagram/Twitter), c
   - Para Transferencia: cuenta origen, cuenta destino, importe y fecha; sin selector de categoría, la asigna la app.
 - **Historial**: listado completo de movimientos, filtrable por cuenta, categoría y rango de fechas; cada movimiento se puede editar o borrar.
 - **Análisis**: categorías ordenadas por gasto (barras horizontales en escala de grises) y evolución mensual de ingresos, gastos y ahorro neto. Transferencia no entra en el ranking de categorías, pero sí en los totales del mes.
-- **Ajustes**: incluye gestión de Categorías, selector de tema (sistema / claro / oscuro) y la pantalla de Diagnóstico (punto 9).
+- **Ajustes**: incluye Cuentas, gestión de Categorías, selector de tema (sistema / claro / oscuro), la pantalla de Diagnóstico (punto 9) y Cerrar sesión.
 
 ## 12.3. Fuera del MVP (fases posteriores, no bloquean el modelo de datos)
 
