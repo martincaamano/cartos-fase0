@@ -43,12 +43,38 @@ test('every file listed in the service worker app shell exists', () => {
   }
 });
 
+const STYLESHEETS = ['styles/tokens.css', 'styles/base.css', 'styles/components.css', 'styles/screens.css'];
+const stripComments = (css) => css.replace(/\/\*[\s\S]*?\*\//g, '');
+
 test('theme tokens exist for light and dark mode', () => {
-  const css = read('styles/main.css');
-  assert.match(css, /prefers-color-scheme:\s*dark/);
-  for (const token of ['--color-bg', '--color-ink', '--color-expense', '--color-income']) {
-    assert.match(css, new RegExp(`${token}:`), `missing CSS token ${token}`);
+  const css = stripComments(read('styles/tokens.css'));
+  const semantic = ['--color-bg', '--color-ink', '--color-ink-muted', '--color-line', '--color-expense', '--color-income'];
+  for (const token of semantic) {
+    assert.match(css, new RegExp(`${token}\\s*:`), `missing CSS token ${token}`);
   }
+  // Background, ink and line palette colours carry their light and dark value.
+  const palette = [...css.matchAll(/(--palette-[\w-]+)\s*:\s*([^;]+);/g)];
+  const themed = palette.filter(([, name]) => /paper|ink|rule|line|bg/.test(name));
+  assert.ok(themed.length >= 4, 'expected palette tokens for paper, ink, ink-soft and rule');
+  for (const [, name, value] of themed) {
+    assert.match(value, /light-dark\(/, `${name} must use light-dark()`);
+  }
+  assert.match(css, /html\[data-theme="light"\]\s*\{[^}]*color-scheme:\s*light\s*;/);
+  assert.match(css, /html\[data-theme="dark"\]\s*\{[^}]*color-scheme:\s*dark\s*;/);
+});
+
+test('every stylesheet is in APP_SHELL and linked from index.html in order', () => {
+  const sw = read('sw.js');
+  const block = sw.match(/const APP_SHELL = \[([\s\S]*?)\];/);
+  assert.ok(block, 'APP_SHELL not found in sw.js');
+  const entries = [...block[1].matchAll(/'([^']+)'/g)].map((match) => match[1].replace(/^\.\//, ''));
+  for (const file of STYLESHEETS) {
+    assert.ok(entries.includes(file), `APP_SHELL is missing ${file}`);
+    assert.ok(existsSync(resolve(root, file)), `missing stylesheet ${file}`);
+  }
+  const html = read('index.html');
+  const linked = [...html.matchAll(/<link rel="stylesheet" href="([^"]+)">/g)].map((match) => match[1]);
+  assert.deepEqual(linked, STYLESHEETS);
 });
 
 function listJsFiles(dir) {

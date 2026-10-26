@@ -1,8 +1,8 @@
-// Theme preference: resolution against the system mode and device storage.
+// Theme preference: parsing and device storage.
 // Importing the module must not touch `document` (it does not exist in Node).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { THEMES, parseTheme, resolveTheme, loadTheme, saveTheme } from '../js/ui/theme.js';
+import { THEMES, parseTheme, loadTheme, saveTheme } from '../js/ui/theme.js';
 
 const KEY = 'cartos.theme';
 
@@ -25,25 +25,6 @@ const throwingStorage = {
 test('importing the module works without a document', () => {
   assert.equal(typeof globalThis.document, 'undefined');
   assert.deepEqual(THEMES, ['system', 'light', 'dark']);
-});
-
-test('resolveTheme covers every preference with the system in light and dark', () => {
-  const cases = [
-    ['system', false, 'light'],
-    ['system', true, 'dark'],
-    ['light', false, 'light'],
-    ['light', true, 'light'],
-    ['dark', false, 'dark'],
-    ['dark', true, 'dark'],
-  ];
-  for (const [preference, systemDark, expected] of cases) {
-    assert.equal(resolveTheme(preference, systemDark), expected, `${preference} + systemDark=${systemDark}`);
-  }
-});
-
-test('resolveTheme treats an invalid preference as system', () => {
-  assert.equal(resolveTheme('sepia', true), 'dark');
-  assert.equal(resolveTheme(undefined, false), 'light');
 });
 
 test('parseTheme keeps valid values', () => {
