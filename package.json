@@ -3,9 +3,14 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "Cartos — PWA de finanzas personales (sin dependencias; Node solo para tests y servidor local)",
+  "description": "Cartos — PWA de finanzas personales (sin dependencias en la app; Node solo para tests, pruebas de aceptación y servidor local)",
   "scripts": {
     "dev": "python3 -m http.server 5173",
-    "test": "node --test \"tests/**/*.test.js\""
+    "test": "node --test \"tests/**/*.test.js\"",
+    "acceptance": "playwright test -c acceptance",
+    "acceptance:update": "playwright test -c acceptance --update-snapshots"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.63.0"
   }
 }

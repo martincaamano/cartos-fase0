@@ -1,0 +1,43 @@
+# Unit tests (npm test) and acceptance tests (npm run acceptance) on every
+# pull request and every push to main. Pages deploys on its own; this only
+# reports. On failure the Playwright report is kept as an artifact.
+#
+# Runs inside Playwright's official image for the version in package.json:
+# WebKit, Chromium and their system libraries come preinstalled, so nothing
+# is downloaded from Ubuntu's mirrors (slow ones made a run time out).
+name: Tests
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    container:
+      image: mcr.microsoft.com/playwright:v1.63.0-noble
+    steps:
+      - uses: actions/checkout@v5
+
+      - run: npm ci
+
+      - name: Unit tests
+        run: npm test
+
+      - name: Acceptance tests
+        run: npm run acceptance
+        env:
+          HOME: /root
+
+      - name: Keep the Playwright report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7
