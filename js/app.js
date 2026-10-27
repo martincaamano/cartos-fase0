@@ -1,218 +1,109 @@
-// Cartos — app entry point. Picks the screen from the session, the personal
-// book and the URL hash, keeps the outbox flowing to the Sheet, and re-checks
-// everything when the app comes back to the foreground or regains network
-// (an access token lasts about an hour).
+// Cartos — app entry point. Wires the book state (js/book-state.js) to the
+// screens: decides which screen to show from the session, the book and the
+// URL hash, and re-checks everything when the app comes back to the
+// foreground or regains network (an access token lasts about an hour).
 
 import { es } from '../i18n/es.js';
-import { decideRoute, parseHash, ROUTES, SECTIONS, SECTION_HASH } from './ui/router.js';
+import { decideRoute, isRepaintable, parseHash, ROUTES, SECTION_HASH } from './ui/router.js';
 import { startTheme } from './ui/theme.js';
-import { getAuthState, getCurrentUser, signOut, TokenExpiredError } from './data/auth.js';
+import { getAuthState, signOut } from './data/auth.js';
 import { cachedPersonalBook, fetchPersonalBook } from './data/personal-book.js';
 import { syncOutbox } from './data/sync.js';
 import { listPending } from './storage/outbox.js';
 import { logEvent } from './storage/logs.js';
-import { enqueue, mergePending } from './storage/outbox-logic.js';
+import { createBookState } from './book-state.js';
+import { VIEWS } from './views.js';
 import { renderLogin } from './screens/login.js';
 import { renderConnect } from './screens/connect.js';
 import { renderStatus } from './screens/status.js';
 import { renderOnboarding } from './screens/onboarding.js';
-import { renderDashboard } from './screens/dashboard.js';
-import { renderAddMovement } from './screens/addMovement.js';
-import { renderHistory } from './screens/history.js';
-import { renderAnalysis } from './screens/analysis.js';
-import { findEntry } from './domain/history.js';
-import { renderSettings } from './screens/settings.js';
-import { renderDiagnostics } from './screens/diagnostics.js';
-import { renderCategories } from './screens/categories.js';
-import { renderAccounts } from './screens/accounts.js';
 
-const UNKNOWN = { status: 'unknown', fileId: null, book: null };
+const state = createBookState({
+  cachedPersonalBook,
+  fetchPersonalBook,
+  syncOutbox,
+  listPending,
+  getAuthState,
+  isOnline: () => navigator.onLine,
+  logEvent,
+});
 
-// What is known about the personal book: unknown, none or ready.
-let personal = UNKNOWN;
-// Movements of the personal book saved on the device but not in the Sheet yet.
-let pending = [];
-let currentKey = null;
-let fetching = false;
+const root = () => document.getElementById('app');
+// The screen on view: a route, or "dashboard:<section>" inside the app.
+let current = { key: null, section: null };
 
-// Screens that may be repainted with fresh data; a half-filled Add form
-// never is, and neither is the History, so its filters stay put.
-const REPAINTABLE = new Set(
-  [SECTIONS.HOME, SECTIONS.ANALYSIS, SECTIONS.CATEGORIES, SECTIONS.ACCOUNTS].map((section) => `${ROUTES.DASHBOARD}:${section}`)
-);
-const repaint = () => show({ force: REPAINTABLE.has(currentKey) });
-
-// Puts what the Add form saved (a movement, or both halves of a transfer)
-// into the in-memory queue, goes to `hash` and starts a sync.
-const afterSave = (hash) => (saved) => {
-  for (const movement of [saved].flat()) pending = enqueue(pending, movement);
-  location.hash = hash;
-  sync();
-};
-
-function showSection(root, { section, params }, offline) {
-  const book = { ...personal.book, movements: mergePending(personal.book.movements, pending) };
-  switch (section) {
-    case SECTIONS.ADD:
-      renderAddMovement(root, { book, fileId: personal.fileId, params, onSaved: afterSave(SECTION_HASH.home) });
-      break;
-    case SECTIONS.HISTORY:
-      renderHistory(root, { book });
-      break;
-    case SECTIONS.ANALYSIS:
-      renderAnalysis(root, { book, params });
-      break;
-    case SECTIONS.EDIT: {
-      const entry = findEntry(book.movements, params.id);
-      if (!entry) {
-        // Deleted meanwhile, or a stale link.
-        location.replace(SECTION_HASH.history);
-        break;
-      }
-      renderAddMovement(root, { book, fileId: personal.fileId, entry, onSaved: afterSave(SECTION_HASH.history) });
-      break;
-    }
-    case SECTIONS.SETTINGS:
-      renderSettings(root, {
-        user: getCurrentUser(),
-        pendingCount: pending.length,
-        onSignOut: () => {
-          signOut();
-          personal = UNKNOWN;
-          pending = [];
-          location.hash = SECTION_HASH.home;
-          show({ force: true });
-        },
-      });
-      break;
-    case SECTIONS.DIAGNOSTICS:
-      renderDiagnostics(root);
-      break;
-    case SECTIONS.CATEGORIES:
-      renderCategories(root, { book: personal.book, fileId: personal.fileId, onChanged: reloadBook });
-      break;
-    case SECTIONS.ACCOUNTS:
-      renderAccounts(root, { book, fileId: personal.fileId, onChanged: reloadBook });
-      break;
-    default:
-      renderDashboard(root, { book, offline, pendingCount: pending.length });
-  }
+function showSection({ section, params }, offline) {
+  VIEWS[section]({
+    root: root(),
+    state,
+    params,
+    offline,
+    redirect: (hash) => location.replace(hash),
+    // After the Add form saved: count it and upload, then go to `hash`.
+    saved: (hash) => (movements) => {
+      state.saved(movements);
+      location.hash = hash;
+    },
+    signOut: () => {
+      signOut();
+      state.reset();
+      location.hash = SECTION_HASH.home;
+      show({ force: true });
+    },
+  });
 }
 
 function show({ force = false } = {}) {
   const offline = !navigator.onLine;
-  const route = decideRoute({ ...getAuthState(), offline, book: personal.status });
+  const route = decideRoute({ ...getAuthState(), offline, book: state.status });
   const section = route === ROUTES.DASHBOARD ? parseHash(location.hash) : null;
   const key = section ? `${route}:${section.section}` : route;
-  if (key === currentKey && !force) return;
-  currentKey = key;
+  if (key === current.key && !force) return;
+  current = { key, section: section?.section ?? null };
 
-  const root = document.getElementById('app');
   switch (route) {
     case ROUTES.LOGIN:
-      renderLogin(root, { onSignedIn: () => { personal = UNKNOWN; pending = []; refresh(); } });
+      renderLogin(root(), { onSignedIn: () => { state.reset(); state.refresh(); } });
       break;
     case ROUTES.CONNECT:
     case ROUTES.RECONNECT:
-      renderConnect(root, { mode: route, onConnected: refresh });
+      renderConnect(root(), { mode: route, onConnected: state.refresh });
       break;
     case ROUTES.LOADING:
-      renderStatus(root, { message: es.status.loading });
+      renderStatus(root(), { message: es.status.loading });
       break;
     case ROUTES.OFFLINE:
-      renderStatus(root, { message: es.status.offline });
+      renderStatus(root(), { message: es.status.offline });
       break;
     case ROUTES.ONBOARDING:
-      renderOnboarding(root, {
-        fileId: personal.fileId,
-        onDone: (result) => { personal = result; show(); },
-      });
+      renderOnboarding(root(), { fileId: state.fileId, onDone: state.setUp });
       break;
     default:
-      showSection(root, section, offline);
+      showSection(section, offline);
   }
 }
+
+// Fresh data repaints only the screens that can take it without losing
+// what the user is doing.
+const repaint = () => show({ force: current.section !== null && isRepaintable(current.section) });
 
 function showLoadFailed() {
-  currentKey = null;
-  renderStatus(document.getElementById('app'), { message: es.status.loadFailed, onRetry: refresh });
+  current = { key: null, section: null };
+  renderStatus(root(), { message: es.status.loadFailed, onRetry: state.refresh });
 }
 
-async function loadPending() {
-  try {
-    pending = (await listPending())
-      .filter((item) => item.fileId === personal.fileId)
-      .map((item) => item.movement);
-  } catch (err) {
-    console.warn('Outbox read failed', err);
-  }
-}
-
-const canReachDrive = () => {
-  const { hasSession, hasDriveAccess, tokenExpired } = getAuthState();
-  return hasSession && hasDriveAccess && !tokenExpired && navigator.onLine;
-};
-
-// Reads the book again from Drive (after a sync or a category change).
-async function reloadBook() {
-  if (!canReachDrive()) return;
-  try {
-    personal = await fetchPersonalBook();
-    await loadPending();
-    repaint();
-  } catch (err) {
-    if (err instanceof TokenExpiredError) show();
-    else console.warn('Book reload failed', err);
-  }
-}
-
-// Uploads the outbox, then refreshes the book so the Sheet is the truth.
-async function sync() {
-  if (personal.status !== 'ready' || !canReachDrive()) return;
-  try {
-    const { appended, updated } = await syncOutbox(personal.fileId);
-    await loadPending();
-    if (appended + updated > 0) await reloadBook();
-    else repaint();
-  } catch (err) {
-    if (err instanceof TokenExpiredError) show();
-    else {
-      // Only the error name and code: never the data being synced.
-      logEvent({ type: 'error', result: `sync:${err?.name ?? 'Error'}${err?.status ? `:${err.status}` : ''}` });
-      console.warn('Sync failed', err);
-    }
-  }
-}
-
-// Paints from the device copy at once, then reads Drive and syncs when it can.
-async function refresh() {
-  if (personal.status === 'unknown') {
-    personal = cachedPersonalBook() ?? UNKNOWN;
-    if (personal.status === 'ready') await loadPending();
-  }
-  show();
-
-  if (!canReachDrive() || fetching) return;
-  fetching = true;
-  try {
-    personal = await fetchPersonalBook();
-    await loadPending();
-    repaint();
-    await sync();
-  } catch (err) {
-    if (err instanceof TokenExpiredError) show();
-    else if (personal.status !== 'ready') showLoadFailed();
-  } finally {
-    fetching = false;
-  }
-}
+state.on((event) => {
+  if (event === 'route') show();
+  else if (event === 'data') repaint();
+  else if (event === 'loadFailed') showLoadFailed();
+});
 
 startTheme();
-refresh();
+state.refresh();
 
 window.addEventListener('hashchange', () => show());
 document.addEventListener('visibilitychange', () => {
-  if (document.visibilityState === 'visible') refresh();
+  if (document.visibilityState === 'visible') state.refresh();
 });
-window.addEventListener('online', refresh);
+window.addEventListener('online', state.refresh);
 window.addEventListener('offline', repaint);
