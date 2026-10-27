@@ -1,6 +1,6 @@
 # Estructura de carpetas — Cartos
 
-Árbol de archivos del repositorio, siguiendo las capas acordadas (datos, dominio, pantallas) con el dominio aislado de infraestructura y de UI. Al día con la tarea 13.
+Árbol de archivos del repositorio, siguiendo las capas acordadas (datos, dominio, pantallas) con el dominio aislado de infraestructura y de UI. Al día con la tarea 14.
 
 ```
 cartos-fase0/
@@ -51,7 +51,14 @@ cartos-fase0/
 │       ├── navbar.js, receipt.js, components.js
 │       └── format.js, theme.js
 │
-└── tests/                (node:test, uno por módulo; Google siempre simulado)
+├── tests/                (node:test, uno por módulo; Google siempre simulado)
+│
+├── acceptance/           (Playwright: la app real con Google simulado; tarea 14)
+│   ├── playwright.config.js, server.js, fixtures.js
+│   ├── *.spec.js         (escenarios de las listas de comprobación)
+│   └── __snapshots__/    (fotos de estilos de cada pantalla)
+│
+└── .github/workflows/tests.yml   (npm test y npm run acceptance en cada PR)
 ```
 
 ## Por qué cada carpeta

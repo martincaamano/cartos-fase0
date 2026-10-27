@@ -19,7 +19,7 @@ Lee solo las secciones que necesites para la tarea en curso, no todos los docume
 ## Stack y límites
 
 - JavaScript nativo con módulos ES (`<script type="module">`). Sin framework, sin bundler, sin transpilado. Los imports locales llevan siempre la extensión `.js`.
-- Cero dependencias en tiempo de ejecución. Node se usa solo para tests y servidor local. No añadas paquetes npm sin permiso del usuario.
+- Cero dependencias en tiempo de ejecución. Node se usa solo para tests y servidor local. La única dependencia de desarrollo es `@playwright/test`, para las pruebas de aceptación (`acceptance/`). No añadas paquetes npm sin permiso del usuario.
 - DOM vanilla, IndexedDB nativo, Service Worker propio (network-first con fallback a caché).
 - El único script externo permitido es Google Identity Services. Nada de CDNs, analítica ni trackers.
 - Google se consulta con `fetch` directo a las APIs REST de Drive y Sheets, con `Authorization: Bearer`.
@@ -59,9 +59,9 @@ Lee solo las secciones que necesites para la tarea en curso, no todos los docume
 ## Flujo de trabajo por tarea
 
 1. Lee `docs/ESTADO.md` y el archivo de la tarea. Si algo es ambiguo o contradice la arquitectura, pregunta; no inventes.
-2. Trabaja en pasos pequeños. Después de cada paso ejecuta `npm test`.
+2. Trabaja en pasos pequeños. Después de cada paso ejecuta `npm test`; antes de dar la tarea por terminada, también `npm run acceptance`.
 3. Toda lógica nueva de negocio lleva su test en `tests/` (con `node:test`). Para probar `data/` se simula `fetch`; nunca se llama a Google de verdad desde los tests.
-4. No des una tarea por cerrada. Las pruebas en iPhone las hace el usuario: déjale la lista de comprobaciones lista.
+4. No des una tarea por cerrada. Las pruebas en iPhone las hace el usuario: déjale la lista de comprobaciones lista, solo con lo que las pruebas de aceptación no cubren (inicio de sesión real con Google, la app instalada en la pantalla de inicio, cómo se ve en el iPhone).
 5. Al terminar, resume en pocas líneas qué cambió y qué debe probar a mano.
 6. Una rama por tarea. Da comandos exactos, listos para pegar, sin huecos que rellenar.
 7. Sé económico con el contexto (el plan del usuario tiene un límite compartido): lee solo lo necesario y usa `/planificar` antes de `/tarea`.
@@ -76,5 +76,7 @@ Lee solo las secciones que necesites para la tarea en curso, no todos los docume
 
 ## Comandos
 
-- `npm test`: ejecuta todos los tests.
+- `npm test`: ejecuta todos los tests (Node, sin navegador).
+- `npm run acceptance`: pruebas de aceptación de la app real en WebKit y Chromium, con Google simulado (`acceptance/`). `npm run acceptance:update` vuelve a guardar las fotos de estilos tras un cambio visual buscado.
+- GitHub Actions (`.github/workflows/tests.yml`) ejecuta las dos en cada PR y en cada push a `main`.
 - `npm run dev`: servidor local en http://localhost:5173
