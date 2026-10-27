@@ -17,7 +17,7 @@ Quitar código muerto y repeticiones pequeñas sin cambiar nada de lo que ve el 
 - Los emojis sugeridos para cuentas viven en un solo sitio (hoy están copiados en Onboarding y Cuentas).
 
 ## Fuera de alcance
-Componentes de interfaz (tarea 11), estilos (tarea 12), rutas y `app.js` (tarea 13), separar `sync.js` (tarea 14).
+Componentes de interfaz (tarea 11), estilos (tarea 12), rutas y `app.js` (tarea 13), separar `sync.js` (tarea 15).
 
 ## Pruebas automáticas
 - Las que ya hay siguen en verde, salvo las del código muerto, que se borran con él.

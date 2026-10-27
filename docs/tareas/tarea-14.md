@@ -1,34 +1,50 @@
-# Tarea 14 — Revisión técnica: sincronización
+# Tarea 14 — Pruebas de aceptación automáticas
 
 Estado: pendiente.
 Depende de: 13 cerrada.
 
 ## Objetivo
-Menos llamadas a Google tras cada guardado y cada módulo de datos con un solo trabajo.
+Que las comprobaciones que hoy se hacen a mano en el iPhone tras cada tarea se hagan solas, en un navegador real con la app real, y que GitHub las ejecute (junto a `npm test`) en cada PR. La prueba manual en el iPhone queda en lo que no se puede automatizar.
 
-## Situación actual
-- Tras cada sincronización con cambios, la app recarga el libro buscándolo de nuevo en Drive (`drive.list`) aunque ya conoce su archivo. El registro de Diagnóstico muestra un `drive.list` en cada guardado (alguno de más de 15 s con mala cobertura).
-- `js/data/sync.js` hace dos trabajos: guardar cambios en la cola (`queueMovement`, `queueTransfer`, `queueEdit`, `queueTransferEdit`, `queueDelete`) y subirlos al Sheet.
+## Decisiones tomadas (2026-10-27)
+- Dependencia de desarrollo autorizada: `@playwright/test`. Solo para estas pruebas; la app publicada sigue sin dependencias.
+- Navegador: WebKit (el motor de Safari), con el tamaño y el táctil de un iPhone.
+- GitHub Actions ejecuta `npm test` y `npm run acceptance` en cada PR y en cada push a `main`.
+- Va antes de la tarea de sincronización (ahora la 15), para que esta ya se compruebe sola.
 
 ## Alcance técnico
-- Recargar tras sincronizar con `readBook(fileId)` del archivo conocido; `drive.list` solo al abrir la app, al volver a primer plano y tras iniciar sesión.
-- Separar `js/data/sync.js`:
-  - `js/data/movements.js`: validar y guardar en la cola (crear, editar, borrar, transferencias).
-  - `js/data/sync.js`: solo subir la cola al Sheet.
-- Revisar que el resultado de la sincronización (`appended`, `updated`) se usa igual en la app.
+- `package.json`: `@playwright/test` en `devDependencies`, script `npm run acceptance`. `package-lock.json` en el repo. `npm test` no cambia (sigue sin navegador).
+- `acceptance/` (nuevo):
+  - `playwright.config.js`: WebKit con perfil de iPhone, servidor estático propio en Node (sin dependencias) sobre la raíz del repo.
+  - Google simulado: intercepta Drive, Sheets y el script de Google Identity Services, con un libro de prueba en memoria que registra cada llamada. Nunca se llama a Google de verdad.
+  - Sesión de prueba sembrada en `localStorage` antes de abrir la app.
+  - Escenarios, uno por bloque de las listas de comprobación:
+    1. Abrir: saldos, total y últimos movimientos.
+    2. Navegación: cada sección desde la barra y los enlaces de vuelta.
+    3. Añadir gasto e ingreso: fila en el Sheet (con `RAW`), saldo actualizado.
+    4. Historial: filtros; editar reescribe la misma fila; borrar marca `deleted` sin quitar la fila.
+    5. Transferencia: dos filas en una sola petición, una línea «A → B».
+    6. Análisis: categoría mayor arriba, Transferencia fuera del ranking, mes anterior.
+    7. Ajustes: crear cuenta (y nombre repetido), crear y quitar categoría.
+    8. Sin conexión: pendiente visible, se sube al volver y no duplica filas.
+    9. Tema: Sistema / Claro / Oscuro y color de la barra de estado.
+    10. Cerrar sesión: vuelve al Login.
+    11. Privacidad: el registro de Diagnóstico no contiene importes, notas ni nombres de categorías.
+  - Comparación visual: capturas de cada pantalla en claro y oscuro guardadas en el repo; un cambio no buscado hace fallar la prueba (se actualizan a propósito con un comando).
+- `.github/workflows/tests.yml`: Node, `npm ci`, instala WebKit, `npm test`, `npm run acceptance`. Si falla, sube el informe de Playwright como artefacto.
+- `docs/`: cómo ejecutarlas en el Mac (incluida la instalación única de WebKit) y cómo actualizar las capturas; `AGENTS.md` y los comandos `/tarea` y `/cerrar` pasan a pedir `npm run acceptance`.
 
 ## Fuera de alcance
-Que cuentas y categorías funcionen sin conexión (sería una función nueva, no una limpieza), sincronización en segundo plano.
+Inicio de sesión real con Google y permiso de Drive, la app instalada en la pantalla de inicio de iOS, pruebas contra el Drive real.
 
 ## Pruebas automáticas
-- Los tests de la cola y de la sincronización pasan, repartidos entre los dos módulos.
-- Test nuevo: una recarga tras sincronizar no llama a `drive.list` (doble de Google).
+- `npm test` y `npm run acceptance` en verde en local y en GitHub Actions.
+- Cada escenario se comprueba que falla si se rompe lo que vigila (se prueba a romper algo a propósito y se deshace).
 
 ## Pruebas manuales en iPhone
-- [ ] Añades un gasto y en Diagnóstico la sincronización ya no va seguida de un `drive.list`.
-- [ ] Con y sin conexión, añadir, editar y borrar siguen funcionando y no duplican filas.
+- [ ] Nada cambia en la app (esta tarea no toca `js/` ni `styles/`).
 
 ## Criterio de cierre
-- [ ] Una llamada menos por guardado, visible en Diagnóstico.
-- [ ] Nada visible cambia y las pruebas en iPhone pasan.
+- [ ] La PR de esta tarea muestra en GitHub las comprobaciones de `npm test` y `npm run acceptance` en verde.
+- [ ] Las listas de comprobación de las tareas siguientes se reducen a lo que no cubren las pruebas automáticas.
 - [ ] `npm test` en verde.

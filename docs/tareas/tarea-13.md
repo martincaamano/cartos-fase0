@@ -1,6 +1,6 @@
 # Tarea 13 — Revisión técnica: rutas y `app.js`
 
-Estado: pendiente.
+Estado: hecha (2026-10-27).
 Depende de: 12 cerrada.
 
 ## Objetivo
@@ -16,7 +16,7 @@ Añadir una pantalla toca cinco sitios: las tres tablas de `js/ui/router.js`, el
 - Un test vigila que cada módulo de `js/` esté en `APP_SHELL` de `sw.js`, para que añadir uno y olvidarlo falle en `npm test`.
 
 ## Fuera de alcance
-Cambiar la navegación o las URL existentes (todas siguen funcionando), sincronización (tarea 14).
+Cambiar la navegación o las URL existentes (todas siguen funcionando), sincronización (tarea 15).
 
 ## Pruebas automáticas
 - `tests/router.test.js`: la tabla genera las mismas rutas que hoy; cada sección de la barra tiene ruta.
@@ -24,10 +24,10 @@ Cambiar la navegación o las URL existentes (todas siguen funcionando), sincroni
 - Test de `APP_SHELL` completo.
 
 ## Pruebas manuales en iPhone
-- [ ] Prueba rápida completa (todas las secciones, editar, borrar, cerrar sesión y volver a entrar).
-- [ ] Modo avión: abres, añades un gasto, quitas el modo avión y se sube.
+- [x] Prueba rápida completa (todas las secciones, editar, borrar, cerrar sesión y volver a entrar).
+- [x] Modo avión: abres, añades un gasto, quitas el modo avión y se sube.
 
 ## Criterio de cierre
-- [ ] Añadir una pantalla toca la tabla de pantallas, su archivo y `sw.js` (este último vigilado por un test).
-- [ ] Nada visible cambia y las pruebas en iPhone pasan.
-- [ ] `npm test` en verde.
+- [x] Añadir una pantalla toca la tabla de pantallas, su entrada en `js/views.js`, su archivo y `sw.js`; la entrada en `views.js` y `sw.js` están vigiladas por tests (cambiado al planificar: ver ESTADO, decisiones de la tarea 13).
+- [x] Nada visible cambia y las pruebas en iPhone pasan.
+- [x] `npm test` en verde.

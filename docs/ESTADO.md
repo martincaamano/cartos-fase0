@@ -7,7 +7,7 @@ Fuente de verdad del progreso. Los agentes lo leen al empezar una tarea y lo act
 - Repositorio: `cartos-fase0` (se queda con ese nombre).
 - GitHub Pages publica `main` (carpeta raíz) en https://martincaamano.github.io/cartos-fase0/. El repo es público: con el plan gratuito, Pages no funciona en repos privados (estuvo sin publicar del 2026-09-27 al 2026-10-24 por eso).
 - Se desarrolla desde un Mac (`npm test`, `npm run dev` en http://localhost:5173). Las pruebas reales se hacen en el iPhone.
-- MVP completo (2026-10-25): las nueve tareas están hechas y probadas en iPhone. Siguiente paso: la revisión técnica, tarea 13 (Rutas y `app.js`).
+- MVP completo (2026-10-25): las nueve tareas están hechas y probadas en iPhone. Siguiente paso: la tarea 14 (Pruebas de aceptación automáticas).
 
 ## Tareas del MVP
 
@@ -104,15 +104,16 @@ Transversal: ~~publicar la app de Google Cloud de "Testing" a "Production"~~ Hec
 
 ## Revisión técnica (después del MVP)
 
-Mejoras de mantenibilidad, estructura y rendimiento sin cambiar lo que ve el usuario. Principios SOLID donde aportan, sin sobreingeniería: ni framework, ni empaquetador, ni dependencias. Cada tarea se prueba en el iPhone con una prueba rápida (abrir, añadir, editar en Historial, Análisis y Ajustes).
+Mejoras de mantenibilidad, estructura y rendimiento sin cambiar lo que ve el usuario, más pruebas de aceptación automáticas. Principios SOLID donde aportan, sin sobreingeniería: ni framework, ni empaquetador, ni dependencias. Cada tarea se prueba en el iPhone con una prueba rápida (abrir, añadir, editar en Historial, Análisis y Ajustes).
 
 | Tarea | Título | Estado | Notas |
 |---|---|---|---|
 | 10 | Limpieza | Hecha (2026-10-26) | Probada en iPhone (prueba rápida y arranque sin conexión) |
 | 11 | Componentes de interfaz | Hecha (2026-10-26) | Probada en iPhone (prueba rápida) |
 | 12 | Estilos y paletas | Hecha (2026-10-26) | Probada en iPhone (claro, oscuro, Sistema, barra de estado y sin conexión) |
-| 13 | Rutas y `app.js` | Pendiente | Una tabla de pantallas; estado y sincronización fuera de `app.js` |
-| 14 | Sincronización | Pendiente | Sin `drive.list` tras guardar; separar la cola de la subida |
+| 13 | Rutas y `app.js` | Hecha (2026-10-27) | Probada en iPhone (prueba rápida completa y modo avión) |
+| 14 | Pruebas de aceptación automáticas | Pendiente | Playwright con WebKit, Google simulado, GitHub Actions en cada PR (añadida el 2026-10-27) |
+| 15 | Sincronización | Pendiente | Sin `drive.list` tras guardar; separar la cola de la subida (antes era la 14) |
 
 ### Decisiones tomadas en la tarea 10
 - Borrado el código sin uso: `addMovement` de `data/book.js` (Añadir pasa por la cola desde la tarea 05) y `latestMovements` de `domain/movement.js`.
@@ -137,6 +138,16 @@ Mejoras de mantenibilidad, estructura y rendimiento sin cambiar lo que ve el usu
 - `tests/styles.test.js` impide colores escritos a mano fuera de `tokens.css`, variables sin definir, uso directo de `--palette-*` y tamaños de letra fuera de la escala.
 - Se comprobó que los estilos calculados de todas las pantallas no cambian (claro, oscuro y temas forzados).
 - Caché del Service Worker: `cartos-v10`.
+
+### Decisiones tomadas en la tarea 13
+- Una tabla de pantallas, `SCREENS` en `js/ui/router.js` (sección, ruta, si se repinta), de la que salen las rutas, `parseHash`, qué pantallas se repintan y qué botones de la barra están activos.
+- `js/book-state.js`: libro y cola en memoria y el ciclo cargar → sincronizar → recargar, sin DOM, con eventos (`route`, `data`, `loadFailed`) y dependencias inyectadas; tiene tests en Node.
+- `js/views.js`: una función de pintado por sección. `app.js` queda en arranque, eventos del navegador y elección de ruta.
+- Desviación de la ficha, aceptada al planificar: añadir una pantalla toca cuatro sitios, no tres (fila en `SCREENS`, entrada en `VIEWS`, el archivo de la pantalla y `sw.js`), porque juntar rutas y pintado en una tabla crearía un ciclo de imports entre `ui/router.js` y las pantallas. Dos de los cuatro los vigila un test. Explicado en `docs/estructura-repositorio-cartos.md`, «Cómo se añade una pantalla».
+- Un test falla si un archivo de `js/`, `i18n/` o `styles/` no está en `APP_SHELL`.
+- Se verificó con un recorrido de extremo a extremo de la app real (Chromium, Google simulado) que pantallas, llamadas a Google y Sheet final son los mismos que antes.
+- Caché del Service Worker: `cartos-v11`.
+- Tras cerrarla se decidió añadir pruebas de aceptación automáticas (tarea 14) antes de la de sincronización, que pasa a ser la 15.
 
 Regla del plan: cada tarea, al cerrarse, deja algo 100% usable en el iPhone. Ninguna queda a medias esperando a la siguiente.
 
