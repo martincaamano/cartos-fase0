@@ -40,7 +40,8 @@ test('an edit saved offline rewrites its row when the connection is back', async
   expect(google.movements().find((m) => m.id === 'm-food').amount).toBe(22);
 });
 
-test('the app opens offline from the Service Worker cache with the device copy', async ({ page, context, app }) => {
+test('the app opens offline from the Service Worker cache with the device copy', async ({ page, context, app, browserName }) => {
+  test.skip(browserName === 'webkit', 'WebKit runs with the Service Worker blocked (see playwright.config.js)');
   await app.open();
   await page.evaluate(() => navigator.serviceWorker.ready);
   await goOffline(context, page, true);

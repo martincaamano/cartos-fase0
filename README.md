@@ -66,7 +66,7 @@ Cuando llegue la tarea 02, añade `http://localhost:5173` a los "Orígenes de Ja
 
 `acceptance/` abre la app real (`index.html`) con Playwright, en WebKit con perfil de iPhone y en Chromium, con Google simulado: un libro de prueba en memoria que registra cada llamada. Nunca toca un Drive de verdad.
 
-- Escenarios: abrir y navegar, añadir, editar y borrar, transferencias, Historial y Análisis, Ajustes, sin conexión (incluido arrancar desde la caché del Service Worker), tema y barra de estado, cerrar sesión y privacidad de los registros.
+- Escenarios: abrir y navegar, añadir, editar y borrar, transferencias, Historial y Análisis, Ajustes, sin conexión (arrancar desde la caché del Service Worker se comprueba en Chromium: en WebKit las pruebas corren sin Service Worker, porque Playwright no puede interceptar las llamadas a Google de una página que él controla), tema y barra de estado, cerrar sesión y privacidad de los registros.
 - `styles.spec.js` compara los estilos calculados de cada pantalla, en claro y oscuro, con `acceptance/__snapshots__`. Tras un cambio visual buscado: `npm run acceptance:update` y revisar el diff.
 - Si una prueba falla, `npx playwright show-report` abre el informe (en GitHub, el artefacto `playwright-report` de la ejecución).
 - No cubren: el inicio de sesión real con Google y la app instalada en la pantalla de inicio. Eso sigue probándose en el iPhone.

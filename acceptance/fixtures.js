@@ -51,7 +51,15 @@ export function sampleBook() {
 // `rows`. Every call is kept in `calls` as { op, ranges?, body? }.
 function fakeGoogle(rows) {
   const calls = [];
-  const json = (route, body) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(body) });
+  // Google's REST APIs answer cross-origin calls, preflight included.
+  const CORS = {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Headers': 'authorization, content-type',
+    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+  };
+  const json = (route, body) =>
+    route.fulfill({ status: 200, contentType: 'application/json', headers: CORS, body: JSON.stringify(body) });
+  const preflight = (route) => route.request().method() === 'OPTIONS' && route.fulfill({ status: 204, headers: CORS });
 
   async function install(context) {
     // Google Identity Services: an empty script, the session is seeded.
@@ -59,6 +67,7 @@ function fakeGoogle(rows) {
       route.fulfill({ status: 200, contentType: 'text/javascript', body: '' }));
 
     await context.route('https://www.googleapis.com/drive/**', (route) => {
+      if (preflight(route)) return undefined;
       calls.push({ op: 'drive.list' });
       return json(route, {
         files: [{ id: 'book-1', name: 'Cartos · Personal', createdTime: AT, appProperties: { app: 'cartos', bookType: 'personal' } }],
@@ -66,6 +75,7 @@ function fakeGoogle(rows) {
     });
 
     await context.route('https://sheets.googleapis.com/**', (route) => {
+      if (preflight(route)) return undefined;
       const request = route.request();
       const url = new URL(request.url());
       if (url.pathname.endsWith('values:batchGet')) {
@@ -97,7 +107,7 @@ function fakeGoogle(rows) {
         return json(route, {});
       }
       calls.push({ op: 'unexpected', path: url.pathname });
-      return route.fulfill({ status: 500 });
+      return route.fulfill({ status: 500, headers: CORS });
     });
   }
 

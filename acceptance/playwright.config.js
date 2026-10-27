@@ -2,6 +2,11 @@
 // with Google faked. WebKit with an iPhone profile is the reference, as it
 // is Safari's engine; Chromium also runs the style snapshots, which are
 // only kept for it (see styles.spec.js).
+//
+// WebKit runs without the Service Worker: once it controls the page,
+// Playwright cannot intercept the page's calls to Google in WebKit, and
+// they would reach the real network. Starting offline from the Service
+// Worker cache is therefore checked in Chromium (offline.spec.js).
 
 import { defineConfig, devices } from '@playwright/test';
 
@@ -22,7 +27,7 @@ export default defineConfig({
     trace: 'retain-on-failure',
   },
   projects: [
-    { name: 'webkit', use: { ...devices['iPhone 15'] } },
+    { name: 'webkit', use: { ...devices['iPhone 15'], serviceWorkers: 'block' } },
     {
       name: 'chromium',
       use: { ...devices['iPhone 15'], browserName: 'chromium', defaultBrowserType: 'chromium' },
