@@ -1,7 +1,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { buildLogEntry, countToDrop, configureLogs, MAX_LOGS } from '../js/storage/logs.js';
-import { configureSync, queueMovement, syncOutbox } from '../js/data/sync.js';
+import { configureSync, syncOutbox } from '../js/data/sync.js';
+import { configureMovements, queueMovement } from '../js/data/movements.js';
 import { setupGoogleApi } from './helpers/fake-google.js';
 
 const now = new Date('2026-10-25T09:30:00.000Z');
@@ -61,9 +62,12 @@ test('the buffer keeps at most 500 entries and drops the oldest surplus', () => 
 test('queueing and syncing a movement logs no amount, note or category name', async () => {
   const entries = [];
   configureLogs({ write: async (entry) => { entries.push(entry); } });
+  // One in-memory outbox: movements.js saves into it, sync.js uploads from it.
   const queued = [];
-  configureSync({
+  configureMovements({
     add: async (fileId, movements) => { for (const movement of movements) queued.push({ fileId, movement }); },
+  });
+  configureSync({
     list: async () => queued,
     remove: async (movements) => {
       for (const done of movements) {
@@ -100,6 +104,7 @@ test('queueing and syncing a movement logs no amount, note or category name', as
     }
   } finally {
     configureLogs();
+    configureMovements();
     configureSync();
   }
 });

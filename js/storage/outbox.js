@@ -1,6 +1,7 @@
-// Outbox in IndexedDB: a movement is stored here the moment it is saved and
-// leaves once it is in the Sheet (js/data/sync.js). Its own database, so its
-// schema never collides with the logs. Keyed by movement id: saving the same
+// Outbox in IndexedDB: a movement is stored here the moment it is saved
+// (js/data/movements.js) and leaves once it is in the Sheet
+// (js/data/sync.js). Its own database, so its schema never collides with
+// the logs. Keyed by movement id: saving the same
 // movement twice keeps a single entry. Not tested in Node (no IndexedDB);
 // the rules live in outbox-logic.js.
 

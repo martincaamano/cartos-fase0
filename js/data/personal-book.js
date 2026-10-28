@@ -39,6 +39,15 @@ export async function fetchPersonalBook() {
   return hasActiveAccounts(book) ? { status: 'ready', fileId: file.id, book } : { status: 'none', fileId: file.id };
 }
 
+// Reads again a book already found, by its file: no Drive search. Used after
+// a sync or a change in Ajustes; the search (fetchPersonalBook) stays for
+// opening the app, coming back to it and signing in.
+export async function reloadPersonalBook(fileId) {
+  const book = await readBook(fileId);
+  remember(fileId, book);
+  return hasActiveAccounts(book) ? { status: 'ready', fileId, book } : { status: 'none', fileId };
+}
+
 // Onboarding: creates the book when there is none yet, adds the first
 // account and returns the book ready for the Dashboard.
 export async function setUpPersonalBook({ fileId = null, account }) {

@@ -7,7 +7,7 @@ import { es } from '../i18n/es.js';
 import { decideRoute, isRepaintable, parseHash, ROUTES, SECTION_HASH } from './ui/router.js';
 import { startTheme } from './ui/theme.js';
 import { getAuthState, signOut } from './data/auth.js';
-import { cachedPersonalBook, fetchPersonalBook } from './data/personal-book.js';
+import { cachedPersonalBook, fetchPersonalBook, reloadPersonalBook } from './data/personal-book.js';
 import { syncOutbox } from './data/sync.js';
 import { listPending } from './storage/outbox.js';
 import { logEvent } from './storage/logs.js';
@@ -21,6 +21,7 @@ import { renderOnboarding } from './screens/onboarding.js';
 const state = createBookState({
   cachedPersonalBook,
   fetchPersonalBook,
+  reloadPersonalBook,
   syncOutbox,
   listPending,
   getAuthState,

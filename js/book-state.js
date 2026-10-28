@@ -12,7 +12,7 @@ import { enqueue, mergePending } from './storage/outbox-logic.js';
 
 const UNKNOWN = Object.freeze({ status: 'unknown', fileId: null, book: null });
 
-// deps: { cachedPersonalBook, fetchPersonalBook, syncOutbox, listPending,
+// deps: { cachedPersonalBook, fetchPersonalBook, reloadPersonalBook, syncOutbox, listPending,
 // getAuthState, isOnline, logEvent }. app.js passes the real ones; the tests
 // pass fakes.
 export function createBookState(deps) {
@@ -39,11 +39,12 @@ export function createBookState(deps) {
     }
   }
 
-  // Reads the book again from Drive (after a sync or a change in Ajustes).
+  // Reads the book again by its file (after a sync or a change in Ajustes),
+  // without searching Drive for it.
   async function reloadBook() {
-    if (!canReachDrive()) return;
+    if (!canReachDrive() || !personal.fileId) return;
     try {
-      personal = await deps.fetchPersonalBook();
+      personal = await deps.reloadPersonalBook(personal.fileId);
       await loadPending();
       emit('data');
     } catch (err) {

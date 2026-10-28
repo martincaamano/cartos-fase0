@@ -34,7 +34,8 @@ cartos-fase0/
 │   │   ├── auth.js, http.js, errors.js
 │   │   ├── drive.js, sheets.js, rows.js
 │   │   ├── book.js, personal-book.js
-│   │   └── sync.js
+│   │   ├── movements.js      (guarda en la cola: crear, editar, borrar)
+│   │   └── sync.js           (sube la cola al Sheet)
 │   │
 │   ├── storage/          (lo que vive en el dispositivo)
 │   │   ├── session.js, book-cache.js

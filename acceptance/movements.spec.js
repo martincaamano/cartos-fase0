@@ -107,3 +107,27 @@ test('editing a transfer changes both halves in one request', async ({ page, app
   expect(update.body.data).toHaveLength(2);
   expect(google.movements().filter((m) => m.categoryId === 'transfer').map((m) => m.amount)).toEqual([35, 35]);
 });
+
+test('after saving, the book is read again by its file, without searching Drive', async ({ page, app, google }) => {
+  await app.open();
+  const opened = google.calls.length;
+  const searches = () => google.calls.slice(opened).filter((call) => call.op === 'drive.list').length;
+
+  await app.addMovement({ amount: '5', category: 'Supermercado' });
+  await app.go('#/history/edit?id=m-food');
+  await page.fill('.amount-input', '21');
+  await page.click('.form-submit');
+  await app.settle();
+  await app.go('#/settings/categories');
+  await page.fill('input[name=name]', 'Gimnasio');
+  await page.click('.form-submit');
+  await app.settle();
+
+  expect(google.writes()).toHaveLength(3);
+  expect(searches()).toBe(0);
+
+  // Coming back to the foreground looks the book up again.
+  await page.evaluate(() => document.dispatchEvent(new Event('visibilitychange')));
+  await app.settle();
+  expect(searches()).toBe(1);
+});
