@@ -7,7 +7,7 @@ Fuente de verdad del progreso. Los agentes lo leen al empezar una tarea y lo act
 - Repositorio: `cartos-fase0` (se queda con ese nombre).
 - GitHub Pages publica `main` (carpeta raíz) en https://martincaamano.github.io/cartos-fase0/. El repo es público: con el plan gratuito, Pages no funciona en repos privados (estuvo sin publicar del 2026-09-27 al 2026-10-24 por eso).
 - Se desarrolla desde un Mac (`npm test`, `npm run dev` en http://localhost:5173). Las pruebas reales se hacen en el iPhone.
-- MVP completo (2026-10-25): las nueve tareas están hechas y probadas en iPhone. Siguiente paso: la tarea 14 (Pruebas de aceptación automáticas).
+- MVP completo (2026-10-25): las nueve tareas están hechas y probadas en iPhone. Siguiente paso: la tarea 15 (Sincronización).
 
 ## Tareas del MVP
 
@@ -112,7 +112,7 @@ Mejoras de mantenibilidad, estructura y rendimiento sin cambiar lo que ve el usu
 | 11 | Componentes de interfaz | Hecha (2026-10-26) | Probada en iPhone (prueba rápida) |
 | 12 | Estilos y paletas | Hecha (2026-10-26) | Probada en iPhone (claro, oscuro, Sistema, barra de estado y sin conexión) |
 | 13 | Rutas y `app.js` | Hecha (2026-10-27) | Probada en iPhone (prueba rápida completa y modo avión) |
-| 14 | Pruebas de aceptación automáticas | Pendiente | Playwright con WebKit, Google simulado, GitHub Actions en cada PR (añadida el 2026-10-27) |
+| 14 | Pruebas de aceptación automáticas | Hecha (2026-10-27) | En verde en GitHub Actions (WebKit y Chromium); no toca la app |
 | 15 | Sincronización | Pendiente | Sin `drive.list` tras guardar; separar la cola de la subida (antes era la 14) |
 
 ### Decisiones tomadas en la tarea 10
@@ -148,6 +148,17 @@ Mejoras de mantenibilidad, estructura y rendimiento sin cambiar lo que ve el usu
 - Se verificó con un recorrido de extremo a extremo de la app real (Chromium, Google simulado) que pantallas, llamadas a Google y Sheet final son los mismos que antes.
 - Caché del Service Worker: `cartos-v11`.
 - Tras cerrarla se decidió añadir pruebas de aceptación automáticas (tarea 14) antes de la de sincronización, que pasa a ser la 15.
+
+### Decisiones tomadas en la tarea 14
+- `@playwright/test` 1.63.0 como única dependencia de desarrollo (autorizada). Comandos `npm run acceptance` y `npm run acceptance:update`. `npm test` sigue sin navegador.
+- `acceptance/`: la app real servida por un servidor propio en `127.0.0.1` (así el Service Worker se registra como en producción), Google simulado con un libro en memoria que registra cada llamada, sesión sembrada y fecha fija (20/10/2026). 22 escenarios que cubren las listas de comprobación de las tareas 04 a 13.
+- «Se ve igual» se comprueba con fotos de los **estilos calculados** de 8 pantallas en claro y oscuro (`acceptance/__snapshots__`), no con capturas de imagen: no dependen de las fuentes de cada máquina. Se guardan solo para Chromium.
+- WebKit (perfil iPhone 15) corre **sin Service Worker**: en WebKit, Playwright no puede interceptar las llamadas a Google de una página controlada por el Service Worker y acabarían en la red real. Arrancar sin conexión desde la caché se comprueba en Chromium.
+- El Google simulado responde a las peticiones previas de CORS como las APIs reales.
+- GitHub Actions (`.github/workflows/tests.yml`) corre dentro de la imagen oficial de Playwright de la misma versión (WebKit, Chromium y sus librerías ya instalados): instalarlos desde Ubuntu hizo que la primera ejecución superase los 15 minutos. Tarda alrededor de un minuto y medio.
+- Se comprobó que las pruebas fallan si se rompe lo que vigilan (cinco fallos provocados; uno no estaba cubierto y se añadió).
+- `AGENTS.md`, `README.md` y los comandos `/tarea`, `/revisar` y `/cerrar` piden `npm run acceptance`; las listas para el iPhone se reducen a lo que no se puede automatizar (inicio de sesión real con Google, app instalada, cómo se ve en el iPhone).
+- En este contenedor de la nube solo hay Chromium; WebKit se comprueba en GitHub Actions y en el Mac (`npx playwright install webkit` una vez).
 
 Regla del plan: cada tarea, al cerrarse, deja algo 100% usable en el iPhone. Ninguna queda a medias esperando a la siguiente.
 
