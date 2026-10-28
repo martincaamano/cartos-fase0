@@ -1,6 +1,6 @@
 # Tarea 14 — Pruebas de aceptación automáticas
 
-Estado: pendiente.
+Estado: hecha (2026-10-27).
 Depende de: 13 cerrada.
 
 ## Objetivo
@@ -42,9 +42,9 @@ Inicio de sesión real con Google y permiso de Drive, la app instalada en la pan
 - Cada escenario se comprueba que falla si se rompe lo que vigila (se prueba a romper algo a propósito y se deshace).
 
 ## Pruebas manuales en iPhone
-- [ ] Nada cambia en la app (esta tarea no toca `js/` ni `styles/`).
+- [x] Nada cambia en la app (esta tarea no toca `js/` ni `styles/`).
 
 ## Criterio de cierre
-- [ ] La PR de esta tarea muestra en GitHub las comprobaciones de `npm test` y `npm run acceptance` en verde.
-- [ ] Las listas de comprobación de las tareas siguientes se reducen a lo que no cubren las pruebas automáticas.
-- [ ] `npm test` en verde.
+- [x] La PR de esta tarea muestra en GitHub las comprobaciones de `npm test` y `npm run acceptance` en verde.
+- [x] Las listas de comprobación de las tareas siguientes se reducen a lo que no cubren las pruebas automáticas.
+- [x] `npm test` en verde.
