@@ -17,6 +17,7 @@ function setup(overrides = {}) {
   const deps = {
     cachedPersonalBook: () => { log.push('cached'); return null; },
     fetchPersonalBook: async () => { log.push('fetch'); return ready([m1]); },
+    reloadPersonalBook: async (fileId) => { log.push(`reload:${fileId}`); return ready([m1, m2], fileId); },
     syncOutbox: async (fileId) => { log.push(`syncOutbox:${fileId}`); return { appended: 0, updated: 0 }; },
     listPending: async () => [],
     getAuthState: () => ({ hasSession: true, hasDriveAccess: true, tokenExpired: false }),
@@ -60,13 +61,56 @@ test('book merges the pending movements of the same file only; pendingCount coun
   assert.deepEqual(state.savedBook.movements, [m1]);
 });
 
-test('sync that uploaded something reads the book again', async () => {
-  const { state, count } = setup({
+test('sync that uploaded something reads the book again by its file, without searching Drive', async () => {
+  const { state, log, count } = setup({
     syncOutbox: async () => ({ appended: 1, updated: 0 }),
   });
   await state.refresh();
-  assert.equal(count('fetch'), 2);
+  assert.equal(count('fetch'), 1, 'only the first read searches Drive');
+  assert.equal(count('reload:f1'), 1);
   assert.equal(count('data'), 2);
+  assert.ok(log.indexOf('reload:f1') > log.indexOf('fetch'));
+  assert.equal(log.at(-1), 'data');
+  assert.deepEqual(state.savedBook.movements, [m1, m2]);
+});
+
+test('an updated row alone also reads the book again by its file', async () => {
+  const { state, log, count } = setup({ syncOutbox: async () => ({ appended: 0, updated: 2 }) });
+  state.setUp(ready([], 'f9'));
+  log.length = 0;
+  await state.sync();
+  assert.deepEqual(log, ['reload:f9', 'data']);
+  assert.equal(count('fetch'), 0);
+});
+
+test('reloadBook without a file id calls nothing', async () => {
+  const { state, log } = setup();
+  await state.reloadBook();
+  assert.deepEqual(log, []);
+  state.setUp({ status: 'none', fileId: null });
+  log.length = 0;
+  await state.reloadBook();
+  assert.deepEqual(log, []);
+});
+
+test('refresh still searches Drive with fetchPersonalBook', async () => {
+  const { state, count } = setup();
+  await state.refresh();
+  assert.equal(count('fetch'), 1);
+  assert.equal(count('reload:f1'), 0);
+});
+
+test('an expired token while reloading the book asks to re-decide the route', async () => {
+  const { state, log, logged } = setup({
+    syncOutbox: async () => ({ appended: 1, updated: 0 }),
+    reloadPersonalBook: async (fileId) => { log.push(`reload:${fileId}`); throw new TokenExpiredError(); },
+  });
+  state.setUp(ready([m1]));
+  log.length = 0;
+  await state.sync();
+  assert.deepEqual(log, ['reload:f1', 'route']);
+  assert.deepEqual(logged, []);
+  assert.equal(state.status, 'ready', 'the book in memory is kept');
 });
 
 test('sync with nothing to upload does not read the book again and emits data', async () => {

@@ -2,7 +2,7 @@
 import { test, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  configurePersonalBook, cachedPersonalBook, fetchPersonalBook, setUpPersonalBook,
+  configurePersonalBook, cachedPersonalBook, fetchPersonalBook, reloadPersonalBook, setUpPersonalBook,
 } from '../js/data/personal-book.js';
 import { HEADERS } from '../js/data/rows.js';
 import { setupGoogleApi } from './helpers/fake-google.js';
@@ -83,4 +83,45 @@ test('onboarding reuses an existing empty book instead of creating another', asy
   await setUpPersonalBook({ fileId: 'file-1', account: { name: 'Banco', emoji: '🏦', initialBalance: 100 } });
   assert.equal(calls.some((c) => c.url.hostname === 'www.googleapis.com'), false, 'no new Drive file');
   assert.ok(calls.some((c) => c.url.pathname === '/v4/spreadsheets/file-1/values/Accounts:append'));
+});
+
+// --- reloadPersonalBook: the book is read again by its file, no Drive search ---
+
+const isDrive = (call) => call.url.hostname === 'www.googleapis.com';
+
+test('reloadPersonalBook makes a single batchGet of that file and no Drive call', async () => {
+  const calls = googleWith({ files: [personalFile], accounts: [accountRow] });
+  const result = await reloadPersonalBook('file-1');
+  assert.equal(calls.length, 1);
+  assert.equal(calls.some(isDrive), false, 'no drive.list');
+  assert.equal(calls[0].method, 'GET');
+  assert.equal(calls[0].url.pathname, '/v4/spreadsheets/file-1/values:batchGet');
+  assert.equal(result.status, 'ready');
+  assert.equal(result.fileId, 'file-1');
+  assert.equal(result.book.accounts[0].name, 'Banco');
+  assert.equal(result.book.accounts[0].initialBalance, 100);
+});
+
+test('reloadPersonalBook refreshes the device copy', async () => {
+  googleWith({ files: [], accounts: [accountRow] });
+  assert.equal(cachedPersonalBook(), null);
+  await reloadPersonalBook('file-1');
+  const cached = cachedPersonalBook();
+  assert.equal(cached.status, 'ready');
+  assert.equal(cached.fileId, 'file-1');
+  assert.equal(cached.book.accounts[0].name, 'Banco');
+});
+
+test('reloadPersonalBook of a book without active accounts is none, keeping its id', async () => {
+  const calls = googleWith({ files: [personalFile], accounts: [['acc-1', 'Banco', '', 0, '', '', true]] });
+  assert.deepEqual(await reloadPersonalBook('file-1'), { status: 'none', fileId: 'file-1' });
+  assert.equal(cachedPersonalBook(), null);
+  assert.equal(calls.some(isDrive), false);
+});
+
+test('reloadPersonalBook and fetchPersonalBook agree on the same book', async () => {
+  googleWith({ files: [personalFile], accounts: [accountRow] });
+  const fetched = await fetchPersonalBook();
+  const reloaded = await reloadPersonalBook('file-1');
+  assert.deepEqual(reloaded, fetched);
 });

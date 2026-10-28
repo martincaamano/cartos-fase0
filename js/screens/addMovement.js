@@ -8,7 +8,7 @@ import { es } from '../../i18n/es.js';
 import { parseAmountInput } from '../domain/money.js';
 import { rankCategories } from '../domain/category.js';
 import { activeOnly } from '../domain/active.js';
-import { queueDelete, queueEdit, queueMovement, queueTransfer, queueTransferEdit } from '../data/sync.js';
+import { queueDelete, queueEdit, queueMovement, queueTransfer, queueTransferEdit } from '../data/movements.js';
 import { createAmountInput, fillTexts, renderCategoryPicker, renderDatePicker } from '../ui/components.js';
 import { formatAmountInput, labelOf } from '../ui/format.js';
 import { SECTION_HASH } from '../ui/router.js';
