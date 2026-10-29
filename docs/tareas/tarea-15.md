@@ -1,6 +1,6 @@
 # Tarea 15 — Revisión técnica: sincronización
 
-Estado: pendiente.
+Estado: hecha (2026-10-29).
 Depende de: 14 cerrada (las pruebas de aceptación vigilan este cambio).
 
 ## Objetivo
@@ -28,10 +28,10 @@ Que cuentas y categorías funcionen sin conexión (sería una función nueva, no
 - `npm run acceptance` en verde, con un escenario nuevo: tras guardar no hay `drive.list` (el Google simulado registra las llamadas).
 
 ## Pruebas manuales en iPhone
-- [ ] Añades un gasto y en Diagnóstico la sincronización ya no va seguida de un `drive.list`.
-- [ ] Con y sin conexión, añadir, editar y borrar siguen funcionando y no duplican filas.
+- [x] Añades un gasto y en Diagnóstico la sincronización ya no va seguida de un `drive.list`.
+- [x] Con y sin conexión, añadir, editar y borrar siguen funcionando y no duplican filas.
 
 ## Criterio de cierre
-- [ ] Una llamada menos por guardado, visible en Diagnóstico.
-- [ ] Nada visible cambia y las pruebas en iPhone pasan.
-- [ ] `npm test` en verde.
+- [x] Una llamada menos por guardado, visible en Diagnóstico.
+- [x] Nada visible cambia y las pruebas en iPhone pasan.
+- [x] `npm test` en verde.
