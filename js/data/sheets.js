@@ -34,6 +34,15 @@ export function batchUpdateValues(spreadsheetId, data) {
   });
 }
 
+// Empties ranges (values only; the tabs and their headers stay).
+export function batchClear(spreadsheetId, ranges) {
+  return googleFetch(`${BASE}/${spreadsheetId}/values:batchClear`, {
+    method: 'POST',
+    body: { ranges },
+    op: 'sheets.batchClear',
+  });
+}
+
 // Structural changes (rename or add tabs).
 export function batchUpdate(spreadsheetId, requests) {
   return googleFetch(`${BASE}/${spreadsheetId}:batchUpdate`, {

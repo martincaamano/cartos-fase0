@@ -3,10 +3,14 @@
 // first account to it instead of creating a second book.
 
 import { listBooks, pickPersonalBook } from './drive.js';
-import { addAccount, createBook, readBook } from './book.js';
+import { es } from '../../i18n/es.js';
+import { addAccount, appendBookRows, createBook, readBook, writeBookRows } from './book.js';
+import { ValidationError } from './errors.js';
 import { currentUserSub } from './auth.js';
 import { loadBookCache, saveBookCache } from '../storage/book-cache.js';
 import { isActive } from '../domain/active.js';
+import { buildDefaultCategories, TRANSFER_CATEGORY_ID } from '../domain/category.js';
+import { buildImport, validateImport } from '../domain/import.js';
 
 const defaults = { storage: () => globalThis.localStorage };
 let deps = defaults;
@@ -56,4 +60,37 @@ export async function setUpPersonalBook({ fileId = null, account }) {
   const book = await readBook(id);
   remember(id, book);
   return { status: 'ready', fileId: id, book };
+}
+
+// What an import into a new book starts from: only Transferencia, named by
+// i18n. The importer checks the file against it.
+export function startingBook() {
+  const transfer = buildDefaultCategories(es.categories).find((c) => c.id === TRANSFER_CATEGORY_ID);
+  return { accounts: [], categories: [transfer], movements: [] };
+}
+
+// Onboarding, from a file (domain/import.js, already validated): creates the
+// book when there is none, writes everything in it and returns it ready.
+// With fileId (an empty book from an earlier try) it is written over.
+export async function importPersonalBook({ fileId = null, data }) {
+  const base = startingBook();
+  const rows = buildImport(data, base);
+  const id = fileId ?? (await createBook({ categories: [] })).fileId;
+  await writeBookRows(id, { ...rows, categories: [...rows.categories, ...base.categories] });
+  const book = await readBook(id);
+  remember(id, book);
+  return { status: 'ready', fileId: id, book };
+}
+
+// Ajustes, from a file: adds its movements (and any new account or
+// category) to the book. The book is read again first, so the names are
+// matched against what is in the Sheet now.
+export async function importIntoPersonalBook(fileId, data) {
+  const current = await readBook(fileId);
+  const errors = validateImport(data, current);
+  if (errors.length) throw new ValidationError(errors.map((error) => error.code));
+  await appendBookRows(fileId, buildImport(data, current));
+  const book = await readBook(fileId);
+  remember(fileId, book);
+  return { status: 'ready', fileId, book };
 }

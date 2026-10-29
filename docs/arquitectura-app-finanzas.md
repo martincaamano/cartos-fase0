@@ -139,6 +139,13 @@ Dado que el desarrollo y la depuración ocurren desde el propio iPhone sin conso
 - Los logs nunca salen del dispositivo salvo que el usuario los copie manualmente. No se escriben en los Sheets (ensuciarían los datos, gastarían llamadas a la API, y en libros compartidos los vería otra persona).
 - Al ser IndexedDB, iOS puede vaciarlos bajo presión de almacenamiento — se asumen como "mejor esfuerzo", suficientes para depurar, no como un registro permanente.
 
+## 9.1. Importar y descargar datos
+
+- **Formatos**: un CSV propio (`fecha;tipo;importe;cuenta;cuenta destino;categoría;nota`, con tipos gasto, ingreso, transferencia y saldo inicial) y un JSON propio (`cartos-import`, versión 1), que conserva emojis. El importador acepta los dos. La plantilla y «Descargar mis datos» usan el CSV, así que la descarga se puede volver a importar con los mismos saldos (sin emojis ni categorías sin uso).
+- **Onboarding**: crea el libro y escribe las tres pestañas de una vez (`values:batchClear` + `values:batchUpdate`, `RAW`); repetirlo tras un fallo no duplica nada.
+- **Ajustes**: solo añade filas al final de cada pestaña (`append`, `RAW`). Cuentas y categorías se emparejan por nombre con las del libro; las demás se crean. Nunca se modifica ni se borra una fila existente. Los movimientos que parecen repetidos (mismo día, cuenta, tipo e importe) se avisan, sin bloquear.
+- Todo se valida con `domain/` antes de escribir. Los archivos se leen y se crean en el dispositivo; solo se escribe en el Drive del usuario. Las filas importadas llevan `createdBy = "import"`.
+
 ## 10. Comunicación con Google
 
 Al no haber Apps Script propio, no hay problema de CORS: `sheets.googleapis.com` y `www.googleapis.com/drive/v3` son APIs REST estándar con soporte CORS normal, `fetch()` con cabecera `Authorization: Bearer <token>` funciona directo desde el navegador.

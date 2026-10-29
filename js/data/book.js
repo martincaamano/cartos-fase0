@@ -4,7 +4,7 @@
 import { es } from '../../i18n/es.js';
 import { createSpreadsheetFile } from './drive.js';
 import { ValidationError } from './errors.js';
-import { append, batchGet, batchUpdate, batchUpdateValues } from './sheets.js';
+import { append, batchClear, batchGet, batchUpdate, batchUpdateValues } from './sheets.js';
 import { findRowById, HEADERS, SHEET_NAMES, toRow, rowsToObjects } from './rows.js';
 import { createAccount, validateAccount } from '../domain/account.js';
 import {
@@ -14,7 +14,9 @@ import {
 // A new spreadsheet always starts with one tab whose sheetId is 0.
 const FIRST_SHEET_ID = 0;
 
-export async function createBook({ name = 'Personal', bookType = 'personal', categoryNames = es.categories } = {}) {
+// categories: the rows to start with; the defaults (named by i18n) when
+// not given, as in the onboarding. An import passes its own.
+export async function createBook({ name = 'Personal', bookType = 'personal', categoryNames = es.categories, categories = null } = {}) {
   const bookId = crypto.randomUUID();
   const file = await createSpreadsheetFile(`Cartos · ${name}`, { app: 'cartos', bookId, bookType, name });
 
@@ -24,10 +26,10 @@ export async function createBook({ name = 'Personal', bookType = 'personal', cat
     { addSheet: { properties: { title: 'Movements' } } },
   ]);
 
-  const categories = buildDefaultCategories(categoryNames);
+  const rows = categories ?? buildDefaultCategories(categoryNames);
   await batchUpdateValues(file.id, [
     { range: 'Accounts!A1', values: [HEADERS.Accounts] },
-    { range: 'Categories!A1', values: [HEADERS.Categories, ...categories.map((c) => toRow('Categories', c))] },
+    { range: 'Categories!A1', values: [HEADERS.Categories, ...rows.map((c) => toRow('Categories', c))] },
     { range: 'Movements!A1', values: [HEADERS.Movements] },
   ]);
 
@@ -41,6 +43,26 @@ export async function readBook(fileId) {
     categories: rowsToObjects('Categories', categories),
     movements: rowsToObjects('Movements', movements),
   };
+}
+
+// Writes a whole book at once (an import): empties the data rows of the
+// three tabs, then writes them in one request, RAW. Repeating it after a
+// failure leaves the same rows, never duplicates.
+export async function writeBookRows(fileId, { accounts, categories, movements }) {
+  await batchClear(fileId, SHEET_NAMES.map((sheet) => `${sheet}!A2:Z`));
+  await batchUpdateValues(fileId, [
+    { range: 'Accounts!A2', values: accounts.map((a) => toRow('Accounts', a)) },
+    { range: 'Categories!A2', values: categories.map((c) => toRow('Categories', c)) },
+    { range: 'Movements!A2', values: movements.map((m) => toRow('Movements', m)) },
+  ]);
+}
+
+// Adds rows at the end of each tab (an import into a book with data),
+// accounts and categories before the movements that point at them.
+export async function appendBookRows(fileId, { accounts, categories, movements }) {
+  if (accounts.length) await append(fileId, 'Accounts', accounts.map((a) => toRow('Accounts', a)));
+  if (categories.length) await append(fileId, 'Categories', categories.map((c) => toRow('Categories', c)));
+  if (movements.length) await append(fileId, 'Movements', movements.map((m) => toRow('Movements', m)));
 }
 
 // existing: the accounts already in the book, to reject a repeated name.

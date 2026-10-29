@@ -47,9 +47,12 @@ export function sampleBook() {
   };
 }
 
-// The fake Google: Drive lists one personal book; Sheets reads and writes
-// `rows`. Every call is kept in `calls` as { op, ranges?, body? }.
-function fakeGoogle(rows) {
+// The fake Google: Drive lists the personal book (none when `rows` is
+// null, until the app creates one); Sheets reads and writes `rows`. Every
+// call is kept in `calls` as { op, ranges?, body? }.
+function fakeGoogle(book) {
+  const rows = book ?? {};
+  let fileId = book ? 'book-1' : null;
   const calls = [];
   // Google's REST APIs answer cross-origin calls, preflight included.
   const CORS = {
@@ -68,9 +71,16 @@ function fakeGoogle(rows) {
 
     await context.route('https://www.googleapis.com/drive/**', (route) => {
       if (preflight(route)) return undefined;
+      // Creating a book: an empty spreadsheet whose tabs come next.
+      if (route.request().method() === 'POST') {
+        calls.push({ op: 'drive.create' });
+        fileId = 'book-new';
+        for (const tab of Object.keys(HEADERS)) rows[tab] = [];
+        return json(route, { id: fileId, name: 'Cartos · Personal' });
+      }
       calls.push({ op: 'drive.list' });
       return json(route, {
-        files: [{ id: 'book-1', name: 'Cartos · Personal', createdTime: AT, appProperties: { app: 'cartos', bookType: 'personal' } }],
+        files: fileId ? [{ id: fileId, name: 'Cartos · Personal', createdTime: AT, appProperties: { app: 'cartos', bookType: 'personal' } }] : [],
       });
     });
 
@@ -89,6 +99,17 @@ function fakeGoogle(rows) {
         });
       }
       const body = JSON.parse(request.postData() ?? '{}');
+      // Renaming and adding tabs when a book is created.
+      if (/spreadsheets\/[^/]+:batchUpdate$/.test(url.pathname)) {
+        calls.push({ op: 'structure' });
+        return json(route, {});
+      }
+      if (url.pathname.endsWith('values:batchClear')) {
+        calls.push({ op: 'clear', ranges: body.ranges });
+        // Only "Tab!A2:Z" is used: everything below the header goes.
+        for (const range of body.ranges) rows[range.split('!')[0]].length = 1;
+        return json(route, {});
+      }
       if (url.pathname.endsWith(':append')) {
         const tab = decodeURIComponent(url.pathname.split('/values/')[1]).replace(':append', '');
         calls.push({ op: 'append', tab, valueInputOption: url.searchParams.get('valueInputOption'), body });
@@ -97,12 +118,16 @@ function fakeGoogle(rows) {
       }
       if (url.pathname.endsWith('values:batchUpdate')) {
         calls.push({ op: 'update', valueInputOption: body.valueInputOption, body });
-        // Writes cell by cell from the first column of the range (A, F...).
+        // Writes cell by cell from the top-left cell of the range (A2, F8...),
+        // as many rows as given, adding rows when needed.
         for (const { range, values } of body.data) {
           const [tab, cells] = range.split('!');
           const [, letter, number] = cells.match(/^([A-Z])(\d+)/);
-          const row = rows[tab][Number(number) - 1];
-          values[0].forEach((value, i) => { row[letter.charCodeAt(0) - 65 + i] = value; });
+          values.forEach((cellsOfRow, k) => {
+            const index = Number(number) - 1 + k;
+            rows[tab][index] ??= [];
+            cellsOfRow.forEach((value, i) => { rows[tab][index][letter.charCodeAt(0) - 65 + i] = value; });
+          });
         }
         return json(route, {});
       }
@@ -125,8 +150,11 @@ function fakeGoogle(rows) {
 }
 
 export const test = base.extend({
-  google: async ({ context }, use) => {
-    const google = fakeGoogle(sampleBook());
+  // false: the user has no book yet (onboarding).
+  withBook: [true, { option: true }],
+
+  google: async ({ context, withBook }, use) => {
+    const google = fakeGoogle(withBook ? sampleBook() : null);
     await google.install(context);
     await use(google);
   },

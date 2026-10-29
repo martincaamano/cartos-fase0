@@ -36,6 +36,13 @@
   text-decoration: none;
 }
 
+/* The download entries are buttons: as wide as the links above them. */
+button.settings-link {
+  width: 100%;
+  line-height: inherit;
+  text-align: left;
+}
+
 .settings-email {
   margin-top: var(--space-2);
   overflow-wrap: anywhere;
