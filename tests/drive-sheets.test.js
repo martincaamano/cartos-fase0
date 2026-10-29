@@ -1,8 +1,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createSpreadsheetFile, listBooks, SPREADSHEET_MIME } from '../js/data/drive.js';
-import { batchGet, append, batchUpdateValues, batchUpdate } from '../js/data/sheets.js';
-import { setupGoogleApi } from './helpers/fake-google.js';
+import { batchGet, append, batchUpdateValues, batchUpdate, batchClear } from '../js/data/sheets.js';
+import { setupGoogleApi, TOKEN } from './helpers/fake-google.js';
 
 test('createSpreadsheetFile posts a Sheet with the app properties', async () => {
   const calls = setupGoogleApi(() => ({ body: { id: 'file-1', name: 'Cartos · Personal' } }));
@@ -56,4 +56,15 @@ test('batchUpdate sends structural requests', async () => {
   await batchUpdate('file-1', [{ addSheet: { properties: { title: 'Movements' } } }]);
   assert.equal(calls[0].url.pathname, '/v4/spreadsheets/file-1:batchUpdate');
   assert.deepEqual(calls[0].body, { requests: [{ addSheet: { properties: { title: 'Movements' } } }] });
+});
+
+test('batchClear posts the ranges to values:batchClear with the token', async () => {
+  const calls = setupGoogleApi();
+  await batchClear('file-1', ['Accounts!A2:Z', 'Movements!A2:Z']);
+  assert.equal(calls.length, 1);
+  const [call] = calls;
+  assert.equal(call.method, 'POST');
+  assert.equal(call.url.origin + call.url.pathname, 'https://sheets.googleapis.com/v4/spreadsheets/file-1/values:batchClear');
+  assert.equal(call.headers.Authorization, `Bearer ${TOKEN}`);
+  assert.deepEqual(call.body, { ranges: ['Accounts!A2:Z', 'Movements!A2:Z'] });
 });

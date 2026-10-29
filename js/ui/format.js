@@ -35,6 +35,12 @@ export function labelOf(item) {
   return item ? `${item.emoji ?? ''} ${item.name ?? ''}`.trim() : '';
 }
 
+// "2026-10-25" → "25/10/2026".
+export function formatDate(date) {
+  const [year, month, day] = date.split('-');
+  return `${day}/${month}/${year}`;
+}
+
 // "2026-10-25" → "25/10". The year is left out: the list shows recent dates.
 export function formatShortDate(date) {
   const [, month, day] = date.split('-');

@@ -28,7 +28,7 @@ cartos-fase0/
 │   ├── domain/           (reglas puras, con tests)
 │   │   ├── account.js, category.js, movement.js, transfer.js
 │   │   ├── balance.js, money.js, active.js
-│   │   └── history.js, stats.js
+│   │   └── history.js, stats.js, import.js, import-csv.js, csv.js
 │   │
 │   ├── data/             (lo único que habla con Google)
 │   │   ├── auth.js, http.js, errors.js
@@ -43,14 +43,14 @@ cartos-fase0/
 │   │   └── logs.js
 │   │
 │   ├── screens/          (una pantalla por archivo)
-│   │   ├── login.js, connect.js, status.js, onboarding.js
+│   │   ├── login.js, connect.js, status.js, onboarding.js, import.js
 │   │   ├── dashboard.js, addMovement.js, history.js, analysis.js
 │   │   └── settings.js, accounts.js, categories.js, diagnostics.js
 │   │
 │   └── ui/               (piezas compartidas; no tocan el DOM al importarse)
 │       ├── router.js     (tabla de pantallas y decisión de ruta)
 │       ├── navbar.js, receipt.js, components.js
-│       └── format.js, theme.js
+│       └── format.js, theme.js, download.js
 │
 ├── tests/                (node:test, uno por módulo; Google siempre simulado)
 │

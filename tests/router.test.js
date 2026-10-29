@@ -73,8 +73,10 @@ test('the screen table produces exactly the same hashes as before', () => {
       categories: '#/settings/categories',
       accounts: '#/settings/accounts',
       diagnostics: '#/settings/diagnostics',
+      import: '#/settings/import',
     }
   );
+  assert.deepEqual(parseHash('#/settings/import'), { section: SECTIONS.IMPORT, params: {} });
   assert.deepEqual(SCREENS.map((screen) => screen.section), Object.keys(SECTION_HASH));
   for (const section of Object.keys(SECTION_HASH)) assert.equal(SECTIONS[section.toUpperCase()], section);
 });

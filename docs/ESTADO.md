@@ -115,6 +115,17 @@ Mejoras de mantenibilidad, estructura y rendimiento sin cambiar lo que ve el usu
 | 14 | Pruebas de aceptación automáticas | Hecha (2026-10-27) | En verde en GitHub Actions (WebKit y Chromium); no toca la app |
 | 15 | Sincronización | Pendiente | Sin `drive.list` tras guardar; separar la cola de la subida (antes era la 14) |
 
+## Puesta en marcha con datos reales y libro compartido
+
+Decidido el 2026-10-29: empezar el libro personal con el histórico real (importado) y separar la reforma de la vivienda en un libro compartido («Casa do medio») que la pareja del usuario también use. Esto levanta la restricción de «cuentas compartidas» fuera del MVP.
+
+| Tarea | Título | Estado | Notas |
+|---|---|---|---|
+| 16 | Importar y descargar los datos | Pendiente | Onboarding (JSON o CSV) y Ajustes → DATOS: importar movimientos, plantilla CSV y descarga; los datos reales no entran en el repo |
+| 17 | Varios libros | Pendiente | Crear y cambiar de libro; transferir a otro libro (gasto en uno, ingreso en otro) |
+| 18 | Libro compartido | Pendiente | Personas por movimiento, compartir con la pareja y abrirlo desde su app (Picker, clave nueva restringida) |
+| 19 | Importar la reforma | Pendiente | El Excel de la reforma a «Casa do medio»; el Excel queda en Drive como copia |
+
 ### Decisiones tomadas en la tarea 10
 - Borrado el código sin uso: `addMovement` de `data/book.js` (Añadir pasa por la cola desde la tarea 05) y `latestMovements` de `domain/movement.js`.
 - Errores de la capa de datos en `js/data/errors.js` (`ValidationError`, `ApiError`).

@@ -16,6 +16,7 @@ import { renderSettings } from './screens/settings.js';
 import { renderDiagnostics } from './screens/diagnostics.js';
 import { renderCategories } from './screens/categories.js';
 import { renderAccounts } from './screens/accounts.js';
+import { renderImport } from './screens/import.js';
 
 export const VIEWS = Object.freeze({
   [SECTIONS.HOME]: ({ root, state, offline }) =>
@@ -37,7 +38,7 @@ export const VIEWS = Object.freeze({
   [SECTIONS.ANALYSIS]: ({ root, state, params }) => renderAnalysis(root, { book: state.book, params }),
 
   [SECTIONS.SETTINGS]: ({ root, state, signOut }) =>
-    renderSettings(root, { user: getCurrentUser(), pendingCount: state.pendingCount, onSignOut: signOut }),
+    renderSettings(root, { user: getCurrentUser(), book: state.book, pendingCount: state.pendingCount, onSignOut: signOut }),
 
   [SECTIONS.CATEGORIES]: ({ root, state }) =>
     renderCategories(root, { book: state.savedBook, fileId: state.fileId, onChanged: state.reloadBook }),
@@ -46,4 +47,15 @@ export const VIEWS = Object.freeze({
     renderAccounts(root, { book: state.book, fileId: state.fileId, onChanged: state.reloadBook }),
 
   [SECTIONS.DIAGNOSTICS]: ({ root }) => renderDiagnostics(root),
+
+  [SECTIONS.IMPORT]: ({ root, state, redirect }) => renderImport(root, {
+    book: state.book,
+    fileId: state.fileId,
+    onBack: () => redirect(SECTION_HASH.settings),
+    // The Dashboard opens with the imported movements already read.
+    onDone: async () => {
+      await state.reloadBook();
+      redirect(SECTION_HASH.home);
+    },
+  }),
 });
