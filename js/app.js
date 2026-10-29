@@ -7,7 +7,7 @@ import { es } from '../i18n/es.js';
 import { decideRoute, isRepaintable, parseHash, ROUTES, SECTION_HASH } from './ui/router.js';
 import { startTheme } from './ui/theme.js';
 import { getAuthState, signOut } from './data/auth.js';
-import { cachedPersonalBook, fetchPersonalBook, reloadPersonalBook } from './data/personal-book.js';
+import { cachedBooks, fetchBooks, openBook, reloadBook } from './data/books.js';
 import { syncOutbox } from './data/sync.js';
 import { listPending } from './storage/outbox.js';
 import { logEvent } from './storage/logs.js';
@@ -19,9 +19,10 @@ import { renderStatus } from './screens/status.js';
 import { renderOnboarding } from './screens/onboarding.js';
 
 const state = createBookState({
-  cachedPersonalBook,
-  fetchPersonalBook,
-  reloadPersonalBook,
+  cachedBooks,
+  fetchBooks,
+  reloadBook,
+  openBook,
   syncOutbox,
   listPending,
   getAuthState,
@@ -98,6 +99,10 @@ state.on((event) => {
   else if (event === 'data') repaint();
   else if (event === 'loadFailed') showLoadFailed();
 });
+
+// Opening the app (no section in the URL) shows Añadir: it is opened to
+// write down an expense far more often than to look at the balance.
+if (!location.hash) history.replaceState(null, '', SECTION_HASH.add);
 
 startTheme();
 state.refresh();

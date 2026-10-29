@@ -14,6 +14,7 @@ import { toIsoDate } from '../domain/movement.js';
 const THEME_TEXT = { system: 'themeSystem', light: 'themeLight', dark: 'themeDark' };
 
 const ENTRIES = [
+  { label: es.settings.books, hash: SECTION_HASH.books },
   { label: es.settings.accounts, hash: SECTION_HASH.accounts },
   { label: es.settings.categories, hash: SECTION_HASH.categories },
   { label: es.settings.diagnostics, hash: SECTION_HASH.diagnostics },

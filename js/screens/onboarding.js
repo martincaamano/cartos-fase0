@@ -4,7 +4,7 @@
 // book comes from data/.
 
 import { es } from '../../i18n/es.js';
-import { setUpPersonalBook } from '../data/personal-book.js';
+import { setUpPersonalBook } from '../data/books.js';
 import { fillTexts, renderAccountForm } from '../ui/components.js';
 import { renderImport } from './import.js';
 

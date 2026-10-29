@@ -16,6 +16,15 @@ export function createSpreadsheetFile(name, appProperties) {
   });
 }
 
+// Renames a book: the file in Drive and the name the app reads.
+export function renameFile(fileId, name, appName) {
+  return googleFetch(`${FILES}/${encodeURIComponent(fileId)}?fields=id,name`, {
+    method: 'PATCH',
+    body: { name, appProperties: { name: appName } },
+    op: 'drive.rename',
+  });
+}
+
 export async function listBooks() {
   const params = new URLSearchParams({
     q: "appProperties has { key='app' and value='cartos' } and trashed=false",
@@ -23,13 +32,4 @@ export async function listBooks() {
   });
   const data = await googleFetch(`${FILES}?${params}`, { op: 'drive.list' });
   return data.files ?? [];
-}
-
-// The personal book is the oldest Cartos file with bookType=personal, so a
-// duplicate created by mistake never replaces the real one.
-export function pickPersonalBook(files) {
-  const personal = files
-    .filter((file) => file.appProperties?.bookType === 'personal')
-    .sort((a, b) => String(a.createdTime).localeCompare(String(b.createdTime)));
-  return personal[0] ?? null;
 }

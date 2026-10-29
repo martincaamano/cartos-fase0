@@ -2,6 +2,7 @@
 // form, category grid and quick date picker. They touch the DOM only when
 // called.
 
+import { es } from '../../i18n/es.js';
 import { quickDates } from '../domain/movement.js';
 import { parseAmountInput } from '../domain/money.js';
 import { createAccount, validateAccount } from '../domain/account.js';
@@ -56,6 +57,16 @@ export function accountErrorText(errors, texts) {
   return texts.balanceInvalid;
 }
 
+// "LIBRO · Casa do medio" on top of a screen, so a movement never goes to
+// the wrong book. Nothing when the name is empty (a single book).
+export function showBookBanner(main, name) {
+  if (!name) return;
+  const banner = document.createElement('p');
+  banner.className = 'book-banner text-muted';
+  banner.textContent = es.books.banner.replace('{name}', name);
+  main.prepend(banner);
+}
+
 // Name, emoji and initial balance of a new account (Onboarding and
 // Ajustes → Cuentas). Validates with domain/ and hands the fields to
 // onSubmit, which returns a promise; while it runs the button says
@@ -65,7 +76,9 @@ export function accountErrorText(errors, texts) {
 // texts: nameLabel, namePlaceholder, emojiLabel, balanceLabel,
 // balancePlaceholder, submit, creating, failed, nameRequired, nameTaken,
 // balanceInvalid and, with needsConnection, offline.
-export function renderAccountForm(container, { existing = [], texts, needsConnection = false, onSubmit }) {
+// check: another problem outside the form (the book name in Ajustes →
+// Libros) as a text, or '' when there is none.
+export function renderAccountForm(container, { existing = [], texts, needsConnection = false, check = () => '', onSubmit }) {
   const form = document.createElement('form');
   form.className = 'form';
   form.noValidate = true;
@@ -104,7 +117,7 @@ export function renderAccountForm(container, { existing = [], texts, needsConnec
       emoji: emoji.value,
       initialBalance: balance.value.trim() === '' ? 0 : parseAmountInput(balance.value),
     };
-    const problem = accountErrorText(validateAccount(createAccount(fields), existing), texts);
+    const problem = check() || accountErrorText(validateAccount(createAccount(fields), existing), texts);
     if (problem) { error.textContent = problem; return; }
     if (needsConnection && !navigator.onLine) { error.textContent = texts.offline; return; }
 

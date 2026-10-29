@@ -30,7 +30,22 @@
   text-align: right;
 }
 
+/* Book open, on top of INICIO and Añadir */
+.book-banner {
+  margin-bottom: var(--space-2);
+  font-size: var(--text-sm);
+  letter-spacing: var(--tracking-wide);
+}
+
 /* Ajustes */
+.book-other {
+  cursor: pointer;
+}
+
+.book-open .receipt-amount {
+  color: var(--color-ink-muted);
+}
+
 .settings-link {
   color: inherit;
   text-decoration: none;

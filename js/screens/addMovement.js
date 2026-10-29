@@ -9,7 +9,7 @@ import { parseAmountInput } from '../domain/money.js';
 import { rankCategories } from '../domain/category.js';
 import { activeOnly } from '../domain/active.js';
 import { queueDelete, queueEdit, queueMovement, queueTransfer, queueTransferEdit } from '../data/movements.js';
-import { createAmountInput, fillTexts, renderCategoryPicker, renderDatePicker } from '../ui/components.js';
+import { showBookBanner, createAmountInput, fillTexts, renderCategoryPicker, renderDatePicker } from '../ui/components.js';
 import { formatAmountInput, labelOf } from '../ui/format.js';
 import { SECTION_HASH } from '../ui/router.js';
 import { renderNavbar } from '../ui/navbar.js';
@@ -34,8 +34,9 @@ function fillAccounts(select, accounts) {
 }
 
 // entry: a History entry to edit (historyEntries / findEntry), or null to
-// add a new movement. onSaved gets what went to the outbox.
-export function renderAddMovement(root, { book, fileId, params = {}, entry = null, today = new Date(), onSaved }) {
+// add a new movement. onSaved gets what went to the outbox. bookName:
+// shown on top when there is more than one book.
+export function renderAddMovement(root, { book, bookName = '', fileId, params = {}, entry = null, today = new Date(), onSaved }) {
   const t = es.add;
   root.innerHTML = `
     <main class="screen screen-form screen-with-navbar">
@@ -80,6 +81,7 @@ export function renderAddMovement(root, { book, fileId, params = {}, entry = nul
       </form>
     </main>
   `;
+  showBookBanner(root.querySelector('main'), bookName);
   fillTexts(root, t);
 
   const form = root.querySelector('form');

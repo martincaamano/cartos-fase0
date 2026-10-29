@@ -28,12 +28,12 @@ cartos-fase0/
 │   ├── domain/           (reglas puras, con tests)
 │   │   ├── account.js, category.js, movement.js, transfer.js
 │   │   ├── balance.js, money.js, active.js
-│   │   └── history.js, stats.js, import.js, import-csv.js, csv.js
+│   │   └── history.js, stats.js, import.js, import-csv.js, csv.js, books.js
 │   │
 │   ├── data/             (lo único que habla con Google)
 │   │   ├── auth.js, http.js, errors.js
 │   │   ├── drive.js, sheets.js, rows.js
-│   │   ├── book.js, personal-book.js
+│   │   ├── book.js, books.js
 │   │   ├── movements.js      (guarda en la cola: crear, editar, borrar)
 │   │   └── sync.js           (sube la cola al Sheet)
 │   │
@@ -43,7 +43,7 @@ cartos-fase0/
 │   │   └── logs.js
 │   │
 │   ├── screens/          (una pantalla por archivo)
-│   │   ├── login.js, connect.js, status.js, onboarding.js, import.js
+│   │   ├── login.js, connect.js, status.js, onboarding.js, import.js, books.js
 │   │   ├── dashboard.js, addMovement.js, history.js, analysis.js
 │   │   └── settings.js, accounts.js, categories.js, diagnostics.js
 │   │

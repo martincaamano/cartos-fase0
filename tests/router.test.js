@@ -60,7 +60,7 @@ test('every section has a hash that parses back to it', () => {
   for (const [section, hash] of Object.entries(SECTION_HASH)) assert.equal(parseHash(hash).section, section);
 });
 
-test('the screen table produces exactly the same hashes as before', () => {
+test('the screen table produces exactly the expected hashes, books included', () => {
   assert.deepEqual(
     { ...SECTION_HASH },
     {
@@ -74,9 +74,12 @@ test('the screen table produces exactly the same hashes as before', () => {
       accounts: '#/settings/accounts',
       diagnostics: '#/settings/diagnostics',
       import: '#/settings/import',
+      books: '#/settings/books',
     }
   );
   assert.deepEqual(parseHash('#/settings/import'), { section: SECTIONS.IMPORT, params: {} });
+  assert.deepEqual(parseHash('#/settings/books'), { section: SECTIONS.BOOKS, params: {} });
+  assert.deepEqual(parseHash('#/settings/books/'), { section: SECTIONS.BOOKS, params: {} });
   assert.deepEqual(SCREENS.map((screen) => screen.section), Object.keys(SECTION_HASH));
   for (const section of Object.keys(SECTION_HASH)) assert.equal(SECTIONS[section.toUpperCase()], section);
 });

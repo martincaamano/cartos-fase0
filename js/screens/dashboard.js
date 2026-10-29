@@ -7,14 +7,15 @@ import { latestEntries } from '../domain/transfer.js';
 import { activeOnly } from '../domain/active.js';
 import { formatEuros, labelOf } from '../ui/format.js';
 import { lookupsOf, movementLine, receiptLine } from '../ui/receipt.js';
-import { fillTexts } from '../ui/components.js';
+import { showBookBanner, fillTexts } from '../ui/components.js';
 import { renderNavbar } from '../ui/navbar.js';
 
 const LATEST_COUNT = 5;
 
 // book: movements already include the pending ones (mergePending);
+// bookName: shown on top when there is more than one book;
 // pendingCount: how many of them are not in the Sheet yet.
-export function renderDashboard(root, { book, offline, pendingCount = 0 }) {
+export function renderDashboard(root, { book, bookName = '', offline, pendingCount = 0 }) {
   const t = es.dashboard;
   root.innerHTML = `
     <main class="screen screen-dashboard">
@@ -30,6 +31,7 @@ export function renderDashboard(root, { book, offline, pendingCount = 0 }) {
     </main>
   `;
   fillTexts(root, t);
+  showBookBanner(root.querySelector('main'), bookName);
   const pending = pendingCount === 1 ? t.pendingOne : t.pendingMany.replace('{n}', pendingCount);
   root.querySelector('.dashboard-notice').textContent = [offline ? t.offline : '', pendingCount ? pending : '']
     .filter(Boolean)
