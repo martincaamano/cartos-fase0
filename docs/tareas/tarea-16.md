@@ -1,6 +1,6 @@
 # Tarea 16 — Importar y descargar los datos
 
-Estado: pendiente.
+Estado: hecha (2026-10-29).
 Depende de: 15 (fusionada).
 
 ## Objetivo
@@ -71,11 +71,13 @@ Reemplazar el libro desde Ajustes, saltarse los repetidos automáticamente, expo
 - Aceptación en Ajustes: un CSV añade movimientos reutilizando cuentas y categorías y crea las nuevas (aviso de repetidos); un CSV con errores los señala por línea y no escribe; la plantilla y «Descargar mis datos» se descargan con el contenido esperado.
 
 ## Pruebas manuales en iPhone
-- [ ] Con el libro de pruebas en la papelera, el onboarding ofrece «Importar desde un archivo» y abre el selector de Archivos.
-- [ ] Importar el archivo real: la vista previa y después INICIO muestran los saldos de hoy de cada cuenta y el total.
+- [x] Con el libro de pruebas en la papelera, el onboarding ofrece «Importar desde un archivo» y abre el selector de Archivos.
+- [x] Importar el archivo real: la vista previa y después INICIO muestran los saldos de hoy de cada cuenta y el total.
 - [ ] Ajustes → Descargar plantilla y Descargar mis datos abren la hoja de compartir; «Guardar en Archivos» deja un CSV que se abre bien en Numbers (acentos y euros correctos).
+  - Probado solo «Descargar mis datos»: el CSV descargado coincide con el archivo importado. La plantilla no se probó en el iPhone.
 - [ ] Ajustes → Importar movimientos con un CSV pequeño editado en el iPhone: vista previa, importación y saldos correctos.
+  - No probado en el iPhone, para no tocar el libro real. Lo cubren las pruebas de aceptación (WebKit y Chromium).
 
 ## Criterio de cierre
-- [ ] El libro personal real está importado y sus saldos coinciden con los del banco.
-- [ ] `npm test` y `npm run acceptance` en verde.
+- [x] El libro personal real está importado y sus saldos coinciden con los del banco.
+- [x] `npm test` y `npm run acceptance` en verde.

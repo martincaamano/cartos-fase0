@@ -121,10 +121,23 @@ Decidido el 2026-10-29: empezar el libro personal con el histórico real (import
 
 | Tarea | Título | Estado | Notas |
 |---|---|---|---|
-| 16 | Importar y descargar los datos | Pendiente | Onboarding (JSON o CSV) y Ajustes → DATOS: importar movimientos, plantilla CSV y descarga; los datos reales no entran en el repo |
+| 16 | Importar y descargar los datos | Hecha (2026-10-29) | Libro personal real importado y cuadrado; plantilla e importar en Ajustes sin probar en iPhone |
 | 17 | Varios libros | Pendiente | Crear y cambiar de libro; transferir a otro libro (gasto en uno, ingreso en otro) |
 | 18 | Libro compartido | Pendiente | Personas por movimiento, compartir con la pareja y abrirlo desde su app (Picker, clave nueva restringida) |
 | 19 | Importar la reforma | Pendiente | El Excel de la reforma a «Casa do medio»; el Excel queda en Drive como copia |
+
+### Decisiones tomadas en la tarea 16
+- Ampliada durante la tarea, a petición del usuario: además del onboarding, Ajustes → DATOS con importar movimientos, plantilla CSV y descarga.
+  - Importar en Ajustes solo añade: empareja cuentas y categorías por nombre y avisa de repetidos.
+  - La plantilla y la descarga usan el mismo CSV.
+- Formatos: el importador acepta CSV y JSON (`cartos-import` v1). El JSON queda para importaciones completas generadas fuera de la app, porque conserva emojis. Añadir una columna de emoji al CSV queda aparcado.
+- Aceptado:
+  - la descarga CSV no es una copia exacta (sin emojis ni categorías sin uso);
+  - reintentar una importación a medias en Ajustes puede repetir movimientos (lo cubre el aviso);
+  - las notas que empiezan por `=` se descargan tal cual.
+- Libro personal real importado el 2026-10-29: 1.318 movimientos (01/01/2024–28/10/2026), total 35.159,92 €. El CSV descargado desde la app coincide fila a fila con el archivo importado. Los datos reales nunca entraron en el repo.
+- Sin probar en el iPhone, para no tocar el libro real: «Descargar plantilla» e importar un CSV desde Ajustes. Lo cubren las pruebas de aceptación.
+- Arquitectura §9.1 (importar y descargar) añadida en la propia tarea, con permiso.
 
 ### Decisiones tomadas en la tarea 10
 - Borrado el código sin uso: `addMovement` de `data/book.js` (Añadir pasa por la cola desde la tarea 05) y `latestMovements` de `domain/movement.js`.
