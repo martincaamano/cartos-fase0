@@ -191,6 +191,58 @@ test('two syncs at once share a single run', async () => {
   assert.equal(calls.filter(isAppend).length, 1);
 });
 
+test('two syncs of the same book at once get the very same run', async () => {
+  memoryOutbox([{ fileId: 'f1', movement: m('a') }]);
+  sheetWith([]);
+  const first = syncOutbox('f1');
+  const second = syncOutbox('f1');
+  assert.equal(first, second);
+  await first;
+});
+
+test('a sync of another book while one runs runs on its own', async () => {
+  const state = memoryOutbox([{ fileId: 'f1', movement: m('a') }, { fileId: 'f2', movement: m('b') }]);
+  const calls = sheetWith([]);
+  const one = syncOutbox('f1');
+  const two = syncOutbox('f2');
+  assert.notEqual(one, two);
+  assert.deepEqual(await Promise.all([one, two]), [
+    { appended: 1, updated: 0, pending: 0 },
+    { appended: 1, updated: 0, pending: 0 },
+  ]);
+  const appends = calls.filter(isAppend);
+  assert.deepEqual(appends.map((c) => [c.url.pathname.split('/')[3], c.body.values[0][0]]).sort(), [['f1', 'a'], ['f2', 'b']]);
+  assert.deepEqual(state.items, []);
+});
+
+test('once a run ends, the next sync of that book starts a new one', async () => {
+  const state = memoryOutbox([{ fileId: 'f1', movement: m('a') }]);
+  sheetWith([]);
+  const first = syncOutbox('f1');
+  await first;
+  state.items.push({ fileId: 'f1', movement: m('c') });
+  const calls = sheetWith([]);
+  const second = syncOutbox('f1');
+  assert.notEqual(first, second);
+  assert.deepEqual(await second, { appended: 1, updated: 0, pending: 0 });
+  assert.deepEqual(calls.filter(isAppend)[0].body.values.map((row) => row[0]), ['c']);
+});
+
+test('a failed run of one book frees its lock and does not touch the other book', async () => {
+  const state = memoryOutbox([{ fileId: 'f1', movement: m('a') }, { fileId: 'f2', movement: m('b') }]);
+  setupGoogleApi((call) => {
+    if (call.url.pathname.endsWith('values:batchGet')) return { body: { valueRanges: [{ values: [['id']] }] } };
+    if (isAppend(call) && call.url.pathname.includes('/f1/')) return { status: 500 };
+    return {};
+  });
+  const [one, two] = await Promise.allSettled([syncOutbox('f1'), syncOutbox('f2')]);
+  assert.equal(one.status, 'rejected');
+  assert.deepEqual(two.value, { appended: 1, updated: 0, pending: 0 });
+  assert.deepEqual(state.items.map((i) => i.fileId), ['f1']);
+  sheetWith([]);
+  assert.deepEqual(await syncOutbox('f1'), { appended: 1, updated: 0, pending: 0 });
+});
+
 test('an edit saved while a sync is running is not lost', async () => {
   const items = keyedOutbox();
   const original = m('a', { categoryId: 'c' });

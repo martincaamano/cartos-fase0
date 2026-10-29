@@ -84,6 +84,8 @@ Bajo `drive.file`, esta consulta solo devuelve archivos a los que la app ya tien
 
 **Cuál es el libro personal** (decidido el 2026-10-25): el archivo más antiguo (`createdTime`) con `bookType=personal`, así un duplicado creado por error nunca sustituye al real. Un libro personal sin cuentas activas cuenta como «sin libro»: el onboarding le añade la primera cuenta en vez de crear otro archivo.
 
+**Qué libro se abre** (tarea 17, 2026-10-29): el último libro abierto en ese dispositivo, si sigue en la lista; si no, el personal. Los demás libros se crean con `bookType=shared` y su nombre va en `appProperties.name` (renombrar cambia ese valor y el nombre del archivo, `Cartos · <nombre>`). El dispositivo guarda una copia de cada libro leído y cuál está abierto, así que cambiar de libro y trabajar sin conexión funciona con cualquiera. La cola de salida guarda el `fileId` de cada cambio y la sincronización sube los de todos los libros, no solo los del abierto.
+
 ## 5. Invitación a un libro compartido (fase posterior al MVP)
 
 1. El propietario crea el libro compartido → la app llama a `permissions.create` de Drive para compartirlo como Editor con el email del invitado, y desactiva que los editores puedan volver a compartirlo.

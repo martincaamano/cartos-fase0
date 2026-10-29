@@ -6,7 +6,7 @@ import {
   requestDriveAccess, getAccessToken, whenGoogleReady, AuthError, TokenExpiredError, DRIVE_SCOPE, signOut,
   currentUserSub,
 } from '../js/data/auth.js';
-import { saveBookCache, loadBookCache } from '../js/storage/book-cache.js';
+import { saveBookCache, saveCurrentBook, loadBookCache, loadBooksCache } from '../js/storage/book-cache.js';
 import { configureLogs } from '../js/storage/logs.js';
 
 function fakeStorage() {
@@ -151,6 +151,7 @@ function signedInWithBookCopy() {
     tokenExpiresAt: clock + 3_600_000,
   }));
   saveBookCache(storage, { sub: 'user-1', fileId: 'file-1', snapshot: { accounts: [], categories: [], movements: [] } });
+  saveCurrentBook(storage, { sub: 'user-1', fileId: 'file-1' });
   assert.equal(getAuthState().hasSession, true);
   assert.notEqual(loadBookCache(storage, 'user-1'), null);
 }
@@ -170,6 +171,8 @@ test('signOut forgets the session and the book copy and disables auto-select', (
     assert.deepEqual(getAuthState(), { hasSession: false, hasDriveAccess: false, tokenExpired: true });
     assert.equal(getCurrentUser(), null);
     assert.equal(loadBookCache(storage, 'user-1'), null);
+    assert.equal(loadBooksCache(storage, 'user-1'), null);
+    assert.equal(storage.getItem('cartos.books'), null);
     assert.equal(storage.getItem('cartos.book'), null);
     assert.equal(disabled, 1);
     assert.deepEqual(logged.map((e) => [e.type, e.result]), [['login', 'signed_out']]);

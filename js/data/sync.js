@@ -2,7 +2,8 @@
 // Movements tab. Reads the ids already in the Sheet first: new movements
 // are appended, edited or deleted ones are written over the row found by
 // id, so a retry after a lost answer never duplicates a row. One run at a
-// time: a second call while one is running gets the same run.
+// time per book: a second call for the same book while one is running gets
+// the same run.
 
 import { append, batchGet, batchUpdateValues } from './sheets.js';
 import { HEADERS, rowsById, toRow } from './rows.js';
@@ -12,12 +13,13 @@ import { logEvent } from '../storage/logs.js';
 
 const defaults = { list: listPending, remove: removePending };
 let store = defaults;
-let running = null;
+// fileId → the run in progress for that book.
+const running = new Map();
 
 // Lets the tests swap the IndexedDB outbox for an in-memory one.
 export function configureSync(overrides = {}) {
   store = { ...defaults, ...overrides };
-  running = null;
+  running.clear();
 }
 
 const LAST_COLUMN = String.fromCharCode(64 + HEADERS.Movements.length);
@@ -41,10 +43,8 @@ async function run(fileId) {
 }
 
 export function syncOutbox(fileId) {
-  if (!running) {
-    running = run(fileId).finally(() => {
-      running = null;
-    });
+  if (!running.has(fileId)) {
+    running.set(fileId, run(fileId).finally(() => running.delete(fileId)));
   }
-  return running;
+  return running.get(fileId);
 }

@@ -18,6 +18,7 @@ export const SCREENS = Object.freeze([
   { section: 'accounts', path: 'settings/accounts', repaint: true },
   { section: 'diagnostics', path: 'settings/diagnostics' },
   { section: 'import', path: 'settings/import' },
+  { section: 'books', path: 'settings/books' },
 ].map(Object.freeze));
 
 // SECTIONS.HOME === 'home', SECTIONS.HISTORY === 'history'...

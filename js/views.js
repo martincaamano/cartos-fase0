@@ -17,10 +17,15 @@ import { renderDiagnostics } from './screens/diagnostics.js';
 import { renderCategories } from './screens/categories.js';
 import { renderAccounts } from './screens/accounts.js';
 import { renderImport } from './screens/import.js';
+import { renderBooks } from './screens/books.js';
+
+// The name of the book open, shown on top of INICIO and Añadir when there
+// is more than one book.
+const bookName = (state) => (state.books.length > 1 ? state.bookInfo?.name ?? '' : '');
 
 export const VIEWS = Object.freeze({
   [SECTIONS.HOME]: ({ root, state, offline }) =>
-    renderDashboard(root, { book: state.book, offline, pendingCount: state.pendingCount }),
+    renderDashboard(root, { book: state.book, bookName: bookName(state), offline, pendingCount: state.pendingCount }),
 
   [SECTIONS.HISTORY]: ({ root, state }) => renderHistory(root, { book: state.book }),
 
@@ -29,11 +34,15 @@ export const VIEWS = Object.freeze({
     const entry = findEntry(book.movements, params.id);
     // Deleted meanwhile, or a stale link.
     if (!entry) return redirect(SECTION_HASH.history);
-    return renderAddMovement(root, { book, fileId: state.fileId, entry, onSaved: saved(SECTION_HASH.history) });
+    return renderAddMovement(root, {
+      book, bookName: bookName(state), fileId: state.fileId, entry, onSaved: saved(SECTION_HASH.history),
+    });
   },
 
   [SECTIONS.ADD]: ({ root, state, params, saved }) =>
-    renderAddMovement(root, { book: state.book, fileId: state.fileId, params, onSaved: saved(SECTION_HASH.home) }),
+    renderAddMovement(root, {
+      book: state.book, bookName: bookName(state), fileId: state.fileId, params, onSaved: saved(SECTION_HASH.home),
+    }),
 
   [SECTIONS.ANALYSIS]: ({ root, state, params }) => renderAnalysis(root, { book: state.book, params }),
 
@@ -57,5 +66,19 @@ export const VIEWS = Object.freeze({
       await state.reloadBook();
       redirect(SECTION_HASH.home);
     },
+  }),
+
+  [SECTIONS.BOOKS]: ({ root, state }) => renderBooks(root, {
+    books: state.books,
+    fileId: state.fileId,
+    onOpen: (fileId) => {
+      state.switchBook(fileId);
+      location.hash = SECTION_HASH.home;
+    },
+    onCreated: (result) => {
+      state.setUp(result);
+      location.hash = SECTION_HASH.home;
+    },
+    onRenamed: state.renamed,
   }),
 });

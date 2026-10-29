@@ -47,18 +47,23 @@ export function sampleBook() {
   };
 }
 
-// The fake Google: Drive lists the personal book (none when `rows` is
-// null, until the app creates one); Sheets reads and writes `rows`. Every
-// call is kept in `calls` as { op, ranges?, body? }.
+// The fake Google: Drive lists the books (the personal one, `book-1`, or
+// none until the app creates one) and Sheets reads and writes the rows of
+// each. `rows` are those of the first book. Every call is kept in `calls`
+// as { op, fileId?, ranges?, body? }.
 function fakeGoogle(book) {
   const rows = book ?? {};
-  let fileId = book ? 'book-1' : null;
+  // fileId → { name, appProperties, createdTime, rows }.
+  const files = new Map();
+  if (book) {
+    files.set('book-1', { name: 'Cartos · Personal', appProperties: { app: 'cartos', bookType: 'personal' }, createdTime: AT, rows });
+  }
   const calls = [];
   // Google's REST APIs answer cross-origin calls, preflight included.
   const CORS = {
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Headers': 'authorization, content-type',
-    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+    'Access-Control-Allow-Methods': 'GET, POST, PATCH, OPTIONS',
   };
   const json = (route, body) =>
     route.fulfill({ status: 200, contentType: 'application/json', headers: CORS, body: JSON.stringify(body) });
@@ -71,16 +76,29 @@ function fakeGoogle(book) {
 
     await context.route('https://www.googleapis.com/drive/**', (route) => {
       if (preflight(route)) return undefined;
-      // Creating a book: an empty spreadsheet whose tabs come next.
-      if (route.request().method() === 'POST') {
-        calls.push({ op: 'drive.create' });
-        fileId = 'book-new';
-        for (const tab of Object.keys(HEADERS)) rows[tab] = [];
-        return json(route, { id: fileId, name: 'Cartos · Personal' });
+      const request = route.request();
+      const body = JSON.parse(request.postData() ?? '{}');
+      // Creating a book: an empty spreadsheet whose tabs come next. The
+      // first one is `book-new` and uses `rows`.
+      if (request.method() === 'POST') {
+        const fileId = files.size === 0 ? 'book-new' : `book-new-${files.size}`;
+        const tabs = files.size === 0 ? rows : {};
+        for (const tab of Object.keys(HEADERS)) tabs[tab] = [];
+        files.set(fileId, { name: body.name, appProperties: body.appProperties, createdTime: `2026-10-20T0${files.size}:00:00.000Z`, rows: tabs });
+        calls.push({ op: 'drive.create', fileId, body });
+        return json(route, { id: fileId, name: body.name });
+      }
+      if (request.method() === 'PATCH') {
+        const fileId = decodeURIComponent(new URL(request.url()).pathname.split('/').pop());
+        const file = files.get(fileId);
+        file.name = body.name;
+        file.appProperties = { ...file.appProperties, ...body.appProperties };
+        calls.push({ op: 'drive.rename', fileId, body });
+        return json(route, { id: fileId, name: body.name });
       }
       calls.push({ op: 'drive.list' });
       return json(route, {
-        files: fileId ? [{ id: fileId, name: 'Cartos · Personal', createdTime: AT, appProperties: { app: 'cartos', bookType: 'personal' } }] : [],
+        files: [...files].map(([id, { name, appProperties, createdTime }]) => ({ id, name, createdTime, appProperties })),
       });
     });
 
@@ -88,36 +106,42 @@ function fakeGoogle(book) {
       if (preflight(route)) return undefined;
       const request = route.request();
       const url = new URL(request.url());
+      const fileId = decodeURIComponent(url.pathname.match(/spreadsheets\/([^/:]+)/)[1]);
+      const tabs = files.get(fileId)?.rows;
+      if (!tabs) {
+        calls.push({ op: 'unexpected', path: url.pathname });
+        return route.fulfill({ status: 404, headers: CORS });
+      }
       if (url.pathname.endsWith('values:batchGet')) {
         const ranges = url.searchParams.getAll('ranges');
-        calls.push({ op: 'batchGet', ranges });
+        calls.push({ op: 'batchGet', fileId, ranges });
         return json(route, {
           valueRanges: ranges.map((range) => {
             const [tab, columns] = range.split('!');
-            return { values: columns ? rows[tab].map((row) => [row[0]]) : rows[tab] };
+            return { values: columns ? tabs[tab].map((row) => [row[0]]) : tabs[tab] };
           }),
         });
       }
       const body = JSON.parse(request.postData() ?? '{}');
       // Renaming and adding tabs when a book is created.
       if (/spreadsheets\/[^/]+:batchUpdate$/.test(url.pathname)) {
-        calls.push({ op: 'structure' });
+        calls.push({ op: 'structure', fileId });
         return json(route, {});
       }
       if (url.pathname.endsWith('values:batchClear')) {
-        calls.push({ op: 'clear', ranges: body.ranges });
+        calls.push({ op: 'clear', fileId, ranges: body.ranges });
         // Only "Tab!A2:Z" is used: everything below the header goes.
-        for (const range of body.ranges) rows[range.split('!')[0]].length = 1;
+        for (const range of body.ranges) tabs[range.split('!')[0]].length = 1;
         return json(route, {});
       }
       if (url.pathname.endsWith(':append')) {
         const tab = decodeURIComponent(url.pathname.split('/values/')[1]).replace(':append', '');
-        calls.push({ op: 'append', tab, valueInputOption: url.searchParams.get('valueInputOption'), body });
-        rows[tab].push(...body.values);
+        calls.push({ op: 'append', fileId, tab, valueInputOption: url.searchParams.get('valueInputOption'), body });
+        tabs[tab].push(...body.values);
         return json(route, {});
       }
       if (url.pathname.endsWith('values:batchUpdate')) {
-        calls.push({ op: 'update', valueInputOption: body.valueInputOption, body });
+        calls.push({ op: 'update', fileId, valueInputOption: body.valueInputOption, body });
         // Writes cell by cell from the top-left cell of the range (A2, F8...),
         // as many rows as given, adding rows when needed.
         for (const { range, values } of body.data) {
@@ -125,8 +149,8 @@ function fakeGoogle(book) {
           const [, letter, number] = cells.match(/^([A-Z])(\d+)/);
           values.forEach((cellsOfRow, k) => {
             const index = Number(number) - 1 + k;
-            rows[tab][index] ??= [];
-            cellsOfRow.forEach((value, i) => { rows[tab][index][letter.charCodeAt(0) - 65 + i] = value; });
+            tabs[tab][index] ??= [];
+            cellsOfRow.forEach((value, i) => { tabs[tab][index][letter.charCodeAt(0) - 65 + i] = value; });
           });
         }
         return json(route, {});
@@ -139,10 +163,11 @@ function fakeGoogle(book) {
   const column = (name) => HEADERS.Movements.indexOf(name);
   return {
     rows,
+    files,
     calls,
     install,
-    // Movements as objects, header left out.
-    movements: () => rows.Movements.slice(1).map((row) =>
+    // Movements of a book as objects, header left out.
+    movements: (fileId = null) => (fileId ? files.get(fileId).rows : rows).Movements.slice(1).map((row) =>
       Object.fromEntries(HEADERS.Movements.map((name, i) => [name, row[i]]))),
     writes: () => calls.filter((call) => call.op === 'append' || call.op === 'update'),
     column,
