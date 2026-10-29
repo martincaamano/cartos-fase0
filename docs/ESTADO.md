@@ -113,7 +113,7 @@ Mejoras de mantenibilidad, estructura y rendimiento sin cambiar lo que ve el usu
 | 12 | Estilos y paletas | Hecha (2026-10-26) | Probada en iPhone (claro, oscuro, Sistema, barra de estado y sin conexión) |
 | 13 | Rutas y `app.js` | Hecha (2026-10-27) | Probada en iPhone (prueba rápida completa y modo avión) |
 | 14 | Pruebas de aceptación automáticas | Hecha (2026-10-27) | En verde en GitHub Actions (WebKit y Chromium); no toca la app |
-| 15 | Sincronización | Pendiente | Sin `drive.list` tras guardar; separar la cola de la subida (antes era la 14) |
+| 15 | Sincronización | Hecha (2026-10-29) | Probada en iPhone con el libro real (con y sin conexión, sin duplicados) |
 
 ## Puesta en marcha con datos reales y libro compartido
 
@@ -170,6 +170,11 @@ Decidido el 2026-10-29: empezar el libro personal con el histórico real (import
 - Se comprobó que las pruebas fallan si se rompe lo que vigilan (cinco fallos provocados; uno no estaba cubierto y se añadió).
 - `AGENTS.md`, `README.md` y los comandos `/tarea`, `/revisar` y `/cerrar` piden `npm run acceptance`; las listas para el iPhone se reducen a lo que no se puede automatizar (inicio de sesión real con Google, app instalada, cómo se ve en el iPhone).
 - En este contenedor de la nube solo hay Chromium; WebKit se comprueba en GitHub Actions y en el Mac (`npx playwright install webkit` una vez).
+
+### Decisiones tomadas en la tarea 15
+- Tras subir la cola se relee solo el libro abierto (`sheets.batchGet`); ya no se busca en Drive (`drive.list`) después de cada guardado. Diagnóstico en el iPhone (2026-10-29): `append` o `batchUpdateValues`, y después solo `batchGet`.
+- Preparar los cambios (`data/movements.js`) queda separado de subirlos (`data/sync.js`).
+- Probada ya con el libro personal real (tarea 16 fusionada antes del cierre). Se usó un movimiento de prueba, que se borró al terminar.
 
 Regla del plan: cada tarea, al cerrarse, deja algo 100% usable en el iPhone. Ninguna queda a medias esperando a la siguiente.
 
