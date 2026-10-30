@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { parseAmountInput } from '../js/domain/money.js';
 import { createAccount, validateAccount } from '../js/domain/account.js';
 import { totalBalance } from '../js/domain/balance.js';
-import { formatEuros, formatShortDate, labelOf } from '../js/ui/format.js';
+import { formatEuros, formatSums, formatShortDate, labelOf } from '../js/ui/format.js';
 
 test('parseAmountInput reads Spanish-style amounts', () => {
   const cases = [
@@ -66,4 +66,36 @@ test('labelOf joins emoji and name, without a stray space when one is missing', 
   assert.equal(labelOf({}), '');
   assert.equal(labelOf(undefined), '');
   assert.equal(labelOf(null), '');
+});
+
+// --- formatSums (tarea 20b) ---
+
+test('formatSums: negative net keeps the real minus and the euro sign', () => {
+  assert.deepEqual(formatSums({ income: 1601.27, expense: 3547.58, net: -1946.31 }), {
+    income: '+1.601,27',
+    expense: '3.547,58',
+    net: '−1.946,31 €',
+  });
+});
+
+test('formatSums: positive net gets a plus sign', () => {
+  assert.deepEqual(formatSums({ income: 500, expense: 87.7, net: 412.3 }), {
+    income: '+500,00',
+    expense: '87,70',
+    net: '+412,30 €',
+  });
+});
+
+test('formatSums: all zero has no sign on the net', () => {
+  assert.deepEqual(formatSums({ income: 0, expense: 0, net: 0 }), { income: '+0,00', expense: '0,00', net: '0,00 €' });
+});
+
+test('formatSums: one cent and big amounts', () => {
+  assert.deepEqual(formatSums({ income: 0.01, expense: 0, net: 0.01 }), { income: '+0,01', expense: '0,00', net: '+0,01 €' });
+  assert.deepEqual(formatSums({ income: 0, expense: 0.01, net: -0.01 }), { income: '+0,00', expense: '0,01', net: '−0,01 €' });
+  assert.deepEqual(formatSums({ income: 1234567.89, expense: 1000000, net: 234567.89 }), {
+    income: '+1.234.567,89',
+    expense: '1.000.000,00',
+    net: '+234.567,89 €',
+  });
 });

@@ -12,6 +12,13 @@ export function formatEuros(amount) {
   return `${sign}${units},${decimals} €`;
 }
 
+// income − spending = net, as History shows it: "+1.601,27 − 3.547,58 =
+// −1.946,31 €". sums: { income, expense, net }.
+export function formatSums({ income, expense, net }) {
+  const bare = (amount) => formatEuros(amount).replace(' €', '');
+  return { income: `+${bare(income)}`, expense: bare(expense), net: `${net > 0 ? '+' : ''}${formatEuros(net)}` };
+}
+
 // What the amount field shows when editing: 1250.5 → "1250,50". No
 // thousands dot, so it reads back the same with parseAmountInput.
 export function formatAmountInput(amount) {

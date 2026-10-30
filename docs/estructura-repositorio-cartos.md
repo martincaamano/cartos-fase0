@@ -38,7 +38,7 @@ cartos-fase0/
 │   │   └── sync.js           (sube la cola al Sheet)
 │   │
 │   ├── storage/          (lo que vive en el dispositivo)
-│   │   ├── session.js, book-cache.js, transfer-categories.js, last-account.js
+│   │   ├── session.js, book-cache.js, transfer-categories.js, last-account.js, history-view.js
 │   │   ├── outbox.js, outbox-logic.js
 │   │   └── logs.js
 │   │

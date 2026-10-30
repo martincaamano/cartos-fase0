@@ -2,25 +2,62 @@
 import { test, expect } from './fixtures.js';
 
 const labels = async (app) => (await app.lines('.history-list')).map(([label]) => label);
+const listView = (page) => page.click('.history-view[data-view=list]');
 
-test('History lists everything by month and filters by account, category and dates', async ({ page, app }) => {
+test('History opens as a summary: the total and each month add up, and open down to the movements', async ({ page, app }) => {
   await app.open('#/history', '.history-list');
+  await expect(page.locator('.tree-month .tree-label')).toHaveText(['OCTUBRE 2026', 'SEPTIEMBRE 2026']);
+  // 1.500 − (20,50 + 45 + 9,99) = 1.424,51.
+  await expect(page.locator('.tree-total .tree-value')).toHaveText('+1.424,51 €');
+  await expect(page.locator('.tree-total .sum-line')).toHaveText('+1.500,00−75,49');
+  await expect(page.locator('.history-line')).toHaveCount(0);
+
+  await page.locator('.tree-month .tree-head', { hasText: 'OCTUBRE' }).click();
+  await expect(page.locator('.tree-month .tree-category .tree-label')).toHaveText(['💼 Nómina', '🍽️ Restaurantes', '🛒 Supermercado']);
+  await page.locator('.tree-category .tree-head', { hasText: 'Restaurantes' }).click();
+  await expect(page.locator('.history-line')).toHaveText([/18\/10\s+🍽️ Restaurantes cena\s*−45,00 €/]);
+});
+
+test('History list shows every movement with its note, and filters by months, accounts and categories', async ({ page, app }) => {
+  await app.open('#/history', '.history-list');
+  await listView(page);
   await expect(page.locator('.history-list h2')).toHaveText(['OCTUBRE 2026', 'SEPTIEMBRE 2026']);
   expect(await labels(app)).toHaveLength(4);
+  await expect(page.locator('.history-list .sum-line').first()).toHaveText('+1.500,00−65,50=+1.434,50 €');
 
-  await page.selectOption('select[name=account]', { label: '💶 Efectivo' });
-  expect(await labels(app)).toEqual(['15/09  🛒 Supermercado · 💶 Efectivo']);
+  await page.click('.history-filter-toggle');
+  await page.locator('.history-accounts .chip', { hasText: 'Efectivo' }).click();
+  expect(await labels(app)).toEqual(['15/09  🛒 Supermercado']);
+  await expect(page.locator('.history-filter-toggle')).toContainText('Filtrar · 1');
 
-  await page.locator('button[type=reset]').click();
-  await page.selectOption('select[name=category]', { label: '🛒 Supermercado' });
+  // Abanca too: both accounts.
+  await page.locator('.history-accounts .chip', { hasText: 'Abanca' }).click();
+  expect(await labels(app)).toHaveLength(4);
+
+  await page.click('.history-clear');
+  await page.locator('.history-categories .chip', { hasText: 'Supermercado' }).click();
   expect(await labels(app)).toHaveLength(2);
 
-  // Both ends of the range count.
-  await page.locator('button[type=reset]').click();
-  await page.fill('input[name=from]', '2026-10-01');
-  await page.fill('input[name=to]', '2026-10-15');
-  await page.locator('input[name=to]').dispatchEvent('change');
-  expect(await labels(app)).toEqual(['15/10  🛒 Supermercado · 🏦 Abanca', '01/10  💼 Nómina · 🏦 Abanca']);
+  // One month: October only; then the range September – October.
+  await page.click('.history-clear');
+  await page.locator('.month-cell', { hasText: 'Oct' }).click();
+  await expect(page.locator('.history-range')).toHaveText('Oct 2026');
+  expect(await labels(app)).toHaveLength(3);
+  await page.locator('.month-cell', { hasText: 'Sep' }).click();
+  await expect(page.locator('.history-range')).toHaveText('Sep – Oct 2026');
+  expect(await labels(app)).toHaveLength(4);
+});
+
+test('History remembers the view and clears the filters when it opens again', async ({ page, app }) => {
+  await app.open('#/history', '.history-list');
+  await listView(page);
+  await page.click('.history-filter-toggle');
+  await page.locator('.history-accounts .chip', { hasText: 'Efectivo' }).click();
+  await app.go('#/');
+  await app.go('#/history');
+  await expect(page.locator('.history-view[data-view=list]')).toHaveClass(/is-selected/);
+  await expect(page.locator('.history-filter-toggle')).toHaveText('Filtrar ▾');
+  expect(await labels(app)).toHaveLength(4);
 });
 
 test('Analysis puts the biggest category first, leaves Transferencia out and goes back a month', async ({ page, app }) => {
