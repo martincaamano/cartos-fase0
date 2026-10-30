@@ -6,7 +6,9 @@ import { currentUserSub } from './auth.js';
 import { ValidationError } from './errors.js';
 import { addPending } from '../storage/outbox.js';
 import { createMovement, editMovement, markDeleted, validateMovement } from '../domain/movement.js';
-import { buildTransfer, deleteTransfer, editTransfer, validateTransfer } from '../domain/transfer.js';
+import {
+  buildCrossBookTransfer, buildTransfer, deleteTransfer, editTransfer, validateTransfer,
+} from '../domain/transfer.js';
 import { activeIds } from '../domain/active.js';
 
 const defaults = { add: addPending };
@@ -38,6 +40,24 @@ export async function queueTransfer(fileId, fields, book) {
   const halves = buildTransfer(fields, { userSub: currentUserSub() });
   await store.add(fileId, halves);
   return halves;
+}
+
+const idsOf = (book) => ({ accountIds: activeIds(book.accounts), categoryIds: activeIds(book.categories) });
+
+// A transfer to another book: each half is validated against its own book
+// and goes to that book's outbox. They are independent from then on
+// (architecture §6): if one upload fails, the other still goes.
+// here / there: { fileId, book }. Returns [outgoing, incoming].
+export async function queueCrossBookTransfer(here, there, fields) {
+  const [outgoing, incoming] = buildCrossBookTransfer(fields, { userSub: currentUserSub() });
+  const errors = [...new Set([
+    ...validateMovement(outgoing, idsOf(here.book)),
+    ...validateMovement(incoming, idsOf(there.book)),
+  ])];
+  if (errors.length) throw new ValidationError(errors);
+  await store.add(here.fileId, [outgoing]);
+  await store.add(there.fileId, [incoming]);
+  return [outgoing, incoming];
 }
 
 // original: the saved movement (book plus outbox). Its own account and

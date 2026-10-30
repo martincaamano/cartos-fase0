@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { buildTransfer, validateTransfer, latestEntries } from '../js/domain/transfer.js';
+import { buildTransfer, buildCrossBookTransfer, validateTransfer, latestEntries } from '../js/domain/transfer.js';
 import { accountBalance } from '../js/domain/balance.js';
 import { TRANSFER_CATEGORY_ID } from '../js/domain/category.js';
 
@@ -70,4 +70,74 @@ test('latestEntries keeps newest first and the requested count', () => {
   const older = movement({ id: 'a', date: '2026-10-01' });
   const newer = movement({ id: 'b', date: '2026-10-20' });
   assert.deepEqual(latestEntries([older, newer], 1).map((e) => e.id), ['b']);
+});
+
+// --- buildCrossBookTransfer (transfer to an account of another book) ---
+
+const crossFields = {
+  fromAccountId: 'my-bank', toAccountId: 'house-bank', amount: 300, date: '2026-10-31',
+  note: 'aportación', expenseCategoryId: 'cat-house', incomeCategoryId: 'cat-contribution',
+};
+
+function crossDeps() {
+  let ids = 0;
+  let clock = 0;
+  const times = ['2026-10-30T08:00:00.000Z', '2026-10-30T09:00:00.000Z'];
+  return {
+    userSub: 'user-7',
+    newId: () => `x-${++ids}`,
+    now: () => new Date(times[clock++] ?? '2099-01-01T00:00:00.000Z'),
+    get nowCalls() { return clock; },
+  };
+}
+
+test('buildCrossBookTransfer returns an expense here and an income there with their own categories', () => {
+  const [out, inc] = buildCrossBookTransfer(crossFields, crossDeps());
+  assert.deepEqual([out.accountId, out.type, out.categoryId], ['my-bank', 'expense', 'cat-house']);
+  assert.deepEqual([inc.accountId, inc.type, inc.categoryId], ['house-bank', 'income', 'cat-contribution']);
+  for (const half of [out, inc]) {
+    assert.equal(half.amount, 300);
+    assert.equal(half.date, '2026-10-31');
+    assert.equal(half.note, 'aportación');
+    assert.equal(half.transferId, '');
+    assert.equal(half.createdBy, 'user-7');
+    assert.equal(half.deleted, false);
+  }
+});
+
+test('buildCrossBookTransfer gives distinct ids and one shared createdAt from a single now()', () => {
+  const deps = crossDeps();
+  const [out, inc] = buildCrossBookTransfer(crossFields, deps);
+  assert.deepEqual([out.id, inc.id], ['x-1', 'x-2']);
+  assert.equal(deps.nowCalls, 1);
+  assert.equal(out.createdAt, '2026-10-30T08:00:00.000Z');
+  assert.equal(inc.createdAt, '2026-10-30T08:00:00.000Z');
+  assert.equal(out.updatedAt, out.createdAt);
+  assert.equal(inc.updatedAt, inc.createdAt);
+});
+
+test('buildCrossBookTransfer defaults the note to an empty string', () => {
+  const { note, ...withoutNote } = crossFields;
+  const halves = buildCrossBookTransfer(withoutNote, crossDeps());
+  assert.deepEqual(halves.map((h) => h.note), ['', '']);
+});
+
+test('buildCrossBookTransfer keeps edge amounts and end-of-month dates as given', () => {
+  for (const amount of [0.01, 999999999.99]) {
+    const halves = buildCrossBookTransfer({ ...crossFields, amount, date: '2028-02-29' }, crossDeps());
+    assert.deepEqual(halves.map((h) => h.amount), [amount, amount]);
+    assert.deepEqual(halves.map((h) => h.date), ['2028-02-29', '2028-02-29']);
+  }
+});
+
+test('buildCrossBookTransfer without userSub leaves createdBy empty', () => {
+  const { userSub, ...deps } = crossDeps();
+  const halves = buildCrossBookTransfer(crossFields, deps);
+  assert.deepEqual(halves.map((h) => h.createdBy), ['', '']);
+});
+
+test('the cross-book halves move each balance by the amount, in cents', () => {
+  const [out, inc] = buildCrossBookTransfer({ ...crossFields, amount: 0.3 }, crossDeps());
+  assert.equal(accountBalance({ id: 'my-bank', initialBalance: 0.1 }, [out]), -0.2);
+  assert.equal(accountBalance({ id: 'house-bank', initialBalance: 0.2 }, [inc]), 0.5);
 });

@@ -27,18 +27,26 @@ Se hace en dos partes, cada una usable sola en el iPhone:
 - `js/screens/books.js` (Ajustes → Libros, ruta `#/settings/books`); nombre del libro en INICIO y Añadir; Añadir al abrir.
 - Textos en `i18n/es.js`; `sw.js` con los módulos nuevos.
 
+## Alcance técnico (17b)
+- `js/domain/transfer.js`: `buildCrossBookTransfer`, un gasto en la cuenta de origen y un ingreso en la de destino, sin `transferId`, cada uno con su categoría.
+- `js/data/movements.js`: `queueCrossBookTransfer` valida cada mitad contra su libro y la pone en la cola de ese libro.
+- `js/storage/transfer-categories.js`: las dos últimas categorías usadas para cada cuenta destino, para que la siguiente aportación salga rellenada.
+- Añadir → Transferencia: el destino ofrece también las cuentas de los otros libros (agrupadas por libro, con su copia en el dispositivo). Si se elige una, aparecen las dos categorías: la del gasto aquí y la del ingreso allí. Al editar, solo las cuentas del propio libro.
+
 ## Fuera de alcance
 Compartir un libro y las personas por movimiento (tarea 18), importar la reforma (19), borrar un libro, ver varios libros sumados.
 
 ## Pruebas automáticas
 - Lógica pura de libros, copia por libro con la conversión, datos con `fetch` simulado (un solo `drive.list` al abrir), estado con cambios en cola de un libro que no está abierto.
 - Aceptación con un Google simulado de varios archivos: crear un libro, cambiar de libro (cada uno con su INICIO), renombrar, la app abre en Añadir, un cambio sin conexión en un libro se sube al volver aunque esté abierto el otro.
+- 17b: la transferencia a otro libro escribe un gasto en uno y un ingreso en el otro, sin `transferId`, con sus categorías; la siguiente sale con las categorías elegidas; sin una de las dos no se guarda nada.
 
 ## Pruebas manuales en iPhone
 - [ ] Con la app instalada, abrirla la lleva a Añadir, con el nombre del libro arriba.
 - [ ] Ajustes → Libros: crear «Casa do medio» con su primera cuenta; aparece en Drive como «Cartos · Casa do medio».
 - [ ] Cambiar entre Personal y Casa do medio: cada uno con su INICIO, Historial y Análisis; los saldos de Personal no cambian.
 - [ ] Cerrar y volver a abrir la app: sigue en el último libro abierto.
+- [ ] 17b: desde Personal, transferencia de Abanca a la cuenta de Casa do medio con gasto «Casa do medio» e ingreso «Aportación Martín» (crearla antes en Ajustes → Categorías de Casa do medio). Aparece en los dos libros y la siguiente sale ya con las dos categorías.
 
 ## Criterio de cierre
 - [ ] 17a y 17b fusionadas y probadas en el iPhone.

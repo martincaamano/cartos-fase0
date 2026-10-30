@@ -8,6 +8,7 @@
 import { SECTIONS, SECTION_HASH } from './ui/router.js';
 import { findEntry } from './domain/history.js';
 import { getCurrentUser } from './data/auth.js';
+import { cachedBook } from './data/books.js';
 import { renderDashboard } from './screens/dashboard.js';
 import { renderAddMovement } from './screens/addMovement.js';
 import { renderHistory } from './screens/history.js';
@@ -22,6 +23,12 @@ import { renderBooks } from './screens/books.js';
 // The name of the book open, shown on top of INICIO and Añadir when there
 // is more than one book.
 const bookName = (state) => (state.books.length > 1 ? state.bookInfo?.name ?? '' : '');
+
+// The other books with a copy on the device: where a transfer can go.
+const otherBooks = (state) => state.books
+  .filter((info) => info.fileId !== state.fileId)
+  .map((info) => ({ fileId: info.fileId, name: info.name, book: cachedBook(info.fileId) }))
+  .filter((other) => other.book);
 
 export const VIEWS = Object.freeze({
   [SECTIONS.HOME]: ({ root, state, offline }) =>
@@ -41,7 +48,12 @@ export const VIEWS = Object.freeze({
 
   [SECTIONS.ADD]: ({ root, state, params, saved }) =>
     renderAddMovement(root, {
-      book: state.book, bookName: bookName(state), fileId: state.fileId, params, onSaved: saved(SECTION_HASH.home),
+      book: state.book,
+      bookName: bookName(state),
+      otherBooks: otherBooks(state),
+      fileId: state.fileId,
+      params,
+      onSaved: saved(SECTION_HASH.home),
     }),
 
   [SECTIONS.ANALYSIS]: ({ root, state, params }) => renderAnalysis(root, { book: state.book, params }),

@@ -8,6 +8,8 @@ import {
   queueEdit,
   queueTransferEdit,
   queueDelete,
+  queueCrossBookTransfer,
+  configureMovements,
 } from '../js/data/movements.js';
 import { ValidationError } from '../js/data/errors.js';
 import { setupGoogleApi } from './helpers/fake-google.js';
@@ -181,4 +183,102 @@ test('saving to the outbox makes no call to Google', async () => {
   await queueTransfer('f1', transfer, book);
   await queueDelete('f1', [m('a')]);
   assert.equal(calls.length, 0);
+});
+
+// --- queueCrossBookTransfer ---
+
+const myBook = {
+  accounts: [{ id: 'my-bank', deleted: false }, { id: 'my-old', deleted: true }],
+  categories: [{ id: 'cat-house', deleted: false }, { id: 'cat-gone', deleted: true }],
+};
+const houseBook = {
+  accounts: [{ id: 'house-bank', deleted: false }],
+  categories: [{ id: 'cat-contribution', deleted: false }],
+};
+const here = { fileId: 'file-mine', book: myBook };
+const there = { fileId: 'file-house', book: houseBook };
+const cross = {
+  fromAccountId: 'my-bank', toAccountId: 'house-bank', amount: 300, date: '2026-10-31',
+  note: 'aportación', expenseCategoryId: 'cat-house', incomeCategoryId: 'cat-contribution',
+};
+
+function recordingStore() {
+  const calls = [];
+  configureMovements({ add: async (fileId, movements) => { calls.push({ fileId, movements }); } });
+  return calls;
+}
+
+async function rejectsWith(fields, expected, sides = [here, there]) {
+  const calls = recordingStore();
+  await assert.rejects(
+    queueCrossBookTransfer(sides[0], sides[1], fields),
+    (err) => {
+      assert.ok(err instanceof ValidationError);
+      assert.deepEqual([...err.errors].sort(), [...expected].sort());
+      return true;
+    }
+  );
+  assert.equal(calls.length, 0, 'nothing is written when invalid');
+}
+
+test('queueCrossBookTransfer adds the outgoing half here and the incoming half there, in that order', async () => {
+  const calls = recordingStore();
+  const halves = await queueCrossBookTransfer(here, there, cross);
+  const [out, inc] = halves;
+  assert.equal(calls.length, 2);
+  assert.equal(calls[0].fileId, 'file-mine');
+  assert.deepEqual(calls[0].movements, [out]);
+  assert.equal(calls[1].fileId, 'file-house');
+  assert.deepEqual(calls[1].movements, [inc]);
+  assert.deepEqual([out.accountId, out.type, out.categoryId], ['my-bank', 'expense', 'cat-house']);
+  assert.deepEqual([inc.accountId, inc.type, inc.categoryId], ['house-bank', 'income', 'cat-contribution']);
+  for (const half of halves) {
+    assert.equal(half.amount, 300);
+    assert.equal(half.transferId, '');
+    assert.equal(half.createdBy, 'user-1');
+  }
+  assert.notEqual(out.id, inc.id);
+});
+
+test('queueCrossBookTransfer accepts one cent and a large amount', async () => {
+  for (const amount of [0.01, 999999999.99]) {
+    const calls = recordingStore();
+    const halves = await queueCrossBookTransfer(here, there, { ...cross, amount });
+    assert.deepEqual(halves.map((h) => h.amount), [amount, amount]);
+    assert.equal(calls.length, 2);
+  }
+});
+
+test('queueCrossBookTransfer reports a shared error code once', async () => {
+  await rejectsWith({ ...cross, amount: 0 }, ['amount_invalid']);
+  await rejectsWith({ ...cross, amount: -5 }, ['amount_invalid']);
+  await rejectsWith({ ...cross, amount: 1.005 }, ['amount_invalid']);
+  await rejectsWith({ ...cross, date: '2026-02-29' }, ['date_invalid']);
+  await rejectsWith({ ...cross, amount: '300', date: '2026-10-31T00:00' }, ['amount_invalid', 'date_invalid']);
+});
+
+test('queueCrossBookTransfer returns the union of the codes of both halves', async () => {
+  await rejectsWith({ ...cross, fromAccountId: 'nope', incomeCategoryId: 'nope' }, ['account_unknown', 'category_unknown']);
+  await rejectsWith({ ...cross, fromAccountId: 'nope', toAccountId: 'nope' }, ['account_unknown']);
+});
+
+test('queueCrossBookTransfer rejects accounts and categories of the other book on the wrong side', async () => {
+  await rejectsWith({ ...cross, fromAccountId: 'house-bank' }, ['account_unknown']);
+  await rejectsWith({ ...cross, toAccountId: 'my-bank' }, ['account_unknown']);
+  await rejectsWith({ ...cross, expenseCategoryId: 'cat-contribution' }, ['category_unknown']);
+  await rejectsWith({ ...cross, incomeCategoryId: 'cat-house' }, ['category_unknown']);
+  // here and there swapped: every id is now on the wrong side.
+  await rejectsWith(cross, ['account_unknown', 'category_unknown'], [there, here]);
+});
+
+test('queueCrossBookTransfer rejects deleted accounts and categories', async () => {
+  await rejectsWith({ ...cross, fromAccountId: 'my-old' }, ['account_unknown']);
+  await rejectsWith({ ...cross, expenseCategoryId: 'cat-gone' }, ['category_unknown']);
+});
+
+test('queueCrossBookTransfer makes no call to Google', async () => {
+  const google = setupGoogleApi();
+  recordingStore();
+  await queueCrossBookTransfer(here, there, cross);
+  assert.equal(google.length, 0);
 });

@@ -1,5 +1,6 @@
-// Several books (tarea 17a): opening in Añadir, creating a book, switching,
-// renaming, and the outbox of a book that is not open. Invented data.
+// Several books (tarea 17): opening in Añadir, creating a book, switching,
+// renaming, the outbox of a book that is not open and transfers to an
+// account of another book. Invented data.
 import { test, expect } from './fixtures.js';
 
 const NEW_BOOK = 'form:not(.book-rename)';
@@ -98,4 +99,66 @@ test('a change saved offline in one book is uploaded with the other book open', 
   // The personal book got nothing.
   expect(google.movements()).toHaveLength(4);
   await expect(page.locator('.book-banner')).toHaveText('LIBRO · Personal');
+});
+
+// Personal (open) → "Cuenta común" of Casa do medio, with a category on each side.
+async function transferToCasa(page, app, { amount, expense, income, note }) {
+  await app.go('#/add?type=transfer');
+  await page.selectOption('select[name=from]', { label: '🏦 Abanca' });
+  await page.selectOption('select[name=to]', { label: '🏦 Cuenta común' });
+  await expect(page.locator('.only-cross')).toBeVisible();
+  await page.fill('.amount-input', amount);
+  if (expense) await page.locator('.cross-expense .category-option', { hasText: expense }).first().click();
+  if (income) await page.locator('.cross-income .category-option', { hasText: income }).first().click();
+  if (note) await page.fill('input[name=note]', note);
+  await page.click('.form-submit');
+  await app.settle();
+}
+
+test('a transfer to another book is an expense here and an income there', async ({ page, app, google }) => {
+  await createBook(page, app, { name: 'Casa do medio', account: 'Cuenta común', balance: '0' });
+  const casa = google.calls.find((call) => call.op === 'drive.create').fileId;
+  await openBook(page, app, 'Personal');
+
+  await app.go('#/add?type=transfer');
+  // Accounts of the other book are grouped under its name.
+  await expect(page.locator('select[name=to] optgroup')).toHaveAttribute('label', 'Casa do medio');
+  await expect(page.locator('.only-cross')).toBeHidden();
+
+  await transferToCasa(page, app, { amount: '300', expense: 'Restaurantes', income: 'Otros ingresos', note: 'Aportación' });
+  await expect(page.locator('.receipt-total-amount')).toHaveText('2.174,51 €');
+
+  const [here] = google.movements().slice(-1);
+  expect([here.accountId, here.type, here.amount, here.categoryId, here.transferId, here.note])
+    .toEqual(['acc-bank', 'expense', 300, 'cat-rest', '', 'Aportación']);
+  const there = google.movements(casa);
+  expect(there).toHaveLength(1);
+  const income = google.files.get(casa).rows.Categories.find((row) => row[0] === there[0].categoryId);
+  expect([there[0].type, there[0].amount, there[0].transferId, there[0].note, income[1]])
+    .toEqual(['income', 300, '', 'Aportación', 'Otros ingresos']);
+
+  await openBook(page, app, 'Casa do medio');
+  await expect(page.locator('.receipt-total-amount')).toHaveText('300,00 €');
+});
+
+test('the next transfer to that account comes with both categories chosen', async ({ page, app, google }) => {
+  await createBook(page, app, { name: 'Casa do medio', account: 'Cuenta común', balance: '0' });
+  const casa = google.calls.find((call) => call.op === 'drive.create').fileId;
+  await openBook(page, app, 'Personal');
+  await transferToCasa(page, app, { amount: '100', expense: 'Restaurantes', income: 'Otros ingresos' });
+
+  // No category tapped this time.
+  await transferToCasa(page, app, { amount: '50' });
+  expect(google.movements().slice(-2).map((m) => [m.amount, m.categoryId])).toEqual([[100, 'cat-rest'], [50, 'cat-rest']]);
+  const [first, second] = google.movements(casa);
+  expect(second.categoryId).toBe(first.categoryId);
+});
+
+test('a transfer to another book needs both categories', async ({ page, app, google }) => {
+  await createBook(page, app, { name: 'Casa do medio', account: 'Cuenta común', balance: '0' });
+  await openBook(page, app, 'Personal');
+  const writes = google.writes().length;
+  await transferToCasa(page, app, { amount: '20', expense: 'Restaurantes' });
+  await expect(page.locator('.form-error')).toHaveText('Elige una categoría.');
+  expect(google.writes()).toHaveLength(writes);
 });
