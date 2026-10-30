@@ -105,7 +105,7 @@ test('a change saved offline in one book is uploaded with the other book open', 
 async function transferToCasa(page, app, { amount, expense, income, note }) {
   await app.go('#/add?type=transfer');
   await page.selectOption('select[name=from]', { label: '🏦 Abanca' });
-  await page.selectOption('select[name=to]', { label: '🏦 Cuenta común' });
+  await page.selectOption('select[name=to]', { label: '🏦 Cuenta común · Casa do medio' });
   await expect(page.locator('.only-cross')).toBeVisible();
   await page.fill('.amount-input', amount);
   if (expense) await page.locator('.cross-expense .category-option', { hasText: expense }).first().click();

@@ -132,6 +132,7 @@ export const es = {
     to: 'Hacia',
     sameAccount: 'Elige dos cuentas distintas.',
     crossNote: 'La cuenta destino es del libro «{book}»: se apunta un gasto aquí y un ingreso allí, cada uno con su categoría. Son independientes: editar o borrar uno no cambia el otro.',
+    otherBookAccount: '{account} · {book}',
     crossExpense: 'Categoría del gasto en {book}',
     crossIncome: 'Categoría del ingreso en {book}',
     needTwoAccounts: 'Para transferir necesitas al menos dos cuentas.',
