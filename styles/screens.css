@@ -72,7 +72,50 @@
   font-size: var(--text-sm);
 }
 
+/* INICIO */
+.dashboard-latest-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+
+.dashboard-see-all {
+  min-height: 0;
+  font-size: var(--text-sm);
+}
+
+.dashboard-account {
+  color: inherit;
+  text-decoration: none;
+}
+
+.dashboard-account .receipt-amount::after {
+  content: ' ›';
+  color: var(--color-ink-muted);
+}
+
 /* Ajustes */
+.settings-value {
+  color: var(--color-ink-muted);
+}
+
+.settings-signout {
+  width: 100%;
+  text-align: left;
+  line-height: inherit;
+}
+
+.settings-signout span:first-child {
+  color: var(--color-expense);
+}
+
+.settings-email {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--color-ink-muted);
+  font-size: var(--text-sm);
+}
+
 .book-other {
   cursor: pointer;
 }
@@ -93,14 +136,7 @@ button.settings-link {
   text-align: left;
 }
 
-.settings-email {
-  margin-top: var(--space-2);
-  overflow-wrap: anywhere;
-}
 
-.settings-signout {
-  color: var(--color-expense);
-}
 
 /* History */
 .history-bar {

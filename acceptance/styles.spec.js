@@ -23,7 +23,7 @@ const SCREENS = [
   ['edit', '#/history/edit?id=m-rest', '.form-delete'],
   ['add', '#/add', '.category-grid'],
   ['analysis', '#/analysis', '.stat-categories'],
-  ['settings', '#/settings', '.theme-picker'],
+  ['settings', '#/settings', '.settings-signout'],
   ['accounts', '#/settings/accounts', '.account-list'],
   ['categories', '#/settings/categories', '.list-expense'],
 ];

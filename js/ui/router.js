@@ -18,6 +18,8 @@ export const SCREENS = Object.freeze([
   { section: 'accounts', path: 'settings/accounts', repaint: true },
   { section: 'diagnostics', path: 'settings/diagnostics' },
   { section: 'import', path: 'settings/import' },
+  { section: 'data', path: 'settings/data' },
+  { section: 'theme', path: 'settings/theme' },
   { section: 'books', path: 'settings/books' },
   { section: 'bookNew', path: 'settings/books/new' },
   { section: 'bookEdit', path: 'settings/books/edit' },

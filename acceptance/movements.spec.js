@@ -6,6 +6,7 @@ test('an expense is saved to the Sheet with RAW and the balance drops', async ({
   await app.addMovement({ amount: '12,34', category: 'Supermercado', note: '=1+1' });
 
   await expect(page).toHaveURL(/#\/$/);
+  await app.reveal();
   await expect(page.locator('.receipt-total-amount')).toHaveText('2.462,17 €');
   const [append] = google.writes();
   expect(append).toMatchObject({ op: 'append', tab: 'Movements', valueInputOption: 'RAW' });
@@ -21,6 +22,7 @@ test('an income is saved as a positive amount in the chosen account', async ({ p
   await app.open();
   await app.addMovement({ type: 'income', amount: '100', category: 'Nómina', account: '💶 Efectivo' });
   expect(google.movements().at(-1)).toMatchObject({ accountId: 'acc-cash', type: 'income', amount: 100 });
+  await app.reveal();
   expect(await app.lines('.receipt-accounts')).toContainEqual(['💶 Efectivo', '140,01 €']);
 });
 
@@ -53,7 +55,9 @@ test('a transfer writes both halves in one request and shows as one line', async
     ['acc-cash', 'income', 'transfer'],
   ]);
   expect(halves[0].transferId).toBe(halves[1].transferId);
+  await app.reveal();
   expect((await app.lines('.receipt-movements'))[0]).toEqual(['20/10  🏦 Abanca → 💶 Efectivo', '30,00 €']);
+  await app.reveal();
   await expect(page.locator('.receipt-total-amount')).toHaveText('2.474,51 €');
 });
 
@@ -91,6 +95,7 @@ test('deleting asks for a second tap and only marks the row as deleted', async (
 
   // It no longer counts: the 45 € are back in the balance.
   await app.go('#/');
+  await app.reveal();
   await expect(page.locator('.receipt-total-amount')).toHaveText('2.519,51 €');
 });
 

@@ -74,6 +74,8 @@ test('the screen table produces exactly the expected hashes, books included', ()
       accounts: '#/settings/accounts',
       diagnostics: '#/settings/diagnostics',
       import: '#/settings/import',
+      data: '#/settings/data',
+      theme: '#/settings/theme',
       books: '#/settings/books',
       bookNew: '#/settings/books/new',
       bookEdit: '#/settings/books/edit',
@@ -85,6 +87,9 @@ test('the screen table produces exactly the expected hashes, books included', ()
   );
   assert.deepEqual(parseHash('#/settings/import'), { section: SECTIONS.IMPORT, params: {} });
   assert.deepEqual(parseHash('#/settings/books'), { section: SECTIONS.BOOKS, params: {} });
+  assert.deepEqual(parseHash('#/settings/data'), { section: SECTIONS.DATA, params: {} });
+  assert.deepEqual(parseHash('#/settings/theme'), { section: SECTIONS.THEME, params: {} });
+  assert.deepEqual(parseHash('#/history?account=acc-1'), { section: SECTIONS.HISTORY, params: { account: 'acc-1' } });
   assert.deepEqual(parseHash('#/settings/books/'), { section: SECTIONS.BOOKS, params: {} });
   assert.deepEqual(SCREENS.map((screen) => screen.section), Object.keys(SECTION_HASH));
 });

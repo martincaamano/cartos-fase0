@@ -11,7 +11,7 @@ const DARK = 'rgb(20, 24, 28)';
 
 test('Sistema follows the device; Claro and Oscuro are forced and survive a reload', async ({ page, app }) => {
   await page.emulateMedia({ colorScheme: 'dark' });
-  await app.open('#/settings', '.theme-picker');
+  await app.open('#/settings/theme', '.theme-picker');
   await page.evaluate(() => { document.body.style.transition = 'none'; });
   expect(await colors(page)).toEqual([null, DARK, DARK]);
 

@@ -213,6 +213,15 @@ export const test = base.extend({
         await expect(page.locator(ready)).toBeVisible();
         await app.settle();
       },
+      // INICIO arrives with its amounts hidden (tarea 20d): tapping INICIO
+      // again shows them, as the user would.
+      async reveal() {
+        await expect(page.locator('.receipt-total-amount')).toBeVisible();
+        if (await page.locator('.amounts-hidden').count()) {
+          await page.click('.navbar-item.is-active');
+          await expect(page.locator('.amounts-hidden')).toHaveCount(0);
+        }
+      },
       async go(hash) {
         await page.evaluate((h) => { location.hash = h; }, hash);
         await app.settle();

@@ -13,7 +13,9 @@ const SECTIONS = [
   { id: 'settings', label: es.navbar.settings },
 ];
 
-export function renderNavbar(container, { active = 'home' } = {}) {
+// onReselect: what tapping the section already on view does (INICIO shows
+// its hidden amounts); nothing by default.
+export function renderNavbar(container, { active = 'home', onReselect = null } = {}) {
   const nav = document.createElement('nav');
   nav.className = 'navbar';
   for (const section of SECTIONS) {
@@ -28,7 +30,8 @@ export function renderNavbar(container, { active = 'home' } = {}) {
     }
     button.disabled = !(section.id in SECTION_HASH);
     button.addEventListener('click', () => {
-      location.hash = SECTION_HASH[section.id];
+      if (section.id === active && onReselect) onReselect();
+      else location.hash = SECTION_HASH[section.id];
     });
     nav.appendChild(button);
   }

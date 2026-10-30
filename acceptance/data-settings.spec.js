@@ -13,7 +13,7 @@ test.beforeEach(async ({ context }) => {
 });
 
 test('a CSV adds movements to the book, reusing names and creating the rest', async ({ page, app, google }) => {
-  await app.open('#/settings', '.settings-export');
+  await app.open('#/settings/data', '.settings-export');
   await page.click('.settings-data a.settings-link');
   await expect(page.locator('h1.form-title')).toHaveText('IMPORTAR MOVIMIENTOS');
   await app.settle();
@@ -40,6 +40,7 @@ test('a CSV adds movements to the book, reusing names and creating the rest', as
   expect(google.calls.slice(before).filter((call) => call.op !== 'drive.list' && call.op !== 'batchGet')).toEqual([]);
 
   await page.click('.import-confirm');
+  await app.reveal();
   await expect(page.locator('.receipt-total-amount')).toHaveText('2.472,01 €');
   await app.settle();
 
@@ -90,11 +91,11 @@ test('a CSV with mistakes points at its lines and writes nothing', async ({ page
   expect(google.writes()).toEqual([]);
 
   await page.click('.back-link');
-  await expect(page.locator('h1.form-title')).toHaveText('AJUSTES');
+  await expect(page.locator('.settings-list')).toBeVisible();
 });
 
 test('the template downloads and imports as it is', async ({ page, app }) => {
-  await app.open('#/settings', '.settings-export');
+  await app.open('#/settings/data', '.settings-export');
   const [download] = await Promise.all([page.waitForEvent('download'), page.click('.settings-template')]);
   expect(download.suggestedFilename()).toBe('cartos-plantilla.csv');
   const text = await (await download.createReadStream()).toArray().then((chunks) => Buffer.concat(chunks).toString('utf8'));
@@ -107,7 +108,7 @@ test('the template downloads and imports as it is', async ({ page, app }) => {
 });
 
 test('my data downloads as the CSV, saldo inicial first and oldest first', async ({ page, app }) => {
-  await app.open('#/settings', '.settings-export');
+  await app.open('#/settings/data', '.settings-export');
   const [download] = await Promise.all([page.waitForEvent('download'), page.click('.settings-export')]);
   expect(download.suggestedFilename()).toBe('cartos-2026-10-20.csv');
   const text = await (await download.createReadStream()).toArray().then((chunks) => Buffer.concat(chunks).toString('utf8'));

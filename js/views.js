@@ -19,6 +19,8 @@ import { renderCategories } from './screens/categories.js';
 import { renderAccounts } from './screens/accounts.js';
 import { renderImport } from './screens/import.js';
 import { renderBooks } from './screens/books.js';
+import { renderData } from './screens/data.js';
+import { renderTheme } from './screens/theme.js';
 import { renderBookEdit, renderBookNew } from './screens/book-card.js';
 import { renderAccountCard } from './screens/account-card.js';
 import { renderCategoryCard } from './screens/category-card.js';
@@ -26,6 +28,9 @@ import { renderCategoryCard } from './screens/category-card.js';
 // The name of the book open, shown on top of INICIO and Añadir when there
 // is more than one book.
 const bookName = (state) => (state.books.length > 1 ? state.bookInfo?.name ?? '' : '');
+
+// INICIO shows its amounts once INICIO is tapped again (tarea 20d).
+let amountsRevealed = false;
 
 // After a card saved to the Sheet: back to its list, which repaints once
 // the book is read again.
@@ -41,10 +46,23 @@ const otherBooks = (state) => state.books
   .filter((other) => other.book);
 
 export const VIEWS = Object.freeze({
-  [SECTIONS.HOME]: ({ root, state, offline }) =>
-    renderDashboard(root, { book: state.book, bookName: bookName(state), offline, pendingCount: state.pendingCount }),
+  [SECTIONS.HOME]: function home({ root, state, offline, repaint }) {
+    // Amounts arrive hidden on every visit; fresh data keeps what was chosen.
+    if (!repaint) amountsRevealed = false;
+    renderDashboard(root, {
+      book: state.book,
+      bookName: bookName(state),
+      offline,
+      pendingCount: state.pendingCount,
+      revealed: amountsRevealed,
+      onReveal: () => {
+        amountsRevealed = true;
+        home({ root, state, offline, repaint: true });
+      },
+    });
+  },
 
-  [SECTIONS.HISTORY]: ({ root, state }) => renderHistory(root, { book: state.book }),
+  [SECTIONS.HISTORY]: ({ root, state, params }) => renderHistory(root, { book: state.book, params }),
 
   [SECTIONS.EDIT]: ({ root, state, params, redirect, saved }) => {
     const book = state.book;
@@ -68,8 +86,17 @@ export const VIEWS = Object.freeze({
 
   [SECTIONS.ANALYSIS]: ({ root, state, params }) => renderAnalysis(root, { book: state.book, params }),
 
-  [SECTIONS.SETTINGS]: ({ root, state, signOut }) =>
-    renderSettings(root, { user: getCurrentUser(), book: state.book, pendingCount: state.pendingCount, onSignOut: signOut }),
+  [SECTIONS.SETTINGS]: ({ root, state, signOut }) => renderSettings(root, {
+    user: getCurrentUser(),
+    book: state.book,
+    bookName: state.bookInfo?.name ?? '',
+    pendingCount: state.pendingCount,
+    onSignOut: signOut,
+  }),
+
+  [SECTIONS.DATA]: ({ root, state }) => renderData(root, { book: state.book }),
+
+  [SECTIONS.THEME]: ({ root }) => renderTheme(root),
 
   [SECTIONS.CATEGORIES]: ({ root, state }) => renderCategories(root, { book: state.book }),
 
