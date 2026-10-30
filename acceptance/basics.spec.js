@@ -19,7 +19,8 @@ test('opens on the Dashboard with the total, the balances and the latest movemen
 test('the navbar reaches every section and marks the one on view', async ({ page, app }) => {
   await app.open();
   const sections = [
-    ['HISTORIAL', 'HISTORIAL', '#/history'],
+    // History has no title since tarea 20: the navbar says where you are.
+    ['HISTORIAL', null, '#/history'],
     ['ANÁLISIS', 'ANÁLISIS', '#/analysis'],
     ['AJUSTES', 'AJUSTES', '#/settings'],
     ['INICIO', null, '#/'],

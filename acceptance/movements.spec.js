@@ -60,6 +60,7 @@ test('a transfer writes both halves in one request and shows as one line', async
 test('editing from the History rewrites the same row and keeps the id', async ({ page, app, google }) => {
   await app.open();
   await app.go('#/history');
+  await page.click('.history-view[data-view=list]');
   await page.locator('.history-line', { hasText: 'Supermercado' }).first().click();
   await expect(page.locator('.amount-input')).toHaveValue('20,50');
   await page.fill('.amount-input', '25');
@@ -97,6 +98,7 @@ test('editing a transfer changes both halves in one request', async ({ page, app
   await app.open();
   await app.addMovement({ type: 'transfer', amount: '30', from: '🏦 Abanca', to: '💶 Efectivo' });
   await app.go('#/history');
+  await page.click('.history-view[data-view=list]');
   await page.locator('.history-line', { hasText: '→' }).click();
   await page.fill('.amount-input', '35');
   await page.click('.form-submit');

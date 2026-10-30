@@ -6,7 +6,7 @@ import { historyEntries } from '../js/domain/history.js';
 
 // Importing the module must not touch the DOM: if it did, this static import
 // would already throw in Node (there is no `document` here).
-import { movementLineModel, lookupsOf } from '../js/ui/receipt.js';
+import { movementLineModel, movementLine, lookupsOf } from '../js/ui/receipt.js';
 
 // Deterministic deps for the domain builders.
 let counter = 0;
@@ -61,19 +61,19 @@ test('lookupsOf with empty lists gives empty Maps', () => {
 
 test('expense: category label, negative amount, expense tone', () => {
   const model = movementLineModel(onlyEntry([expense()]), lookups);
-  assert.deepEqual(model, { label: '20/10  🛒 Supermercado', amount: -42.5, tone: 'expense' });
+  assert.deepEqual(model, { label: '20/10  🛒 Supermercado', amount: -42.5, tone: 'expense', note: '' });
 });
 
 test('income: positive amount, income tone', () => {
   const model = movementLineModel(onlyEntry([income()]), lookups);
-  assert.deepEqual(model, { label: '01/10  💼 Nómina', amount: 1500, tone: 'income' });
+  assert.deepEqual(model, { label: '01/10  💼 Nómina', amount: 1500, tone: 'income', note: '' });
 });
 
 test('transfer: from → to label, positive amount, no tone', () => {
   const entry = onlyEntry(transfer());
   assert.equal(entry.kind, 'transfer');
   const model = movementLineModel(entry, lookups);
-  assert.deepEqual(model, { label: '22/10  🏦 Abanca → 💶 Efectivo', amount: 60, tone: '' });
+  assert.deepEqual(model, { label: '22/10  🏦 Abanca → 💶 Efectivo', amount: 60, tone: '', note: '' });
 });
 
 test('transfer ignores withAccount (accounts are already in the label)', () => {
@@ -85,10 +85,10 @@ test('loose half of a transfer shows as an ordinary movement', () => {
   const [outgoing, incoming] = transfer();
   const outEntry = onlyEntry([outgoing]);
   assert.equal(outEntry.kind, 'movement');
-  assert.deepEqual(movementLineModel(outEntry, lookups), { label: '22/10  🔁 Transferencia', amount: -60, tone: 'expense' });
+  assert.deepEqual(movementLineModel(outEntry, lookups), { label: '22/10  🔁 Transferencia', amount: -60, tone: 'expense', note: '' });
 
   const inEntry = onlyEntry([{ ...incoming }]);
-  assert.deepEqual(movementLineModel(inEntry, lookups), { label: '22/10  🔁 Transferencia', amount: 60, tone: 'income' });
+  assert.deepEqual(movementLineModel(inEntry, lookups), { label: '22/10  🔁 Transferencia', amount: 60, tone: 'income', note: '' });
 });
 
 test('half whose pair is deleted shows as an ordinary movement', () => {
@@ -113,15 +113,15 @@ test('entries from historyEntries work the same', () => {
   const movements = [expense(), income(), ...transfer()];
   const models = historyEntries(movements).map((entry) => movementLineModel(entry, lookups, { withAccount: true }));
   assert.deepEqual(models, [
-    { label: '22/10  🏦 Abanca → 💶 Efectivo', amount: 60, tone: '' },
-    { label: '20/10  🛒 Supermercado · 🏦 Abanca', amount: -42.5, tone: 'expense' },
-    { label: '01/10  💼 Nómina · 🏦 Abanca', amount: 1500, tone: 'income' },
+    { label: '22/10  🏦 Abanca → 💶 Efectivo', amount: 60, tone: '', note: '' },
+    { label: '20/10  🛒 Supermercado · 🏦 Abanca', amount: -42.5, tone: 'expense', note: '' },
+    { label: '01/10  💼 Nómina · 🏦 Abanca', amount: 1500, tone: 'income', note: '' },
   ]);
 });
 
 test('missing category leaves an empty label in its place, without throwing', () => {
   const entry = onlyEntry([expense({ categoryId: 'cat-removed' })]);
-  assert.deepEqual(movementLineModel(entry, lookups), { label: '20/10  ', amount: -42.5, tone: 'expense' });
+  assert.deepEqual(movementLineModel(entry, lookups), { label: '20/10  ', amount: -42.5, tone: 'expense', note: '' });
 });
 
 test('missing account with withAccount leaves an empty label, without throwing', () => {
@@ -139,7 +139,7 @@ test('transfer with missing accounts leaves empty labels, without throwing', () 
 test('empty lookups do not throw', () => {
   const empty = lookupsOf({ accounts: [], categories: [] });
   const model = movementLineModel(onlyEntry([income()]), empty, { withAccount: true });
-  assert.deepEqual(model, { label: '01/10   · ', amount: 1500, tone: 'income' });
+  assert.deepEqual(model, { label: '01/10   · ', amount: 1500, tone: 'income', note: '' });
 });
 
 test('date is DD/MM with leading zeros, year left out', () => {
@@ -176,4 +176,82 @@ test('model does not mutate the entry or the lookups', () => {
   movementLineModel(entry, lookups, { withAccount: true });
   assert.deepEqual(entry, snapshot);
   assert.equal(lookups.accountById.size, 2);
+});
+
+// --- note (tarea 20b) ---
+
+test('model carries the movement note, for expense and income', () => {
+  assert.equal(movementLineModel(onlyEntry([expense({ note: 'cena con Ana' })]), lookups).note, 'cena con Ana');
+  assert.equal(movementLineModel(onlyEntry([income({ note: 'octubre' })]), lookups, { withAccount: true }).note, 'octubre');
+});
+
+test('model note is empty when the movement has none', () => {
+  assert.equal(movementLineModel(onlyEntry([expense()]), lookups).note, '');
+});
+
+test('transfer model carries the note of its first half', () => {
+  const entry = onlyEntry(transfer({ note: 'ahorro' }));
+  assert.equal(entry.kind, 'transfer');
+  assert.equal(movementLineModel(entry, lookups).note, 'ahorro');
+  // Halves with different notes: the first half (the outgoing one) wins.
+  const [outgoing, incoming] = transfer({ note: 'out' });
+  const mixed = onlyEntry([outgoing, { ...incoming, note: 'in' }]);
+  assert.equal(mixed.halves[0], outgoing);
+  assert.equal(movementLineModel(mixed, lookups).note, 'out');
+});
+
+test('loose transfer half keeps its own note', () => {
+  const [, incoming] = transfer({ note: 'suelta' });
+  assert.equal(movementLineModel(onlyEntry([incoming]), lookups).note, 'suelta');
+});
+
+// Minimal fake DOM, installed only while a test runs, to see whether
+// movementLine passes the note on to receiptLine.
+function fakeElement(tag) {
+  return {
+    tag, className: '', textContent: '', href: '', children: [],
+    appendChild(child) { this.children.push(child); return child; },
+  };
+}
+function withFakeDocument(fn) {
+  globalThis.document = { createElement: fakeElement };
+  try {
+    return fn();
+  } finally {
+    delete globalThis.document;
+  }
+}
+const noteOf = (line) => line.children.find((c) => c.className === 'receipt-label').children.find((c) => c.className === 'receipt-note');
+
+test('movementLine shows the note only with withNote', () => {
+  const entry = onlyEntry([expense({ note: 'cena' })]);
+  withFakeDocument(() => {
+    const plain = movementLine(entry, lookups);
+    assert.equal(noteOf(plain), undefined);
+    const explicitOff = movementLine(entry, lookups, { withNote: false });
+    assert.equal(noteOf(explicitOff), undefined);
+    const withNote = movementLine(entry, lookups, { withNote: true, withAccount: true });
+    const note = noteOf(withNote);
+    assert.equal(note.tag, 'small');
+    assert.equal(note.textContent, ' cena');
+    const label = withNote.children.find((c) => c.className === 'receipt-label');
+    assert.equal(label.textContent, '20/10  🛒 Supermercado · 🏦 Abanca');
+    const amount = withNote.children.find((c) => c.className.startsWith('receipt-amount'));
+    assert.equal(amount.textContent, '−42,50 €');
+    assert.equal(amount.className, 'receipt-amount amount-expense');
+  });
+});
+
+test('movementLine with withNote and an empty note adds no note element', () => {
+  withFakeDocument(() => {
+    assert.equal(noteOf(movementLine(onlyEntry([expense()]), lookups, { withNote: true })), undefined);
+  });
+});
+
+test('movementLine with withNote shows a transfer note', () => {
+  withFakeDocument(() => {
+    const line = movementLine(onlyEntry(transfer({ note: 'ahorro' })), lookups, { withNote: true });
+    assert.equal(noteOf(line).textContent, ' ahorro');
+  });
+  assert.equal(typeof globalThis.document, 'undefined');
 });
