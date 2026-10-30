@@ -38,12 +38,17 @@ function fillAccounts(select, accounts) {
   }
 }
 
-// The accounts of the other books, one group per book.
+// The accounts of the other books, one group per book. Each one also says
+// its book ("🏦 Abanca · Casa do medio"): the iPhone picker barely shows
+// group names, and two books may have accounts with the same name.
 function fillOtherBooks(select, otherBooks) {
   for (const other of otherBooks) {
     const group = document.createElement('optgroup');
     group.label = other.name;
     fillAccounts(group, activeOnly(other.book.accounts));
+    for (const option of group.children) {
+      option.textContent = es.add.otherBookAccount.replace('{account}', option.textContent).replace('{book}', other.name);
+    }
     select.appendChild(group);
   }
 }
