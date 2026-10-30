@@ -123,6 +123,7 @@ Decidido el 2026-10-29: empezar el libro personal con el histórico real (import
 |---|---|---|---|
 | 16 | Importar y descargar los datos | Hecha (2026-10-29) | Libro personal real importado y cuadrado; plantilla e importar en Ajustes sin probar en iPhone |
 | 17 | Varios libros | Pendiente | 17a: crear, cambiar y renombrar libros, abrir en Añadir. 17b: transferir a otro libro con una categoría en cada lado |
+| 20 | Experiencia: pantallas más simples | Pendiente | Definida pantalla a pantalla con bocetos; en cuatro partes (20a Añadir, 20b Historial, 20c Libros/Cuentas/Categorías, 20d Ajustes/INICIO, 20e Análisis). Antes de la 18 |
 | 18 | Libro compartido | Pendiente | Personas por movimiento, compartir con la pareja y abrirlo desde su app (Picker, clave nueva restringida) |
 | 19 | Importar la reforma | Pendiente | El Excel de la reforma a «Casa do medio»; el Excel queda en Drive como copia |
 
