@@ -45,7 +45,7 @@ cartos-fase0/
 │   ├── screens/          (una pantalla por archivo)
 │   │   ├── login.js, connect.js, status.js, onboarding.js, import.js, books.js, book-card.js
 │   │   ├── dashboard.js, addMovement.js, history.js, analysis.js
-│   │   └── settings.js, accounts.js, account-card.js, categories.js, category-card.js, diagnostics.js
+│   │   └── settings.js, data.js, theme.js, accounts.js, account-card.js, categories.js, category-card.js, diagnostics.js
 │   │
 │   └── ui/               (piezas compartidas; no tocan el DOM al importarse)
 │       ├── router.js     (tabla de pantallas y decisión de ruta)

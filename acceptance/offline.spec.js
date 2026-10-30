@@ -13,6 +13,7 @@ test('a movement saved offline waits, then goes up once without duplicates', asy
   await app.addMovement({ amount: '3', category: 'Supermercado' });
 
   await expect(page.locator('.dashboard-notice')).toContainText('1 movimiento pendiente');
+  await app.reveal();
   await expect(page.locator('.receipt-total-amount')).toHaveText('2.471,51 €');
   expect(google.writes()).toEqual([]);
 
@@ -46,6 +47,7 @@ test('the app opens offline from the Service Worker cache with the device copy',
   await page.evaluate(() => navigator.serviceWorker.ready);
   await goOffline(context, page, true);
   await page.reload();
+  await app.reveal();
   await expect(page.locator('.receipt-total-amount')).toHaveText('2.474,51 €');
   await expect(page.locator('.dashboard-notice')).toContainText('Sin conexión');
 });

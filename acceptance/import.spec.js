@@ -42,6 +42,7 @@ test('a file is previewed, imported into a new book and the Dashboard adds up', 
   expect(google.calls.filter((call) => call.op !== 'drive.list')).toEqual([]);
 
   await page.click('.import-confirm');
+  await app.reveal();
   await expect(page.locator('.receipt-total-amount')).toHaveText('7.479,50 €');
   await app.settle();
 

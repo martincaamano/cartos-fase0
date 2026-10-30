@@ -29,6 +29,7 @@ test('opening the app shows Añadir; INICIO stays in the bar', async ({ page, ap
   // A single book: no book name on top.
   await expect(page.locator('.book-banner')).toHaveCount(0);
   await page.click('.navbar-item >> text=INICIO');
+  await app.reveal();
   await expect(page.locator('.receipt-total-amount')).toHaveText('2.474,51 €');
 });
 
@@ -36,7 +37,9 @@ test('a new book has its own accounts and total, and the personal one is untouch
   await createBook(page, app, { name: 'Casa do medio', account: 'Cuenta común', balance: '100' });
 
   expect(new URL(page.url()).hash).toBe('#/');
+  await app.reveal();
   await expect(page.locator('.receipt-total-amount')).toHaveText('100,00 €');
+  await app.reveal();
   expect(await app.lines('.receipt-accounts')).toEqual([['🏦 Cuenta común', '100,00 €']]);
 
   const create = google.calls.find((call) => call.op === 'drive.create');
@@ -47,6 +50,7 @@ test('a new book has its own accounts and total, and the personal one is untouch
   expect(rows.Categories.length).toBeGreaterThan(10);
 
   await openBook(page, app, 'Personal');
+  await app.reveal();
   await expect(page.locator('.receipt-total-amount')).toHaveText('2.474,51 €');
   expect(google.rows.Accounts).toHaveLength(3);
 
@@ -89,8 +93,10 @@ test('a change saved offline in one book is uploaded with the other book open', 
 
   await context.setOffline(true);
   await app.addMovement({ amount: '120', category: 'Hogar', note: 'pintura' });
+  await app.reveal();
   await expect(page.locator('.receipt-total-amount')).toHaveText('380,00 €');
   await openBook(page, app, 'Personal');
+  await app.reveal();
   await expect(page.locator('.receipt-total-amount')).toHaveText('2.474,51 €');
   expect(google.movements(casa)).toEqual([]);
 
@@ -131,6 +137,7 @@ test('a transfer to another book is an expense here and an income there', async 
   await expect(page.locator('.only-cross')).toBeHidden();
 
   await transferToCasa(page, app, { amount: '300', expense: '🍽️ Restaurantes', income: '💰 Otros ingresos', note: 'Aportación' });
+  await app.reveal();
   await expect(page.locator('.receipt-total-amount')).toHaveText('2.174,51 €');
 
   const [here] = google.movements().slice(-1);
@@ -143,6 +150,7 @@ test('a transfer to another book is an expense here and an income there', async 
     .toEqual(['income', 300, '', 'Aportación', 'Otros ingresos']);
 
   await openBook(page, app, 'Casa do medio');
+  await app.reveal();
   await expect(page.locator('.receipt-total-amount')).toHaveText('300,00 €');
 });
 

@@ -57,8 +57,9 @@ function filterChip(text, on, onTap) {
 }
 
 // book: movements already include the pending ones (mergePending).
+// params: { account } opens it filtered by that account (from INICIO).
 // storage: where the view chosen last is remembered.
-export function renderHistory(root, { book, today = new Date(), storage = globalThis.localStorage }) {
+export function renderHistory(root, { book, params = {}, today = new Date(), storage = globalThis.localStorage }) {
   const t = es.history;
   root.innerHTML = `
     <main class="screen screen-form screen-with-navbar screen-history">
@@ -93,7 +94,7 @@ export function renderHistory(root, { book, today = new Date(), storage = global
   const state = {
     view: loadHistoryView(storage),
     range: null,
-    accountIds: new Set(),
+    accountIds: new Set(book.accounts.some((a) => a.id === params.account) ? [params.account] : []),
     categoryIds: new Set(),
     open: new Set(),
   };

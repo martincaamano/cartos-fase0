@@ -34,12 +34,14 @@ const root = () => document.getElementById('app');
 // The screen on view: a route, or "dashboard:<section>" inside the app.
 let current = { key: null, section: null };
 
-function showSection({ section, params }, offline) {
+// repaint: the same screen again with fresh data (not a new visit).
+function showSection({ section, params }, offline, repaint) {
   VIEWS[section]({
     root: root(),
     state,
     params,
     offline,
+    repaint,
     redirect: (hash) => location.replace(hash),
     // After the Add form saved: count it and upload, then go to `hash`.
     saved: (hash) => (movements) => {
@@ -61,6 +63,7 @@ function show({ force = false } = {}) {
   const section = route === ROUTES.DASHBOARD ? parseHash(location.hash) : null;
   const key = section ? `${route}:${section.section}` : route;
   if (key === current.key && !force) return;
+  const repaint = key === current.key;
   current = { key, section: section?.section ?? null };
 
   switch (route) {
@@ -81,7 +84,7 @@ function show({ force = false } = {}) {
       renderOnboarding(root(), { fileId: state.fileId, onDone: state.setUp });
       break;
     default:
-      showSection(section, offline);
+      showSection(section, offline, repaint);
   }
 }
 
