@@ -19,10 +19,20 @@ import { renderCategories } from './screens/categories.js';
 import { renderAccounts } from './screens/accounts.js';
 import { renderImport } from './screens/import.js';
 import { renderBooks } from './screens/books.js';
+import { renderBookEdit, renderBookNew } from './screens/book-card.js';
+import { renderAccountCard } from './screens/account-card.js';
+import { renderCategoryCard } from './screens/category-card.js';
 
 // The name of the book open, shown on top of INICIO and Añadir when there
 // is more than one book.
 const bookName = (state) => (state.books.length > 1 ? state.bookInfo?.name ?? '' : '');
+
+// After a card saved to the Sheet: back to its list, which repaints once
+// the book is read again.
+const savedTo = (state, redirect, hash) => () => {
+  redirect(hash);
+  state.reloadBook();
+};
 
 // The other books with a copy on the device: where a transfer can go.
 const otherBooks = (state) => state.books
@@ -61,11 +71,31 @@ export const VIEWS = Object.freeze({
   [SECTIONS.SETTINGS]: ({ root, state, signOut }) =>
     renderSettings(root, { user: getCurrentUser(), book: state.book, pendingCount: state.pendingCount, onSignOut: signOut }),
 
-  [SECTIONS.CATEGORIES]: ({ root, state }) =>
-    renderCategories(root, { book: state.savedBook, fileId: state.fileId, onChanged: state.reloadBook }),
+  [SECTIONS.CATEGORIES]: ({ root, state }) => renderCategories(root, { book: state.book }),
 
-  [SECTIONS.ACCOUNTS]: ({ root, state }) =>
-    renderAccounts(root, { book: state.book, fileId: state.fileId, onChanged: state.reloadBook }),
+  [SECTIONS.CATEGORY_NEW]: ({ root, state, redirect }) =>
+    renderCategoryCard(root, { book: state.book, fileId: state.fileId, onDone: savedTo(state, redirect, SECTION_HASH.categories) }),
+
+  [SECTIONS.CATEGORY_EDIT]: ({ root, state, params, redirect }) => {
+    const category = state.book.categories.find((item) => item.id === params.id && !item.deleted);
+    if (!category) return redirect(SECTION_HASH.categories);
+    return renderCategoryCard(root, {
+      book: state.book, fileId: state.fileId, category, onDone: savedTo(state, redirect, SECTION_HASH.categories),
+    });
+  },
+
+  [SECTIONS.ACCOUNTS]: ({ root, state }) => renderAccounts(root, { book: state.book }),
+
+  [SECTIONS.ACCOUNT_NEW]: ({ root, state, redirect }) =>
+    renderAccountCard(root, { book: state.book, fileId: state.fileId, onDone: savedTo(state, redirect, SECTION_HASH.accounts) }),
+
+  [SECTIONS.ACCOUNT_EDIT]: ({ root, state, params, redirect }) => {
+    const account = state.book.accounts.find((item) => item.id === params.id && !item.deleted);
+    if (!account) return redirect(SECTION_HASH.accounts);
+    return renderAccountCard(root, {
+      book: state.book, fileId: state.fileId, account, onDone: savedTo(state, redirect, SECTION_HASH.accounts),
+    });
+  },
 
   [SECTIONS.DIAGNOSTICS]: ({ root }) => renderDiagnostics(root),
 
@@ -87,10 +117,22 @@ export const VIEWS = Object.freeze({
       state.switchBook(fileId);
       location.hash = SECTION_HASH.home;
     },
+  }),
+
+  [SECTIONS.BOOK_NEW]: ({ root, state }) => renderBookNew(root, {
+    books: state.books,
     onCreated: (result) => {
       state.setUp(result);
       location.hash = SECTION_HASH.home;
     },
-    onRenamed: state.renamed,
+  }),
+
+  [SECTIONS.BOOK_EDIT]: ({ root, state, redirect }) => renderBookEdit(root, {
+    books: state.books,
+    fileId: state.fileId,
+    onRenamed: (books) => {
+      state.renamed(books);
+      redirect(SECTION_HASH.books);
+    },
   }),
 });

@@ -37,6 +37,41 @@
   letter-spacing: var(--tracking-wide);
 }
 
+/* Lists that open cards (Libros, Cuentas, Categorías) and the cards */
+.add-row,
+.account-line,
+.category-line,
+.book-open {
+  color: inherit;
+  text-decoration: none;
+}
+
+.add-row .receipt-label {
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+
+.card-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.card-remove {
+  color: var(--color-expense);
+}
+
+.screen-card .form-submit {
+  position: sticky;
+  bottom: calc(env(safe-area-inset-bottom) + var(--navbar-room) + var(--space-2));
+}
+
+.emoji-other {
+  width: auto;
+  padding: 0 var(--space-2);
+  font-size: var(--text-sm);
+}
+
 /* Ajustes */
 .book-other {
   cursor: pointer;

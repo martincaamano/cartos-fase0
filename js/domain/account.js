@@ -36,3 +36,16 @@ export function validateAccount(account, existing = []) {
   }
   return errors;
 }
+
+// A new version of a saved account (its card in Ajustes → Cuentas): same id
+// and creation time; name, emoji and initial balance change. Validate the
+// result with validateAccount.
+export function editAccount(original, { name, emoji = '', initialBalance }, now = new Date()) {
+  return {
+    ...original,
+    name: String(name ?? '').trim(),
+    emoji: String(emoji ?? '').trim(),
+    initialBalance,
+    updatedAt: now.toISOString(),
+  };
+}

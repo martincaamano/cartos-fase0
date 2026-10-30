@@ -6,9 +6,9 @@ import { createSpreadsheetFile } from './drive.js';
 import { ValidationError } from './errors.js';
 import { append, batchClear, batchGet, batchUpdate, batchUpdateValues } from './sheets.js';
 import { findRowById, HEADERS, SHEET_NAMES, toRow, rowsToObjects } from './rows.js';
-import { createAccount, validateAccount } from '../domain/account.js';
+import { createAccount, editAccount, validateAccount } from '../domain/account.js';
 import {
-  buildDefaultCategories, canRemoveCategory, createCategory, validateCategory,
+  buildDefaultCategories, canRemoveCategory, createCategory, editCategory, validateCategory, validateCategoryEdit,
 } from '../domain/category.js';
 
 // A new spreadsheet always starts with one tab whose sheetId is 0.
@@ -84,6 +84,36 @@ export async function addCategory(fileId, fields, existing) {
 }
 
 const columnLetter = (sheet, column) => String.fromCharCode(65 + HEADERS[sheet].indexOf(column));
+const lastColumn = (sheet) => String.fromCharCode(64 + HEADERS[sheet].length);
+
+// Writes a whole row over the one with the same id, found by its id (never
+// by a remembered row number), RAW.
+async function writeRowById(fileId, sheet, item) {
+  const [idColumn] = await batchGet(fileId, [`${sheet}!A:A`]);
+  const row = findRowById(idColumn, item.id);
+  if (row === null) throw new ValidationError([sheet === 'Accounts' ? 'account_unknown' : 'category_unknown']);
+  await batchUpdateValues(fileId, [{ range: `${sheet}!A${row}:${lastColumn(sheet)}${row}`, values: [toRow(sheet, item)] }]);
+}
+
+// Ajustes → Cuentas, the card of an account: name, emoji and initial
+// balance. existing: the book's accounts, to reject a repeated name.
+export async function updateAccount(fileId, original, fields, existing = []) {
+  const account = editAccount(original, fields);
+  const errors = validateAccount(account, existing);
+  if (errors.length) throw new ValidationError(errors);
+  await writeRowById(fileId, 'Accounts', account);
+  return account;
+}
+
+// Ajustes → Categorías, the card of a category: name, emoji and kind (the
+// kind only while no movement uses it). book: { categories, movements }.
+export async function updateCategory(fileId, original, fields, book) {
+  const category = editCategory(original, fields);
+  const errors = validateCategoryEdit(category, original, book);
+  if (errors.length) throw new ValidationError(errors);
+  await writeRowById(fileId, 'Categories', category);
+  return category;
+}
 
 // Logical delete: finds the row by id (never by a remembered row number)
 // and sets updatedAt and deleted. The row itself is never removed.

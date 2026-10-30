@@ -1,130 +1,69 @@
-// Categories (inside Settings): the book's categories by type, removing
-// own and default ones (never Transferencia) and creating new ones. Changes
-// go straight to the Sheet, so they need a connection.
+// Categories (inside Settings, tarea 20c): the book's categories by type,
+// most used first, each one opening its card, and "+ Nueva categoría" at
+// the end. The less used expenses fold behind "+ N más". Transferencia is
+// fixed and has no card.
 
 import { es } from '../../i18n/es.js';
-import { canRemoveCategory, createCategory, validateCategory } from '../domain/category.js';
-import { activeOnly } from '../domain/active.js';
-import { addCategory, removeCategory } from '../data/book.js';
-import { fillTexts, setupEmojiPicker } from '../ui/components.js';
+import { rankCategories, TRANSFER_CATEGORY_ID } from '../domain/category.js';
 import { labelOf } from '../ui/format.js';
 import { receiptLine } from '../ui/receipt.js';
+import { fillTexts } from '../ui/components.js';
 import { SECTION_HASH } from '../ui/router.js';
 import { renderNavbar } from '../ui/navbar.js';
 
-const SUGGESTED_EMOJIS = ['🛍️', '☕', '🐶', '🎁', '✈️', '🏋️'];
+// Expenses shown before "+ N más".
+const SHOWN_EXPENSES = 8;
 
-// Removable categories end with "Quitar"; Transferencia says it is fixed.
-function categoryLine(category, { onRemove, t }) {
-  let action;
-  if (canRemoveCategory(category)) {
-    action = document.createElement('button');
-    action.type = 'button';
-    action.className = 'link-button';
-    action.textContent = t.remove;
-    action.addEventListener('click', () => onRemove(category));
-  } else {
-    action = document.createElement('span');
-    action.className = 'text-muted';
-    action.textContent = t.fixed;
-  }
-  return receiptLine(labelOf(category), action);
-}
+const cardLine = (category) => receiptLine(labelOf(category), '›', {
+  href: `${SECTION_HASH.categoryEdit}?id=${encodeURIComponent(category.id)}`,
+  className: 'category-line',
+});
 
-export function renderCategories(root, { book, fileId, onChanged }) {
+export function renderCategories(root, { book }) {
   const t = es.categoryAdmin;
   root.innerHTML = `
     <main class="screen screen-form screen-with-navbar">
       <a class="link-button back-link" data-text="back"></a>
       <h1 class="form-title" data-text="title"></h1>
-      <p class="form-error categories-error" role="alert"></p>
       <h2 class="receipt-heading" data-text="expenses"></h2>
       <ul class="receipt-list list-expense"></ul>
       <h2 class="receipt-heading" data-text="incomes"></h2>
       <ul class="receipt-list list-income"></ul>
-      <h2 class="receipt-heading" data-text="newTitle"></h2>
-      <form class="form" novalidate>
-        <label class="field">
-          <span class="field-label" data-text="name"></span>
-          <input class="field-input" name="name" maxlength="30" autocomplete="off">
-        </label>
-        <div class="field">
-          <span class="field-label" data-text="emoji"></span>
-          <div class="emoji-row"></div>
-          <input class="field-input emoji-input" name="emoji" maxlength="8">
-        </div>
-        <div class="field">
-          <span class="field-label" data-text="kind"></span>
-          <div class="chip-row kind-row"></div>
-        </div>
-        <p class="form-error form-error-new" role="alert"></p>
-        <button type="submit" class="btn-primary form-submit"></button>
-      </form>
+      <ul class="receipt-list list-new"></ul>
     </main>
   `;
   fillTexts(root, t);
-  const back = root.querySelector('.back-link');
-  back.href = SECTION_HASH.settings;
-  const listError = root.querySelector('.categories-error');
+  root.querySelector('.back-link').href = SECTION_HASH.settings;
 
-  const fail = (target, err) => {
-    target.textContent = !navigator.onLine ? t.offline : t.failed;
-    console.warn('Category change failed', err);
-  };
+  const { categories, movements } = book;
+  // A category of both kinds is listed once, with the expenses.
+  const expenses = rankCategories(categories, movements, 'expense');
+  const incomes = rankCategories(categories, movements, 'income').filter((c) => c.kind !== 'both');
 
-  const onRemove = (category) => {
-    if (!navigator.onLine) { listError.textContent = t.offline; return; }
-    if (!window.confirm(t.confirmRemove.replace('{name}', category.name))) return;
-    removeCategory(fileId, category).then(onChanged).catch((err) => fail(listError, err));
-  };
-
-  const active = activeOnly(book.categories);
-  for (const category of active) {
-    const list = root.querySelector(category.kind === 'income' ? '.list-income' : '.list-expense');
-    list.appendChild(categoryLine(category, { onRemove, t }));
+  const expenseList = root.querySelector('.list-expense');
+  expenseList.append(...expenses.slice(0, SHOWN_EXPENSES).map(cardLine));
+  if (expenses.length > SHOWN_EXPENSES) {
+    const rest = expenses.slice(SHOWN_EXPENSES);
+    const more = document.createElement('button');
+    more.type = 'button';
+    more.className = 'link-button category-more-link';
+    more.textContent = t.more.replace('{n}', rest.length);
+    const item = receiptLine('', more, { className: 'more-row' });
+    more.addEventListener('click', () => item.replaceWith(...rest.map(cardLine)));
+    expenseList.appendChild(item);
   }
 
-  const form = root.querySelector('form');
-  const error = root.querySelector('.form-error-new');
-  const submit = root.querySelector('.form-submit');
-  submit.textContent = t.create;
-  setupEmojiPicker(root.querySelector('.emoji-row'), form.elements.emoji, SUGGESTED_EMOJIS);
-
-  let kind = 'expense';
-  const kindRow = root.querySelector('.kind-row');
-  for (const [value, text] of [['expense', es.add.expense], ['income', es.add.income]]) {
-    const chip = document.createElement('button');
-    chip.type = 'button';
-    chip.className = 'chip';
-    chip.dataset.kind = value;
-    chip.textContent = text;
-    chip.addEventListener('click', () => {
-      kind = value;
-      for (const other of kindRow.children) other.classList.toggle('is-selected', other.dataset.kind === kind);
-    });
-    kindRow.appendChild(chip);
+  const incomeList = root.querySelector('.list-income');
+  incomeList.append(...incomes.map(cardLine));
+  const transfer = categories.find((c) => c.id === TRANSFER_CATEGORY_ID && !c.deleted);
+  if (transfer) {
+    const fixed = document.createElement('span');
+    fixed.className = 'text-muted';
+    fixed.textContent = t.fixed;
+    incomeList.appendChild(receiptLine(labelOf(transfer), fixed));
   }
-  kindRow.firstElementChild.classList.add('is-selected');
 
-  form.addEventListener('submit', (event) => {
-    event.preventDefault();
-    const fields = { name: form.elements.name.value, emoji: form.elements.emoji.value, kind };
-    const errors = validateCategory(createCategory(fields), book.categories);
-    if (errors.includes('name_required')) { error.textContent = t.nameRequired; return; }
-    if (errors.includes('name_taken')) { error.textContent = t.nameTaken; return; }
-    if (!navigator.onLine) { error.textContent = t.offline; return; }
-
-    error.textContent = '';
-    submit.disabled = true;
-    submit.textContent = t.creating;
-    addCategory(fileId, fields, book.categories)
-      .then(onChanged)
-      .catch((err) => {
-        fail(error, err);
-        submit.disabled = false;
-        submit.textContent = t.create;
-      });
-  });
+  root.querySelector('.list-new').appendChild(receiptLine(t.newLink, '', { href: SECTION_HASH.categoryNew, className: 'add-row' }));
 
   renderNavbar(root, { active: 'settings' });
 }
