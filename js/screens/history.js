@@ -57,7 +57,8 @@ function filterChip(text, on, onTap) {
 }
 
 // book: movements already include the pending ones (mergePending).
-// params: { account } opens it filtered by that account (from INICIO).
+// params: { account } opens it filtered by that account (from INICIO);
+// { month } by that month (from Análisis).
 // storage: where the view chosen last is remembered.
 export function renderHistory(root, { book, params = {}, today = new Date(), storage = globalThis.localStorage }) {
   const t = es.history;
@@ -93,7 +94,7 @@ export function renderHistory(root, { book, params = {}, today = new Date(), sto
   // What is on screen. Filters start empty every time (tarea 20).
   const state = {
     view: loadHistoryView(storage),
-    range: null,
+    range: /^\d{4}-\d{2}$/.test(params.month ?? '') ? { from: params.month, to: params.month, open: false } : null,
     accountIds: new Set(book.accounts.some((a) => a.id === params.account) ? [params.account] : []),
     categoryIds: new Set(),
     open: new Set(),

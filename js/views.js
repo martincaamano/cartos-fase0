@@ -84,7 +84,7 @@ export const VIEWS = Object.freeze({
       onSaved: saved(SECTION_HASH.home),
     }),
 
-  [SECTIONS.ANALYSIS]: ({ root, state, params }) => renderAnalysis(root, { book: state.book, params }),
+  [SECTIONS.ANALYSIS]: ({ root, state, params }) => renderAnalysis(root, { book: state.book, fileId: state.fileId, params }),
 
   [SECTIONS.SETTINGS]: ({ root, state, signOut }) => renderSettings(root, {
     user: getCurrentUser(),
