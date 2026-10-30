@@ -1,6 +1,8 @@
 // Add: tabs Gasto / Ingreso / Transferencia. Validation comes from domain/;
 // movements go to the outbox and are uploaded to the Sheet in the
-// background. A transfer has no category: the app sets Transferencia.
+// background. A transfer inside the book has no category: the app sets
+// Transferencia. A transfer to an account of another book is an expense
+// here and an income there, each with a category the user picks.
 // The same form edits or deletes a saved entry from the History: its type
 // is fixed, and a transfer changes both halves together.
 
@@ -8,7 +10,10 @@ import { es } from '../../i18n/es.js';
 import { parseAmountInput } from '../domain/money.js';
 import { rankCategories } from '../domain/category.js';
 import { activeOnly } from '../domain/active.js';
-import { queueDelete, queueEdit, queueMovement, queueTransfer, queueTransferEdit } from '../data/movements.js';
+import {
+  queueCrossBookTransfer, queueDelete, queueEdit, queueMovement, queueTransfer, queueTransferEdit,
+} from '../data/movements.js';
+import { loadTransferCategories, saveTransferCategories } from '../storage/transfer-categories.js';
 import { showBookBanner, createAmountInput, fillTexts, renderCategoryPicker, renderDatePicker } from '../ui/components.js';
 import { formatAmountInput, labelOf } from '../ui/format.js';
 import { SECTION_HASH } from '../ui/router.js';
@@ -33,10 +38,27 @@ function fillAccounts(select, accounts) {
   }
 }
 
+// The accounts of the other books, one group per book.
+function fillOtherBooks(select, otherBooks) {
+  for (const other of otherBooks) {
+    const group = document.createElement('optgroup');
+    group.label = other.name;
+    fillAccounts(group, activeOnly(other.book.accounts));
+    select.appendChild(group);
+  }
+}
+
 // entry: a History entry to edit (historyEntries / findEntry), or null to
-// add a new movement. onSaved gets what went to the outbox. bookName:
-// shown on top when there is more than one book.
-export function renderAddMovement(root, { book, bookName = '', fileId, params = {}, entry = null, today = new Date(), onSaved }) {
+// add a new movement. onSaved gets what went to this book's outbox.
+// bookName: shown on top when there is more than one book.
+// otherBooks: [{ fileId, name, book }] the other books with a copy on the
+// device, offered as transfer destinations (not when editing).
+// storage: where the categories of the last transfer to another book are
+// remembered.
+export function renderAddMovement(root, {
+  book, bookName = '', fileId, params = {}, entry = null, today = new Date(), onSaved,
+  otherBooks = [], storage = globalThis.localStorage,
+}) {
   const t = es.add;
   root.innerHTML = `
     <main class="screen screen-form screen-with-navbar">
@@ -66,6 +88,17 @@ export function renderAddMovement(root, { book, bookName = '', fileId, params = 
         <div class="field only-single">
           <span class="field-label" data-text="category"></span>
           <div class="category-picker"></div>
+        </div>
+        <div class="only-cross" hidden>
+          <p class="text-muted form-note cross-note"></p>
+          <div class="field">
+            <span class="field-label cross-expense-label"></span>
+            <div class="category-picker cross-expense"></div>
+          </div>
+          <div class="field">
+            <span class="field-label cross-income-label"></span>
+            <div class="category-picker cross-income"></div>
+          </div>
         </div>
         <div class="field">
           <span class="field-label" data-text="date"></span>
@@ -100,7 +133,14 @@ export function renderAddMovement(root, { book, bookName = '', fileId, params = 
   const accounts = activeOnly(book.accounts);
   const { account: accountSelect, from: fromSelect, to: toSelect } = form.elements;
   for (const select of [accountSelect, fromSelect, toSelect]) fillAccounts(select, accounts);
+  // Other books are offered only for a new transfer.
+  const destinations = entry ? [] : otherBooks.filter((other) => activeOnly(other.book.accounts).length > 0);
+  fillOtherBooks(toSelect, destinations);
+  const otherBookOf = (accountId) =>
+    destinations.find((other) => other.book.accounts.some((account) => account.id === accountId)) ?? null;
+  const otherAccounts = destinations.reduce((count, other) => count + activeOnly(other.book.accounts).length, 0);
   if (accounts.length > 1) toSelect.value = accounts[1].id;
+  else if (otherAccounts > 0) toSelect.selectedIndex = accounts.length;
 
   // What is being edited: one movement, or both halves of a transfer.
   const original = entry?.kind === 'movement' ? entry.movement : null;
@@ -110,6 +150,9 @@ export function renderAddMovement(root, { book, bookName = '', fileId, params = 
     type: TYPES.includes(initialType) ? initialType : 'expense',
     categoryId: null,
     date: null,
+    // Transfer to another book: the category on each side.
+    expenseCategoryId: null,
+    incomeCategoryId: null,
   };
 
   const categoryChoices = () => {
@@ -131,6 +174,37 @@ export function renderAddMovement(root, { book, bookName = '', fileId, params = 
     });
   };
 
+  const pickerTexts = { seeAll: t.seeAll, search: t.search, empty: t.noMatches };
+  const cross = root.querySelector('.only-cross');
+  // Shown when the destination of a transfer is in another book.
+  const paintCross = () => {
+    const other = state.type === 'transfer' ? otherBookOf(toSelect.value) : null;
+    cross.hidden = !other;
+    if (!other) return;
+    const remembered = loadTransferCategories(storage, toSelect.value);
+    const expenses = rankCategories(book.categories, book.movements, 'expense');
+    const incomes = rankCategories(other.book.categories, other.book.movements, 'income');
+    const pick = (list, id) => (list.some((category) => category.id === id) ? id : null);
+    state.expenseCategoryId = pick(expenses, remembered?.expenseCategoryId);
+    state.incomeCategoryId = pick(incomes, remembered?.incomeCategoryId);
+    root.querySelector('.cross-note').textContent = t.crossNote.replace('{book}', other.name);
+    root.querySelector('.cross-expense-label').textContent = t.crossExpense.replace('{book}', bookName);
+    root.querySelector('.cross-income-label').textContent = t.crossIncome.replace('{book}', other.name);
+    renderCategoryPicker(root.querySelector('.cross-expense'), {
+      categories: expenses,
+      selectedId: state.expenseCategoryId,
+      onSelect: (category) => { state.expenseCategoryId = category.id; },
+      texts: pickerTexts,
+    });
+    renderCategoryPicker(root.querySelector('.cross-income'), {
+      categories: incomes,
+      selectedId: state.incomeCategoryId,
+      onSelect: (category) => { state.incomeCategoryId = category.id; },
+      texts: pickerTexts,
+    });
+  };
+  toSelect.addEventListener('change', paintCross);
+
   const tabs = root.querySelector('.tabs');
   const applyType = () => {
     const isTransfer = state.type === 'transfer';
@@ -141,11 +215,12 @@ export function renderAddMovement(root, { book, bookName = '', fileId, params = 
     }
     for (const field of root.querySelectorAll('.only-single')) field.hidden = isTransfer;
     for (const field of root.querySelectorAll('.only-transfer')) field.hidden = !isTransfer;
-    const cannotTransfer = isTransfer && accounts.length < 2;
+    const cannotTransfer = isTransfer && accounts.length + otherAccounts < 2;
     blocked.hidden = !cannotTransfer;
     form.hidden = cannotTransfer;
     error.textContent = '';
     paintCategories();
+    paintCross();
   };
   for (const type of TYPES) {
     const tab = document.createElement('button');
@@ -202,8 +277,18 @@ export function renderAddMovement(root, { book, bookName = '', fileId, params = 
     };
     const transfer = { ...common, fromAccountId: fromSelect.value, toAccountId: toSelect.value };
     const single = { ...common, accountId: accountSelect.value, type: state.type, categoryId: state.categoryId };
+    const other = state.type === 'transfer' ? otherBookOf(toSelect.value) : null;
     let saving;
-    if (halves) saving = queueTransferEdit(fileId, halves, transfer, book);
+    if (other) {
+      const categories = { expenseCategoryId: state.expenseCategoryId, incomeCategoryId: state.incomeCategoryId };
+      // Only the half of this book is counted here; the other one waits in
+      // its own book's outbox and is uploaded with it.
+      saving = queueCrossBookTransfer({ fileId, book }, other, { ...transfer, ...categories })
+        .then(([outgoing]) => {
+          saveTransferCategories(storage, transfer.toAccountId, categories);
+          return outgoing;
+        });
+    } else if (halves) saving = queueTransferEdit(fileId, halves, transfer, book);
     else if (original) saving = queueEdit(fileId, original, single, book);
     else if (state.type === 'transfer') saving = queueTransfer(fileId, transfer, book);
     else saving = queueMovement(fileId, single, book);

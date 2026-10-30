@@ -35,6 +35,23 @@ export function buildTransfer({ fromAccountId, toAccountId, amount, date, note =
   ];
 }
 
+// A transfer to an account of another book (architecture §6): two
+// independent movements, an expense here and an income there, with no
+// transferId, each with a category of its own book (e.g. "Casa do medio"
+// here, "Aportación Martín" there). fields: { fromAccountId, toAccountId,
+// amount, date, note, expenseCategoryId, incomeCategoryId }. Returns
+// [outgoing, incoming]; validate each with validateMovement against its book.
+export function buildCrossBookTransfer(fields, { userSub = '', ...deps } = {}) {
+  const { now, newId } = { ...defaults, ...deps };
+  const at = now();
+  const shared = { amount: fields.amount, date: fields.date, note: fields.note ?? '' };
+  const options = { userSub, now: () => at, newId };
+  return [
+    createMovement({ ...shared, accountId: fields.fromAccountId, type: 'expense', categoryId: fields.expenseCategoryId }, options),
+    createMovement({ ...shared, accountId: fields.toAccountId, type: 'income', categoryId: fields.incomeCategoryId }, options),
+  ];
+}
+
 // halves: [outgoing, incoming] of a saved transfer. Editing or deleting a
 // transfer always changes both rows together (architecture §6). Validate
 // the fields first with validateTransfer.
