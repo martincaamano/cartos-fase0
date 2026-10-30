@@ -6,7 +6,7 @@ import { es } from '../../i18n/es.js';
 import { quickDates } from '../domain/movement.js';
 import { parseAmountInput } from '../domain/money.js';
 import { createAccount, validateAccount } from '../domain/account.js';
-import { formatShortDate } from './format.js';
+import { formatAmountInput, formatShortDate } from './format.js';
 
 // Fills every [data-text="key"] inside root with texts[key].
 export function fillTexts(root, texts) {
@@ -17,10 +17,19 @@ export function fillTexts(root, texts) {
 export const ACCOUNT_EMOJIS = Object.freeze(['🏦', '💶', '💳', '🐷', '💼', '🏠']);
 
 // Row of suggested emojis that fill `input`; typing any other emoji works too.
-export function setupEmojiPicker(row, input, suggestions) {
-  input.value = input.value || suggestions[0];
+export function setupEmojiPicker(row, input, offered) {
+  input.value = input.value || offered[0];
+  // An emoji of its own (a saved one) goes first, in place of the last suggestion.
+  const suggestions = offered.includes(input.value) ? offered : [input.value, ...offered.slice(0, -1)];
+  // "Otro…" shows the field for any other emoji; it stays hidden otherwise.
+  const other = document.createElement('button');
+  other.type = 'button';
+  other.className = 'emoji-option emoji-other';
+  other.textContent = es.emoji.other;
   const markSelected = () => {
-    for (const button of row.children) button.classList.toggle('is-selected', button.textContent === input.value);
+    for (const button of row.children) {
+      button.classList.toggle('is-selected', button === other ? !input.hidden : input.hidden && button.textContent === input.value);
+    }
   };
   for (const suggestion of suggestions) {
     const button = document.createElement('button');
@@ -29,11 +38,19 @@ export function setupEmojiPicker(row, input, suggestions) {
     button.textContent = suggestion;
     button.addEventListener('click', () => {
       input.value = suggestion;
+      input.hidden = true;
       markSelected();
     });
     row.appendChild(button);
   }
-  input.addEventListener('input', markSelected);
+  other.addEventListener('click', () => {
+    input.hidden = false;
+    if (suggestions.includes(input.value)) input.value = '';
+    input.focus();
+    markSelected();
+  });
+  row.appendChild(other);
+  input.hidden = suggestions.includes(input.value);
   markSelected();
 }
 
@@ -79,7 +96,11 @@ export function showBookBanner(main, name) {
 // balanceInvalid and, with needsConnection, offline.
 // check: another problem outside the form (the book name in Ajustes →
 // Libros) as a text, or '' when there is none.
-export function renderAccountForm(container, { existing = [], texts, needsConnection = false, check = () => '', onSubmit }) {
+// account: a saved account to edit (its card): the fields start with its
+// values and its own name does not count as repeated.
+export function renderAccountForm(container, {
+  existing = [], texts, needsConnection = false, check = () => '', account = null, onSubmit,
+}) {
   const form = document.createElement('form');
   form.className = 'form';
   form.noValidate = true;
@@ -109,6 +130,11 @@ export function renderAccountForm(container, { existing = [], texts, needsConnec
   const error = form.querySelector('.form-error');
   const submit = form.querySelector('.form-submit');
   submit.textContent = texts.submit;
+  if (account) {
+    name.value = account.name;
+    emoji.value = account.emoji;
+    balance.value = formatAmountInput(account.initialBalance);
+  }
   setupEmojiPicker(form.querySelector('.emoji-row'), emoji, ACCOUNT_EMOJIS);
 
   form.addEventListener('submit', (event) => {
@@ -118,7 +144,8 @@ export function renderAccountForm(container, { existing = [], texts, needsConnec
       emoji: emoji.value,
       initialBalance: balance.value.trim() === '' ? 0 : parseAmountInput(balance.value),
     };
-    const problem = check() || accountErrorText(validateAccount(createAccount(fields), existing), texts);
+    const others = account ? existing.filter((other) => other.id !== account.id) : existing;
+    const problem = check() || accountErrorText(validateAccount(createAccount(fields), others), texts);
     if (problem) { error.textContent = problem; return; }
     if (needsConnection && !navigator.onLine) { error.textContent = texts.offline; return; }
 

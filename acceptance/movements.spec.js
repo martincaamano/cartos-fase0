@@ -120,7 +120,7 @@ test('after saving, the book is read again by its file, without searching Drive'
   await page.fill('.amount-input', '21');
   await page.click('.form-submit');
   await app.settle();
-  await app.go('#/settings/categories');
+  await app.go('#/settings/categories/new');
   await page.fill('input[name=name]', 'Gimnasio');
   await page.click('.form-submit');
   await app.settle();

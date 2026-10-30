@@ -19,11 +19,17 @@ export const SCREENS = Object.freeze([
   { section: 'diagnostics', path: 'settings/diagnostics' },
   { section: 'import', path: 'settings/import' },
   { section: 'books', path: 'settings/books' },
+  { section: 'bookNew', path: 'settings/books/new' },
+  { section: 'bookEdit', path: 'settings/books/edit' },
+  { section: 'accountNew', path: 'settings/accounts/new' },
+  { section: 'accountEdit', path: 'settings/accounts/edit' },
+  { section: 'categoryNew', path: 'settings/categories/new' },
+  { section: 'categoryEdit', path: 'settings/categories/edit' },
 ].map(Object.freeze));
 
-// SECTIONS.HOME === 'home', SECTIONS.HISTORY === 'history'...
+// SECTIONS.HOME === 'home', SECTIONS.BOOK_NEW === 'bookNew'...
 export const SECTIONS = Object.freeze(
-  Object.fromEntries(SCREENS.map(({ section }) => [section.toUpperCase(), section]))
+  Object.fromEntries(SCREENS.map(({ section }) => [section.replace(/[A-Z]/g, (c) => `_${c}`).toUpperCase(), section]))
 );
 
 export const SECTION_HASH = Object.freeze(

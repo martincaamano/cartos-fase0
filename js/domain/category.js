@@ -78,6 +78,36 @@ export function canRemoveCategory(category) {
   return category.id !== TRANSFER_CATEGORY_ID && !category.deleted;
 }
 
+// Transferencia is fixed: it is neither edited nor removed.
+export const canEditCategory = canRemoveCategory;
+
+// How many active movements use a category.
+export function categoryUses(category, movements) {
+  return movements.filter((movement) => !movement.deleted && movement.categoryId === category.id).length;
+}
+
+// A new version of a saved category (its card in Ajustes → Categorías):
+// same id; name, emoji and kind change. Validate it with validateCategoryEdit.
+export function editCategory(original, { name, emoji = '', kind }, now = new Date()) {
+  return {
+    ...original,
+    name: String(name ?? '').trim(),
+    emoji: String(emoji ?? '').trim(),
+    kind,
+    updatedAt: now.toISOString(),
+  };
+}
+
+// validateCategory, plus: Transferencia is not editable, and the kind only
+// changes while no movement uses the category (they would end up with a
+// category of the other type).
+export function validateCategoryEdit(edited, original, { categories = [], movements = [] } = {}) {
+  if (!canEditCategory(original)) return ['not_editable'];
+  const errors = validateCategory(edited, categories);
+  if (edited.kind !== original.kind && categoryUses(original, movements) > 0) errors.push('kind_in_use');
+  return errors;
+}
+
 // Categories offered for a movement type, most used first; ties keep the
 // book order (defaults first). Transfer is never offered by hand.
 export function rankCategories(categories, movements, type) {

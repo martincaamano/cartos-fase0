@@ -75,13 +75,53 @@ test('the screen table produces exactly the expected hashes, books included', ()
       diagnostics: '#/settings/diagnostics',
       import: '#/settings/import',
       books: '#/settings/books',
+      bookNew: '#/settings/books/new',
+      bookEdit: '#/settings/books/edit',
+      accountNew: '#/settings/accounts/new',
+      accountEdit: '#/settings/accounts/edit',
+      categoryNew: '#/settings/categories/new',
+      categoryEdit: '#/settings/categories/edit',
     }
   );
   assert.deepEqual(parseHash('#/settings/import'), { section: SECTIONS.IMPORT, params: {} });
   assert.deepEqual(parseHash('#/settings/books'), { section: SECTIONS.BOOKS, params: {} });
   assert.deepEqual(parseHash('#/settings/books/'), { section: SECTIONS.BOOKS, params: {} });
   assert.deepEqual(SCREENS.map((screen) => screen.section), Object.keys(SECTION_HASH));
-  for (const section of Object.keys(SECTION_HASH)) assert.equal(SECTIONS[section.toUpperCase()], section);
+});
+
+test('SECTIONS keys are SNAKE_CASE of each section name', () => {
+  assert.equal(SECTIONS.HOME, 'home');
+  assert.equal(SECTIONS.BOOKS, 'books');
+  assert.equal(SECTIONS.BOOK_NEW, 'bookNew');
+  assert.equal(SECTIONS.BOOK_EDIT, 'bookEdit');
+  assert.equal(SECTIONS.ACCOUNT_NEW, 'accountNew');
+  assert.equal(SECTIONS.ACCOUNT_EDIT, 'accountEdit');
+  assert.equal(SECTIONS.CATEGORY_NEW, 'categoryNew');
+  assert.equal(SECTIONS.CATEGORY_EDIT, 'categoryEdit');
+  assert.equal(SECTIONS.BOOKNEW, undefined);
+  assert.deepEqual(Object.values(SECTIONS), Object.keys(SECTION_HASH));
+  assert.ok(Object.isFrozen(SECTIONS));
+});
+
+test('parseHash maps the card screens and keeps their id', () => {
+  const cases = [
+    ['#/settings/books/new', SECTIONS.BOOK_NEW, {}],
+    ['#/settings/books/edit', SECTIONS.BOOK_EDIT, {}],
+    ['#/settings/accounts/new', SECTIONS.ACCOUNT_NEW, {}],
+    ['#/settings/accounts/new/', SECTIONS.ACCOUNT_NEW, {}],
+    ['#/settings/accounts/edit?id=x', SECTIONS.ACCOUNT_EDIT, { id: 'x' }],
+    ['#/settings/categories/new', SECTIONS.CATEGORY_NEW, {}],
+    ['#/settings/categories/edit?id=cat-7', SECTIONS.CATEGORY_EDIT, { id: 'cat-7' }],
+    ['#/settings/accounts/remove', SECTIONS.HOME, {}],
+  ];
+  for (const [hash, section, params] of cases) assert.deepEqual(parseHash(hash), { section, params }, hash);
+  assert.equal(parseHash('#/settings/accounts/edit?id=x').section, 'accountEdit');
+});
+
+test('card screens are never repainted: a half-filled form would reset', () => {
+  for (const section of ['bookNew', 'bookEdit', 'accountNew', 'accountEdit', 'categoryNew', 'categoryEdit']) {
+    assert.equal(isRepaintable(section), false, section);
+  }
 });
 
 test('parseHash keeps the id of the movement being edited', () => {

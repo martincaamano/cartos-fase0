@@ -190,8 +190,12 @@ select.field-input {
 
 .emoji-row {
   display: flex;
-  flex-wrap: wrap;
   gap: var(--space-2);
+}
+
+.emoji-row .emoji-option {
+  flex: 1;
+  min-width: 0;
 }
 
 .emoji-option {

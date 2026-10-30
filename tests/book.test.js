@@ -3,6 +3,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   createBook, readBook, addAccount, addCategory, removeCategory, writeBookRows, appendBookRows,
+  updateAccount, updateCategory,
 } from '../js/data/book.js';
 import { HEADERS, toRow } from '../js/data/rows.js';
 import { ValidationError } from '../js/data/errors.js';
@@ -240,4 +241,118 @@ test('appendBookRows stops at the first failure: no movements without their acco
   const calls = setupGoogleApi((call) => (call.url.pathname === appendPath('Accounts') ? { status: 500 } : {}));
   await assert.rejects(appendBookRows('file-1', importedRows));
   assert.deepEqual(calls.map((c) => c.url.pathname).filter((p) => p !== appendPath('Accounts')), []);
+});
+
+// --- Cards (tarea 20c): updateAccount, updateCategory ---
+
+const idColumn = (ids) => (call) => (call.method === 'GET'
+  ? { body: { valueRanges: [{ values: [['id'], ...ids.map((id) => [id])] }] } }
+  : {});
+
+const savedAccount = {
+  id: 'acc-2', name: 'Hucha', emoji: '🐷', initialBalance: 0,
+  createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z', deleted: false,
+};
+const accounts = [
+  { ...savedAccount, id: 'acc-1', name: 'Banco Inventado' },
+  savedAccount,
+  { ...savedAccount, id: 'acc-old', name: 'Vieja', deleted: true },
+];
+
+test('updateAccount reads column A, finds the row by id and rewrites A:G RAW', async () => {
+  const calls = setupGoogleApi(idColumn(['acc-1', 'acc-old', 'acc-2']));
+  const account = await updateAccount('file-1', savedAccount, { name: ' Ahorro ', emoji: '💰', initialBalance: 1250.5 }, accounts);
+
+  assert.equal(account.id, 'acc-2');
+  assert.equal(account.name, 'Ahorro');
+  assert.equal(account.createdAt, '2026-01-01T00:00:00.000Z');
+  assert.notEqual(account.updatedAt, savedAccount.updatedAt);
+
+  assert.equal(calls.length, 2);
+  for (const call of calls) assert.equal(call.headers.Authorization, `Bearer ${TOKEN}`);
+  const [read, write] = calls;
+  assert.equal(read.method, 'GET');
+  assert.equal(read.url.pathname, '/v4/spreadsheets/file-1/values:batchGet');
+  assert.deepEqual(read.url.searchParams.getAll('ranges'), ['Accounts!A:A']);
+
+  assert.equal(write.method, 'POST');
+  assert.equal(write.url.pathname, '/v4/spreadsheets/file-1/values:batchUpdate');
+  assert.equal(write.body.valueInputOption, 'RAW');
+  assert.deepEqual(write.body.data, [{ range: 'Accounts!A4:G4', values: [toRow('Accounts', account)] }]);
+  assert.deepEqual(write.body.data[0].values[0].slice(0, 5),
+    ['acc-2', 'Ahorro', '💰', 1250.5, '2026-01-01T00:00:00.000Z']);
+  assert.equal(typeof write.body.data[0].values[0][3], 'number', 'amount is a number, never text');
+});
+
+test('updateAccount keeps its own name and accepts a name freed by a deleted account', async () => {
+  const calls = setupGoogleApi(idColumn(['acc-1', 'acc-2']));
+  await updateAccount('file-1', savedAccount, { name: 'HUCHA', initialBalance: 0 }, accounts);
+  await updateAccount('file-1', savedAccount, { name: 'Vieja', initialBalance: -0.01 }, accounts);
+  assert.equal(calls.length, 4);
+  assert.equal(calls[3].body.data[0].range, 'Accounts!A3:G3');
+});
+
+test('updateAccount throws ValidationError before any call when invalid', async () => {
+  const calls = setupGoogleApi(idColumn(['acc-1', 'acc-2']));
+  await assert.rejects(updateAccount('file-1', savedAccount, { name: 'banco inventado', initialBalance: 0 }, accounts),
+    (err) => err instanceof ValidationError && err.errors.includes('name_taken'));
+  await assert.rejects(updateAccount('file-1', savedAccount, { name: 'Hucha', initialBalance: 0.001 }, accounts),
+    (err) => err instanceof ValidationError && err.errors.includes('initial_balance_invalid'));
+  await assert.rejects(updateAccount('file-1', savedAccount, { name: '', initialBalance: 0 }, accounts),
+    (err) => err instanceof ValidationError && err.errors.includes('name_required'));
+  assert.equal(calls.length, 0);
+});
+
+test('updateAccount with an id missing from the Sheet reads but never writes', async () => {
+  const calls = setupGoogleApi(idColumn(['acc-1']));
+  await assert.rejects(updateAccount('file-1', savedAccount, { name: 'Hucha', initialBalance: 0 }, accounts),
+    (err) => err instanceof ValidationError && err.errors.length === 1 && err.errors[0] === 'account_unknown');
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0].method, 'GET');
+});
+
+const gym = { id: 'cat-2', name: 'Gimnasio', emoji: '🏋️', kind: 'expense', isDefault: false, updatedAt: 't0', deleted: false };
+const transferCategory = { id: 'transfer', name: 'Transferencia', emoji: '🔁', kind: 'both', isDefault: true, updatedAt: 't0', deleted: false };
+const categoryBook = {
+  categories: [transferCategory, { ...gym, id: 'cat-1', name: 'Ocio' }, gym],
+  movements: [{ id: 'm-1', categoryId: 'cat-2', amount: 30, deleted: false }],
+};
+
+test('updateCategory finds the row by id and rewrites Categories A:G RAW', async () => {
+  const calls = setupGoogleApi(idColumn(['transfer', 'cat-1', 'cat-2']));
+  const category = await updateCategory('file-1', gym, { name: 'Gym', emoji: '💪', kind: 'expense' }, categoryBook);
+
+  assert.equal(category.id, 'cat-2');
+  assert.equal(category.isDefault, false);
+  assert.equal(calls.length, 2);
+  assert.deepEqual(calls[0].url.searchParams.getAll('ranges'), ['Categories!A:A']);
+  assert.equal(calls[1].body.valueInputOption, 'RAW');
+  assert.deepEqual(calls[1].body.data, [{ range: 'Categories!A4:G4', values: [toRow('Categories', category)] }]);
+  assert.deepEqual(calls[1].body.data[0].values[0].slice(0, 5), ['cat-2', 'Gym', '💪', 'expense', false]);
+});
+
+test('updateCategory changes the kind when only deleted movements use it', async () => {
+  const calls = setupGoogleApi(idColumn(['cat-2']));
+  const book = { ...categoryBook, movements: [{ id: 'm-1', categoryId: 'cat-2', amount: 30, deleted: true }] };
+  const category = await updateCategory('file-1', gym, { name: 'Gimnasio', kind: 'both' }, book);
+  assert.equal(category.kind, 'both');
+  assert.equal(calls[1].body.data[0].range, 'Categories!A2:G2');
+});
+
+test('updateCategory refuses kind_in_use, not_editable and name_taken without any call', async () => {
+  const calls = setupGoogleApi(idColumn(['transfer', 'cat-1', 'cat-2']));
+  await assert.rejects(updateCategory('file-1', gym, { name: 'Gimnasio', kind: 'income' }, categoryBook),
+    (err) => err instanceof ValidationError && err.errors.length === 1 && err.errors[0] === 'kind_in_use');
+  await assert.rejects(updateCategory('file-1', transferCategory, { name: 'Traspaso', kind: 'both' }, categoryBook),
+    (err) => err instanceof ValidationError && err.errors.length === 1 && err.errors[0] === 'not_editable');
+  await assert.rejects(updateCategory('file-1', gym, { name: 'OCIO', kind: 'expense' }, categoryBook),
+    (err) => err instanceof ValidationError && err.errors.includes('name_taken'));
+  assert.equal(calls.length, 0);
+});
+
+test('updateCategory with an id missing from the Sheet reads but never writes', async () => {
+  const calls = setupGoogleApi(idColumn(['transfer', 'cat-1']));
+  await assert.rejects(updateCategory('file-1', gym, { name: 'Gym', kind: 'expense' }, categoryBook),
+    (err) => err instanceof ValidationError && err.errors.includes('category_unknown'));
+  assert.equal(calls.length, 1);
 });
