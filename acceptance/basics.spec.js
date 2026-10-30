@@ -21,16 +21,15 @@ test('opens on the Dashboard with the total, the balances and the latest movemen
 test('the navbar reaches every section and marks the one on view', async ({ page, app }) => {
   await app.open();
   const sections = [
-    // History has no title since tarea 20: the navbar says where you are.
-    ['HISTORIAL', null, '#/history'],
-    ['ANÁLISIS', 'ANÁLISIS', '#/analysis'],
-    ['AJUSTES', null, '#/settings'],
-    ['INICIO', null, '#/'],
+    // No titles since tarea 20: the navbar says where you are.
+    ['HISTORIAL', '#/history'],
+    ['ANÁLISIS', '#/analysis'],
+    ['AJUSTES', '#/settings'],
+    ['INICIO', '#/'],
   ];
-  for (const [button, title, hash] of sections) {
+  for (const [button, hash] of sections) {
     await page.getByRole('button', { name: button, exact: true }).click();
     await expect(page).toHaveURL(new RegExp(`${hash.replace('/', '\\/')}$`));
-    if (title) await expect(page.locator('h1.form-title')).toHaveText(title);
     await expect(page.locator('.navbar-item.is-active')).toHaveText(button);
   }
   await page.getByRole('button', { name: 'Añadir' }).click();

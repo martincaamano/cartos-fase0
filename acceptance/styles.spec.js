@@ -22,7 +22,7 @@ const SCREENS = [
   ['history', '#/history', '.history-list'],
   ['edit', '#/history/edit?id=m-rest', '.form-delete'],
   ['add', '#/add', '.category-grid'],
-  ['analysis', '#/analysis', '.stat-categories'],
+  ['analysis', '#/analysis', '.stat-tiles'],
   ['settings', '#/settings', '.settings-signout'],
   ['accounts', '#/settings/accounts', '.account-list'],
   ['categories', '#/settings/categories', '.list-expense'],

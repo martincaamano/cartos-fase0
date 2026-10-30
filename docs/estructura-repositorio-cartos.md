@@ -28,7 +28,7 @@ cartos-fase0/
 │   ├── domain/           (reglas puras, con tests)
 │   │   ├── account.js, category.js, movement.js, transfer.js
 │   │   ├── balance.js, money.js, active.js
-│   │   └── history.js, stats.js, import.js, import-csv.js, csv.js, books.js
+│   │   └── history.js, stats.js, analysis.js, import.js, import-csv.js, csv.js, books.js
 │   │
 │   ├── data/             (lo único que habla con Google)
 │   │   ├── auth.js, http.js, errors.js
@@ -38,7 +38,7 @@ cartos-fase0/
 │   │   └── sync.js           (sube la cola al Sheet)
 │   │
 │   ├── storage/          (lo que vive en el dispositivo)
-│   │   ├── session.js, book-cache.js, transfer-categories.js, last-account.js, history-view.js
+│   │   ├── session.js, book-cache.js, transfer-categories.js, last-account.js, history-view.js, analysis-exclude.js
 │   │   ├── outbox.js, outbox-logic.js
 │   │   └── logs.js
 │   │
@@ -49,7 +49,7 @@ cartos-fase0/
 │   │
 │   └── ui/               (piezas compartidas; no tocan el DOM al importarse)
 │       ├── router.js     (tabla de pantallas y decisión de ruta)
-│       ├── navbar.js, receipt.js, components.js
+│       ├── navbar.js, receipt.js, components.js, charts.js
 │       └── format.js, theme.js, download.js
 │
 ├── tests/                (node:test, uno por módulo; Google siempre simulado)
