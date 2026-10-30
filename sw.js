@@ -3,7 +3,7 @@
 // antiguas de la app (aprendido en la Fase 0, donde cache-first daba problemas
 // de staleness al actualizar código).
 
-const CACHE_NAME = 'cartos-v16';
+const CACHE_NAME = 'cartos-v17';
 
 const APP_SHELL = [
   './',
@@ -56,6 +56,7 @@ const APP_SHELL = [
   './js/screens/settings.js',
   './js/screens/status.js',
   './js/storage/book-cache.js',
+  './js/storage/last-account.js',
   './js/storage/logs.js',
   './js/storage/outbox-logic.js',
   './js/storage/outbox.js',

@@ -131,3 +131,31 @@ test('after saving, the book is read again by its file, without searching Drive'
   await app.settle();
   expect(searches()).toBe(1);
 });
+
+// Tarea 20a: Añadir fits on an iPhone screen and remembers the account.
+test('Añadir fits on one screen and starts from the account used last', async ({ page, app }) => {
+  await app.open('#/add', '.form-submit');
+  const fits = () => page.evaluate(() => document.documentElement.scrollHeight <= innerHeight);
+  expect(await fits()).toBe(true);
+  await expect(page.locator('.form-submit')).toBeInViewport();
+  await expect(page.locator('input[name=note]')).toBeHidden();
+
+  await app.addMovement({ amount: '3', category: 'Supermercado', account: '💶 Efectivo', note: 'pan' });
+  await app.go('#/history');
+  await app.go('#/add');
+  await expect(page.locator('select[name=account]')).toHaveValue('acc-cash');
+  await page.click('.tab >> text=Transferencia');
+  expect(await fits()).toBe(true);
+});
+
+test('«Otra…» saves another day and shows it on the chip', async ({ page, app, google }) => {
+  await app.open('#/add', '.form-submit');
+  await page.fill('.amount-input', '7');
+  await page.locator('.category-option', { hasText: 'Restaurantes' }).click();
+  await page.locator('.date-input').fill('2026-10-05');
+  await expect(page.locator('.date-other')).toHaveClass(/is-selected/);
+  await expect(page.locator('.date-other span')).toHaveText('05/10');
+  await page.click('.form-submit');
+  await app.settle();
+  expect(google.movements().at(-1).date).toBe('2026-10-05');
+});

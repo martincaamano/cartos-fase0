@@ -239,7 +239,10 @@ export const test = base.extend({
         if (to) await page.selectOption('select[name=to]', { label: to });
         await page.fill('.amount-input', amount);
         if (category) await page.locator('.category-option', { hasText: category }).first().click();
-        if (note) await page.fill('input[name=note]', note);
+        if (note) {
+          if (await page.locator('.note-toggle').isVisible()) await page.click('.note-toggle');
+          await page.fill('input[name=note]', note);
+        }
         await page.click('.form-submit');
         await app.settle();
       },
