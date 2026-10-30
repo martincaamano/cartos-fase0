@@ -160,9 +160,32 @@ select.field-input {
   text-align: right;
 }
 
+/* Hoy · Ayer · Anteayer · Otra…: the native date field lies over the last
+   chip, invisible, so a tap on it opens the iOS picker. */
+.date-row {
+  flex-wrap: nowrap;
+}
+
+.date-row .chip {
+  flex: 1;
+  min-width: 0;
+  padding: 0 var(--space-1);
+  text-align: center;
+}
+
+.date-other {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
 .date-input {
-  margin-top: var(--space-2);
+  position: absolute;
+  inset: 0;
   width: 100%;
+  height: 100%;
+  opacity: 0;
 }
 
 .emoji-row {
@@ -335,7 +358,7 @@ select.field-input {
   justify-content: center;
   gap: var(--space-1);
   min-height: 64px;
-  padding: var(--space-2) var(--space-1);
+  padding: var(--space-1) 2px;
   border: var(--rule);
   border-radius: var(--radius);
 }
@@ -361,9 +384,15 @@ select.field-input {
 .category-name {
   font-size: var(--text-2xs);
   max-width: 100%;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  line-height: 1.2;
+  text-align: center;
+  /* Long names go on two lines, split with a hyphen, never cut with "…". */
+  overflow-wrap: anywhere;
+  hyphens: auto;
+}
+
+.category-more .category-emoji {
+  color: var(--color-ink-muted);
 }
 
 .category-list .category-name {

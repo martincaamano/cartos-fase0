@@ -108,9 +108,12 @@ async function transferToCasa(page, app, { amount, expense, income, note }) {
   await page.selectOption('select[name=to]', { label: '🏦 Cuenta común · Casa do medio' });
   await expect(page.locator('.only-cross')).toBeVisible();
   await page.fill('.amount-input', amount);
-  if (expense) await page.locator('.cross-expense .category-option', { hasText: expense }).first().click();
-  if (income) await page.locator('.cross-income .category-option', { hasText: income }).first().click();
-  if (note) await page.fill('input[name=note]', note);
+  if (expense) await page.selectOption('select[name=expenseCategory]', { label: expense });
+  if (income) await page.selectOption('select[name=incomeCategory]', { label: income });
+  if (note) {
+    await page.click('.note-toggle');
+    await page.fill('input[name=note]', note);
+  }
   await page.click('.form-submit');
   await app.settle();
 }
@@ -125,7 +128,7 @@ test('a transfer to another book is an expense here and an income there', async 
   await expect(page.locator('select[name=to] optgroup')).toHaveAttribute('label', 'Casa do medio');
   await expect(page.locator('.only-cross')).toBeHidden();
 
-  await transferToCasa(page, app, { amount: '300', expense: 'Restaurantes', income: 'Otros ingresos', note: 'Aportación' });
+  await transferToCasa(page, app, { amount: '300', expense: '🍽️ Restaurantes', income: '💰 Otros ingresos', note: 'Aportación' });
   await expect(page.locator('.receipt-total-amount')).toHaveText('2.174,51 €');
 
   const [here] = google.movements().slice(-1);
@@ -145,7 +148,7 @@ test('the next transfer to that account comes with both categories chosen', asyn
   await createBook(page, app, { name: 'Casa do medio', account: 'Cuenta común', balance: '0' });
   const casa = google.calls.find((call) => call.op === 'drive.create').fileId;
   await openBook(page, app, 'Personal');
-  await transferToCasa(page, app, { amount: '100', expense: 'Restaurantes', income: 'Otros ingresos' });
+  await transferToCasa(page, app, { amount: '100', expense: '🍽️ Restaurantes', income: '💰 Otros ingresos' });
 
   // No category tapped this time.
   await transferToCasa(page, app, { amount: '50' });
@@ -158,7 +161,7 @@ test('a transfer to another book needs both categories', async ({ page, app, goo
   await createBook(page, app, { name: 'Casa do medio', account: 'Cuenta común', balance: '0' });
   await openBook(page, app, 'Personal');
   const writes = google.writes().length;
-  await transferToCasa(page, app, { amount: '20', expense: 'Restaurantes' });
+  await transferToCasa(page, app, { amount: '20', expense: '🍽️ Restaurantes' });
   await expect(page.locator('.form-error')).toHaveText('Elige una categoría.');
   expect(google.writes()).toHaveLength(writes);
 });

@@ -89,9 +89,128 @@ button.settings-link {
   text-decoration: none;
 }
 
-/* Add, in edit mode */
+/* Añadir and Editar: everything fits on one screen, Guardar always in view */
+.add-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.add-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+}
+
+.amount-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-3);
+  padding-bottom: var(--space-2);
+  border-bottom: var(--rule-strong);
+}
+
+.amount-field {
+  flex: 1;
+  min-width: 0;
+}
+
+.amount-currency {
+  font-size: var(--text-lg);
+}
+
+.amount-row .amount-input {
+  width: 100%;
+  min-height: var(--touch);
+  padding: 0;
+  border: none;
+  background: none;
+  font-size: var(--text-2xl);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.line-pick {
+  flex-shrink: 0;
+  max-width: 55%;
+}
+
+.line-pick,
+.line {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: var(--touch);
+}
+
+.line {
+  border-bottom: var(--rule);
+}
+
+.line-label {
+  flex-shrink: 0;
+  font-size: var(--text-sm);
+  letter-spacing: var(--tracking-wide);
+  color: var(--color-ink-muted);
+  text-transform: uppercase;
+}
+
+/* A <select> that reads as text: "🏦 Abanca ▾". */
+.line-select {
+  min-width: 0;
+  min-height: var(--touch);
+  padding: 0 var(--space-3) 0 0;
+  border: none;
+  background: none;
+  -webkit-appearance: none;
+  appearance: none;
+  font-size: var(--text-base);
+  color: var(--color-ink);
+  text-overflow: ellipsis;
+  background-image: linear-gradient(45deg, transparent 50%, var(--color-ink-muted) 50%),
+    linear-gradient(135deg, var(--color-ink-muted) 50%, transparent 50%);
+  background-position: right 6px center, right 1px center;
+  background-size: 5px 5px;
+  background-repeat: no-repeat;
+}
+
+.line .line-select {
+  text-align: right;
+  text-align-last: right;
+}
+
+.only-cross {
+  display: flex;
+  flex-direction: column;
+}
+
+.only-cross[hidden] {
+  display: none;
+}
+
+.note-field .field-input {
+  width: 100%;
+}
+
+.add-actions {
+  position: sticky;
+  bottom: calc(env(safe-area-inset-bottom) + var(--navbar-room));
+  padding: var(--space-2) 0;
+  background: var(--color-bg);
+}
+
+.add-actions .form-submit {
+  width: 100%;
+}
+
+.add-form .form-error:empty {
+  display: none;
+}
+
 .form-delete {
-  align-self: center;
   color: var(--color-expense);
 }
 

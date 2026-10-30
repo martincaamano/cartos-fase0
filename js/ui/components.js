@@ -6,6 +6,7 @@ import { es } from '../../i18n/es.js';
 import { quickDates } from '../domain/movement.js';
 import { parseAmountInput } from '../domain/money.js';
 import { createAccount, validateAccount } from '../domain/account.js';
+import { formatShortDate } from './format.js';
 
 // Fills every [data-text="key"] inside root with texts[key].
 export function fillTexts(root, texts) {
@@ -150,10 +151,11 @@ function categoryButton(category, onSelect) {
   return button;
 }
 
-// categories: already ranked (rankCategories). Shows the first `gridSize` as
-// a grid and the rest behind "Ver todas", with a search box.
+// categories: already ranked (rankCategories). Shows them as a grid of
+// `gridSize` tiles; when there are more, the last tile is "Ver todas", which
+// opens the full list with a search box.
 // texts: { seeAll, search, empty }.
-export function renderCategoryPicker(container, { categories, selectedId = null, onSelect, gridSize = 8, texts }) {
+export function renderCategoryPicker(container, { categories, selectedId = null, onSelect, gridSize = 12, texts }) {
   container.replaceChildren();
   let selected = selectedId;
   const select = (category) => {
@@ -166,14 +168,23 @@ export function renderCategoryPicker(container, { categories, selectedId = null,
 
   const grid = document.createElement('div');
   grid.className = 'category-grid';
-  for (const category of categories.slice(0, gridSize)) grid.appendChild(categoryButton(category, select));
+  const more = categories.length > gridSize;
+  for (const category of categories.slice(0, more ? gridSize - 1 : gridSize)) grid.appendChild(categoryButton(category, select));
   container.appendChild(grid);
 
-  if (categories.length > gridSize) {
+  if (more) {
     const toggle = document.createElement('button');
     toggle.type = 'button';
-    toggle.className = 'link-button';
-    toggle.textContent = texts.seeAll;
+    toggle.className = 'category-option category-more';
+    const dots = document.createElement('span');
+    dots.className = 'category-emoji';
+    dots.setAttribute('aria-hidden', 'true');
+    dots.textContent = '···';
+    const label = document.createElement('span');
+    label.className = 'category-name';
+    label.textContent = texts.seeAll;
+    toggle.append(dots, label);
+    grid.appendChild(toggle);
     const panel = document.createElement('div');
     panel.className = 'category-all';
     panel.hidden = true;
@@ -203,27 +214,36 @@ export function renderCategoryPicker(container, { categories, selectedId = null,
       if (!panel.hidden) paint();
     });
     panel.append(search, list);
-    container.append(toggle, panel);
+    container.append(panel);
   }
   if (selected) select(categories.find((c) => c.id === selected) ?? categories[0]);
 }
 
-// Hoy / Ayer / Anteayer plus a native date field for any other day.
+// Hoy / Ayer / Anteayer / Otra… in one row. "Otra…" is a native date field
+// laid over the chip (iOS only opens its picker on a direct tap) and then
+// shows the day chosen (25/10).
 // initial: YYYY-MM-DD to start with (today when not given).
 // texts: { today, yesterday, dayBefore, other }.
 export function renderDatePicker(container, { today, initial = null, onChange, texts }) {
   container.replaceChildren();
   const dates = quickDates(today);
   const row = document.createElement('div');
-  row.className = 'chip-row';
+  row.className = 'chip-row date-row';
+  const otherChip = document.createElement('label');
+  otherChip.className = 'chip date-other';
+  const otherText = document.createElement('span');
   const other = document.createElement('input');
   other.type = 'date';
-  other.className = 'field-input date-input';
+  other.className = 'date-input';
   other.max = dates.today;
   other.setAttribute('aria-label', texts.other);
+  otherChip.append(otherText, other);
 
   const choose = (value) => {
-    for (const chip of row.children) chip.classList.toggle('is-selected', chip.dataset.date === value);
+    const quick = Object.values(dates).includes(value);
+    for (const chip of row.querySelectorAll('[data-date]')) chip.classList.toggle('is-selected', chip.dataset.date === value);
+    otherChip.classList.toggle('is-selected', !quick);
+    otherText.textContent = quick ? texts.other : formatShortDate(value);
     other.value = value;
     onChange(value);
   };
@@ -236,9 +256,10 @@ export function renderDatePicker(container, { today, initial = null, onChange, t
     chip.addEventListener('click', () => choose(value));
     row.appendChild(chip);
   }
+  row.appendChild(otherChip);
   other.addEventListener('change', () => {
     if (other.value) choose(other.value);
   });
-  container.append(row, other);
+  container.append(row);
   choose(initial ?? dates.today);
 }

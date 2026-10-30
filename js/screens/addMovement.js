@@ -14,6 +14,7 @@ import {
   queueCrossBookTransfer, queueDelete, queueEdit, queueMovement, queueTransfer, queueTransferEdit,
 } from '../data/movements.js';
 import { loadTransferCategories, saveTransferCategories } from '../storage/transfer-categories.js';
+import { loadLastAccount, saveLastAccount } from '../storage/last-account.js';
 import { showBookBanner, createAmountInput, fillTexts, renderCategoryPicker, renderDatePicker } from '../ui/components.js';
 import { formatAmountInput, labelOf } from '../ui/format.js';
 import { SECTION_HASH } from '../ui/router.js';
@@ -58,64 +59,64 @@ function fillOtherBooks(select, otherBooks) {
 // bookName: shown on top when there is more than one book.
 // otherBooks: [{ fileId, name, book }] the other books with a copy on the
 // device, offered as transfer destinations (not when editing).
-// storage: where the categories of the last transfer to another book are
-// remembered.
+// storage: where the account used last and the categories of the last
+// transfer to another book are remembered.
 export function renderAddMovement(root, {
   book, bookName = '', fileId, params = {}, entry = null, today = new Date(), onSaved,
   otherBooks = [], storage = globalThis.localStorage,
 }) {
   const t = es.add;
   root.innerHTML = `
-    <main class="screen screen-form screen-with-navbar">
-      <a class="link-button back-link" hidden></a>
+    <main class="screen screen-form screen-with-navbar screen-add">
+      <div class="add-top" hidden>
+        <a class="link-button back-link"></a>
+        <button type="button" class="link-button form-delete"></button>
+      </div>
       <div class="tabs" role="tablist"></div>
       <p class="text-muted form-note loose-half" hidden></p>
       <div class="transfer-blocked" hidden>
         <p class="text-muted form-note"></p>
         <a class="link-button"></a>
       </div>
-      <form class="form" novalidate>
-        <label class="field only-single">
-          <span class="field-label" data-text="account"></span>
-          <select class="field-input" name="account"></select>
-        </label>
-        <label class="field only-transfer">
-          <span class="field-label" data-text="from"></span>
-          <select class="field-input" name="from"></select>
-        </label>
-        <label class="field only-transfer">
-          <span class="field-label" data-text="to"></span>
-          <select class="field-input" name="to"></select>
-        </label>
-        <label class="field field-amount">
-          <span class="field-label" data-text="amount"></span>
-        </label>
-        <div class="field only-single">
-          <span class="field-label" data-text="category"></span>
-          <div class="category-picker"></div>
+      <form class="add-form" novalidate>
+        <div class="amount-row">
+          <label class="line-pick only-single">
+            <span class="offscreen" data-text="account"></span>
+            <select class="line-select" name="account"></select>
+          </label>
+          <label class="amount-field">
+            <span class="offscreen" data-text="amount"></span>
+          </label>
+          <span class="amount-currency" aria-hidden="true">€</span>
         </div>
+        <label class="line only-transfer">
+          <span class="line-label" data-text="from"></span>
+          <select class="line-select" name="from"></select>
+        </label>
+        <label class="line only-transfer">
+          <span class="line-label" data-text="to"></span>
+          <select class="line-select" name="to"></select>
+        </label>
         <div class="only-cross" hidden>
-          <p class="text-muted form-note cross-note"></p>
-          <div class="field">
-            <span class="field-label cross-expense-label"></span>
-            <div class="category-picker cross-expense"></div>
-          </div>
-          <div class="field">
-            <span class="field-label cross-income-label"></span>
-            <div class="category-picker cross-income"></div>
-          </div>
+          <label class="line">
+            <span class="line-label" data-text="crossExpense"></span>
+            <select class="line-select" name="expenseCategory"></select>
+          </label>
+          <label class="line">
+            <span class="line-label" data-text="crossIncome"></span>
+            <select class="line-select" name="incomeCategory"></select>
+          </label>
         </div>
-        <div class="field">
-          <span class="field-label" data-text="date"></span>
-          <div class="date-picker"></div>
+        <div class="only-single category-picker" role="group"></div>
+        <div class="date-picker" role="group"></div>
+        <div class="note-field">
+          <button type="button" class="link-button note-toggle" data-text="addNote"></button>
+          <input class="field-input" name="note" maxlength="140" autocomplete="off" hidden>
         </div>
-        <label class="field">
-          <span class="field-label" data-text="note"></span>
-          <input class="field-input" name="note" maxlength="140" autocomplete="off">
-        </label>
         <p class="form-error" role="alert"></p>
-        <button type="submit" class="btn-primary form-submit"></button>
-        <button type="button" class="link-button form-delete" hidden></button>
+        <div class="add-actions">
+          <button type="submit" class="btn-primary form-submit"></button>
+        </div>
       </form>
     </main>
   `;
@@ -127,7 +128,22 @@ export function renderAddMovement(root, {
   const submit = root.querySelector('.form-submit');
   submit.textContent = t.save;
   const amount = createAmountInput('amount');
-  root.querySelector('.field-amount').appendChild(amount);
+  root.querySelector('.amount-field').appendChild(amount);
+  root.querySelector('.category-picker').setAttribute('aria-label', t.category);
+  root.querySelector('.date-picker').setAttribute('aria-label', t.date);
+
+  // The note stays folded until it is wanted (or the movement has one).
+  const note = form.elements.note;
+  const noteToggle = root.querySelector('.note-toggle');
+  note.placeholder = t.notePlaceholder;
+  const openNote = () => {
+    noteToggle.hidden = true;
+    note.hidden = false;
+  };
+  noteToggle.addEventListener('click', () => {
+    openNote();
+    note.focus();
+  });
 
   const blocked = root.querySelector('.transfer-blocked');
   blocked.querySelector('.form-note').textContent = t.needTwoAccounts;
@@ -146,6 +162,13 @@ export function renderAddMovement(root, {
   const otherAccounts = destinations.reduce((count, other) => count + activeOnly(other.book.accounts).length, 0);
   if (accounts.length > 1) toSelect.value = accounts[1].id;
   else if (otherAccounts > 0) toSelect.selectedIndex = accounts.length;
+  // A new movement starts from the account used last in this book.
+  const lastAccount = entry ? null : loadLastAccount(storage, fileId);
+  if (accounts.some((account) => account.id === lastAccount)) {
+    accountSelect.value = lastAccount;
+    fromSelect.value = lastAccount;
+    if (toSelect.value === lastAccount) toSelect.value = accounts.find((account) => account.id !== lastAccount)?.id ?? '';
+  }
 
   // What is being edited: one movement, or both halves of a transfer.
   const original = entry?.kind === 'movement' ? entry.movement : null;
@@ -155,9 +178,6 @@ export function renderAddMovement(root, {
     type: TYPES.includes(initialType) ? initialType : 'expense',
     categoryId: null,
     date: null,
-    // Transfer to another book: the category on each side.
-    expenseCategoryId: null,
-    incomeCategoryId: null,
   };
 
   const categoryChoices = () => {
@@ -179,34 +199,30 @@ export function renderAddMovement(root, {
     });
   };
 
-  const pickerTexts = { seeAll: t.seeAll, search: t.search, empty: t.noMatches };
   const cross = root.querySelector('.only-cross');
+  const { expenseCategory, incomeCategory } = form.elements;
+  // A category <select>, ranked by use, preselecting `id` when it is there;
+  // otherwise it starts on "Elige…", so saving asks for one.
+  const fillCategories = (select, categories, id) => {
+    const choose = document.createElement('option');
+    choose.value = '';
+    choose.textContent = t.choose;
+    select.replaceChildren(choose, ...categories.map((category) => {
+      const option = document.createElement('option');
+      option.value = category.id;
+      option.textContent = labelOf(category);
+      return option;
+    }));
+    select.value = categories.some((category) => category.id === id) ? id : '';
+  };
   // Shown when the destination of a transfer is in another book.
   const paintCross = () => {
     const other = state.type === 'transfer' ? otherBookOf(toSelect.value) : null;
     cross.hidden = !other;
     if (!other) return;
     const remembered = loadTransferCategories(storage, toSelect.value);
-    const expenses = rankCategories(book.categories, book.movements, 'expense');
-    const incomes = rankCategories(other.book.categories, other.book.movements, 'income');
-    const pick = (list, id) => (list.some((category) => category.id === id) ? id : null);
-    state.expenseCategoryId = pick(expenses, remembered?.expenseCategoryId);
-    state.incomeCategoryId = pick(incomes, remembered?.incomeCategoryId);
-    root.querySelector('.cross-note').textContent = t.crossNote.replace('{book}', other.name);
-    root.querySelector('.cross-expense-label').textContent = t.crossExpense.replace('{book}', bookName);
-    root.querySelector('.cross-income-label').textContent = t.crossIncome.replace('{book}', other.name);
-    renderCategoryPicker(root.querySelector('.cross-expense'), {
-      categories: expenses,
-      selectedId: state.expenseCategoryId,
-      onSelect: (category) => { state.expenseCategoryId = category.id; },
-      texts: pickerTexts,
-    });
-    renderCategoryPicker(root.querySelector('.cross-income'), {
-      categories: incomes,
-      selectedId: state.incomeCategoryId,
-      onSelect: (category) => { state.incomeCategoryId = category.id; },
-      texts: pickerTexts,
-    });
+    fillCategories(expenseCategory, rankCategories(book.categories, book.movements, 'expense'), remembered?.expenseCategoryId);
+    fillCategories(incomeCategory, rankCategories(other.book.categories, other.book.movements, 'income'), remembered?.incomeCategoryId);
   };
   toSelect.addEventListener('change', paintCross);
 
@@ -245,12 +261,13 @@ export function renderAddMovement(root, {
 
   const saved = original ?? halves?.[0];
   if (saved) {
+    root.querySelector('.add-top').hidden = false;
     const back = root.querySelector('.back-link');
-    back.hidden = false;
     back.href = SECTION_HASH.history;
     back.textContent = t.back;
     amount.value = formatAmountInput(saved.amount);
-    form.elements.note.value = saved.note;
+    note.value = saved.note;
+    if (saved.note) openNote();
     if (original) accountSelect.value = original.accountId;
     if (halves) {
       fromSelect.value = halves[0].accountId;
@@ -278,14 +295,14 @@ export function renderAddMovement(root, {
     const common = {
       amount: parseAmountInput(amount.value),
       date: state.date,
-      note: form.elements.note.value.trim(),
+      note: note.value.trim(),
     };
     const transfer = { ...common, fromAccountId: fromSelect.value, toAccountId: toSelect.value };
     const single = { ...common, accountId: accountSelect.value, type: state.type, categoryId: state.categoryId };
     const other = state.type === 'transfer' ? otherBookOf(toSelect.value) : null;
     let saving;
     if (other) {
-      const categories = { expenseCategoryId: state.expenseCategoryId, incomeCategoryId: state.incomeCategoryId };
+      const categories = { expenseCategoryId: expenseCategory.value, incomeCategoryId: incomeCategory.value };
       // Only the half of this book is counted here; the other one waits in
       // its own book's outbox and is uploaded with it.
       saving = queueCrossBookTransfer({ fileId, book }, other, { ...transfer, ...categories })
@@ -298,7 +315,10 @@ export function renderAddMovement(root, {
     else if (state.type === 'transfer') saving = queueTransfer(fileId, transfer, book);
     else saving = queueMovement(fileId, single, book);
     saving
-      .then(onSaved)
+      .then((saved) => {
+        if (!entry) saveLastAccount(storage, fileId, state.type === 'transfer' ? transfer.fromAccountId : single.accountId);
+        return onSaved(saved);
+      })
       .catch((err) => {
         const key = err.errors?.map((code) => ERROR_TEXT[code]).find(Boolean);
         error.textContent = key ? t[key] : t.failed;
@@ -310,7 +330,6 @@ export function renderAddMovement(root, {
   if (saved) {
     // Two taps: the first one asks, the second one deletes.
     const remove = root.querySelector('.form-delete');
-    remove.hidden = false;
     remove.textContent = t.delete;
     let armed = false;
     remove.addEventListener('click', () => {
