@@ -10,25 +10,32 @@ import { toCents, fromCents } from './money.js';
 
 const accountsOf = (entry) => (entry.kind === 'transfer' ? [entry.from, entry.to] : [entry.movement.accountId]);
 const categoryOf = (entry) => (entry.kind === 'transfer' ? TRANSFER_CATEGORY_ID : entry.movement.categoryId);
+// Who paid (tarea 18b): a member id, or '' for common (transfers included).
+const personOf = (entry) => (entry.kind === 'transfer' ? '' : entry.movement.personId ?? '');
 export const monthOf = (entry) => entry.date.slice(0, 7);
 
 // A transfer, or a loose half of one (its category is still Transferencia).
 const isTransfer = (entry) => categoryOf(entry) === TRANSFER_CATEGORY_ID;
 
-// filters: { accountIds, categoryIds, fromMonth, toMonth }. An empty list or
-// month means no filter. Months are YYYY-MM and both ends are included. A
-// transfer matches an account when either half belongs to it.
-export function historyEntries(movements, { accountIds = [], categoryIds = [], fromMonth = '', toMonth = '' } = {}) {
+// filters: { accountIds, categoryIds, personIds, fromMonth, toMonth }. An
+// empty list or month means no filter. Months are YYYY-MM and both ends are
+// included. A transfer matches an account when either half belongs to it.
+// personIds: member ids, '' for common (a transfer is common).
+export function historyEntries(movements, {
+  accountIds = [], categoryIds = [], personIds = [], fromMonth = '', toMonth = '',
+} = {}) {
   return groupEntries(movements)
     .filter((entry) => accountIds.length === 0 || accountsOf(entry).some((id) => accountIds.includes(id)))
     .filter((entry) => categoryIds.length === 0 || categoryIds.includes(categoryOf(entry)))
+    .filter((entry) => personIds.length === 0 || personIds.includes(personOf(entry)))
     .filter((entry) => (!fromMonth || monthOf(entry) >= fromMonth) && (!toMonth || monthOf(entry) <= toMonth))
     .sort(newestFirst);
 }
 
-// How many filters are on: each month range, account and category counts one.
-export function activeFilterCount({ accountIds = [], categoryIds = [], fromMonth = '' } = {}) {
-  return accountIds.length + categoryIds.length + (fromMonth ? 1 : 0);
+// How many filters are on: each month range, account, category and person
+// counts one.
+export function activeFilterCount({ accountIds = [], categoryIds = [], personIds = [], fromMonth = '' } = {}) {
+  return accountIds.length + categoryIds.length + personIds.length + (fromMonth ? 1 : 0);
 }
 
 // The entry a history line points to: a movement id or a transferId.

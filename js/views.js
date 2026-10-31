@@ -71,6 +71,7 @@ export const VIEWS = Object.freeze({
     if (!entry) return redirect(SECTION_HASH.history);
     return renderAddMovement(root, {
       book, bookName: bookName(state), fileId: state.fileId, entry, onSaved: saved(SECTION_HASH.history),
+      ownEmail: getCurrentUser()?.email ?? '',
     });
   },
 
@@ -82,6 +83,7 @@ export const VIEWS = Object.freeze({
       fileId: state.fileId,
       params,
       onSaved: saved(SECTION_HASH.home),
+      ownEmail: getCurrentUser()?.email ?? '',
     }),
 
   [SECTIONS.ANALYSIS]: ({ root, state, params }) => renderAnalysis(root, { book: state.book, fileId: state.fileId, params }),
@@ -165,5 +167,6 @@ export const VIEWS = Object.freeze({
       state.renamed(books);
       redirect(SECTION_HASH.books);
     },
+    onShared: () => state.reloadBook(),
   }),
 });

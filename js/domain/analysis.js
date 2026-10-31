@@ -232,3 +232,22 @@ export function largestExpenses(movements, months, count = 3) {
   const rest = sumOf(expenses, 'amount') - sumOf(items, 'amount');
   return { items, averageWithout: fromCents(Math.round(rest / months.length)) };
 }
+
+// Spending per person in a shared book (tarea 18b), biggest first:
+// [{ personId, amount, share }]. personId '' is common; share is the whole
+// percentage of the period's spending.
+export function spendingByPerson(movements, months) {
+  const inside = new Set(months);
+  const cents = new Map();
+  let total = 0;
+  for (const movement of movements) {
+    if (movement.type !== 'expense' || !inside.has(monthOf(movement.date))) continue;
+    const id = movement.personId ?? '';
+    const amount = toCents(movement.amount);
+    cents.set(id, (cents.get(id) ?? 0) + amount);
+    total += amount;
+  }
+  return [...cents]
+    .sort(([idA, a], [idB, b]) => b - a || idA.localeCompare(idB))
+    .map(([personId, amount]) => ({ personId, amount: fromCents(amount), share: total ? Math.round((amount / total) * 100) : 0 }));
+}

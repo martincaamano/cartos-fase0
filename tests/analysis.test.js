@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   countable, daysInMonth, periodMonths, previousMonths, monthlySeries, keyFigures,
-  categoryChanges, categoryTrends, monthPace, weekdayPattern, fixedCosts, largestExpenses,
+  categoryChanges, categoryTrends, monthPace, weekdayPattern, fixedCosts, largestExpenses, spendingByPerson,
 } from '../js/domain/analysis.js';
 import { TRANSFER_CATEGORY_ID } from '../js/domain/category.js';
 
@@ -475,4 +475,24 @@ test('largestExpenses with fewer expenses than asked, a custom count and cents',
   const c = expense(5, '2026-10-03');
   assert.deepEqual(largestExpenses([a, b, c], ['2026-10'], 1), { items: [c], averageWithout: 0.3 });
   assert.deepEqual(largestExpenses([], ['2026-10']), { items: [], averageWithout: 0 });
+});
+
+// --- spendingByPerson ---
+
+test('spendingByPerson sums expenses per person in the period, biggest first, with its share', () => {
+  const movements = [
+    expense(30, '2026-10-02', 'food', { personId: 'p-ana' }),
+    expense(0.1, '2026-10-03', 'food', { personId: 'p-ana' }),
+    expense(0.2, '2026-10-04', 'food', { personId: 'p-ana' }),
+    expense(60, '2026-10-05', 'food', { personId: 'p-martin' }),
+    expense(9.7, '2026-10-06', 'food'), // common
+    expense(500, '2026-09-30', 'food', { personId: 'p-ana' }), // another month
+    income(1000, '2026-10-01', 'salary', { personId: 'p-ana' }), // not spending
+  ];
+  assert.deepEqual(spendingByPerson(movements, ['2026-10']), [
+    { personId: 'p-martin', amount: 60, share: 60 },
+    { personId: 'p-ana', amount: 30.3, share: 30 },
+    { personId: '', amount: 9.7, share: 10 },
+  ]);
+  assert.deepEqual(spendingByPerson([], ['2026-10']), []);
 });

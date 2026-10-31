@@ -123,3 +123,61 @@ test('the Picker only opens shared Cartos books, and says when it is not set up'
   await expect(page.locator('.books-error')).toHaveText('Ese archivo no es un libro compartido de Cartos.');
   await expect(page.locator('.book-open')).toContainText('Personal');
 });
+
+// 18b: who paid an expense of a shared book.
+async function openAnasBook(page, context, app, google) {
+  await withPickerKey(context);
+  sharedByAna(google);
+  google.pick('book-ana');
+  await app.open('#/settings/books', '.book-list');
+  await page.click('.book-open-shared');
+  await expect(page.locator('.book-banner')).toHaveText('LIBRO · Casa compartida');
+  await app.settle();
+}
+
+test('an expense of a shared book says who paid it; the personal book does not ask', async ({ page, context, app, google }) => {
+  await openAnasBook(page, context, app, google);
+  google.files.get('book-ana').rows.Categories.push(['cat-obra', 'Obra', '🧱', 'expense', false, AT, false]);
+  await page.reload();
+  await app.settle();
+
+  await app.go('#/add?type=expense');
+  // Whoever is signed in pays by default.
+  await expect(page.locator('.person-picker .chip')).toHaveText(['Ana', 'Prueba', 'Común']);
+  await expect(page.locator('.person-picker .chip.is-selected')).toHaveText('Prueba');
+  await page.click('.tab[data-type=income]');
+  await expect(page.locator('.person-picker')).toBeHidden();
+  await page.click('.tab[data-type=expense]');
+
+  await page.fill('.amount-input', '40');
+  await page.locator('.category-option', { hasText: 'Obra' }).click();
+  await page.locator('.person-picker .chip', { hasText: 'Ana' }).click();
+  await page.click('.form-submit');
+  await app.settle();
+  const [saved] = google.movements('book-ana');
+  expect(saved.personId).toBe('member-ana');
+  expect(saved.amount).toBe(40);
+
+  // History: the person goes with the note, and filters.
+  await app.go('#/history');
+  await page.click('.history-view[data-view=list]');
+  await expect(page.locator('.history-line')).toHaveText([/Obra\s+Ana\s*−40,00 €/]);
+  await page.click('.history-filter-toggle');
+  await page.locator('.history-people .chip', { hasText: 'Común' }).click();
+  await expect(page.locator('.history-line')).toHaveCount(0);
+  await page.locator('.history-people .chip', { hasText: 'Ana' }).click();
+  await expect(page.locator('.history-line')).toHaveCount(1);
+
+  // Análisis: what each one paid.
+  await app.go('#/analysis');
+  expect(await app.lines('.stat-people')).toEqual([['Ana', '40,00 € 100 %']]);
+
+  // The personal book has no people.
+  await app.go('#/settings/books');
+  await page.locator('.book-other', { hasText: 'Personal' }).click();
+  await app.settle();
+  await app.go('#/add?type=expense');
+  await expect(page.locator('.person-picker')).toBeHidden();
+  await app.go('#/analysis');
+  await expect(page.locator('.stat-people')).toHaveCount(0);
+});

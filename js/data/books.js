@@ -32,6 +32,11 @@ export function configureBooks(overrides = {}) {
 }
 
 const sub = () => currentUserSub();
+
+// A shared book is read with its people; the personal one never has any.
+const isSharedFile = (fileId) =>
+  loadBooksCache(deps.storage(), sub())?.books?.some((book) => book.fileId === fileId && book.bookType === 'shared') ?? false;
+const read = (fileId) => readBook(fileId, { withMembers: isSharedFile(fileId) });
 const hasActiveAccounts = (book) => book.accounts.some(isActive);
 const statusOf = (book) => (hasActiveAccounts(book) ? 'ready' : 'none');
 
@@ -64,7 +69,7 @@ export async function fetchBooks() {
   saveBookList(deps.storage(), { sub: sub(), books });
   const chosen = chooseBook(books, loadBooksCache(deps.storage(), sub())?.current);
   if (!chosen) return { status: 'none', fileId: null, book: null, books };
-  const book = await readBook(chosen.fileId);
+  const book = await read(chosen.fileId);
   remember(chosen.fileId, book);
   open(chosen.fileId);
   return { status: statusOf(book), fileId: chosen.fileId, book, books };
@@ -73,7 +78,7 @@ export async function fetchBooks() {
 // Reads again a book already found, by its file: no Drive search. Used after
 // a sync, a change in Ajustes or switching books.
 export async function reloadBook(fileId) {
-  const book = await readBook(fileId);
+  const book = await read(fileId);
   remember(fileId, book);
   return { status: statusOf(book), fileId, book };
 }
@@ -111,7 +116,7 @@ export async function openSharedBook(fileId, books) {
   const file = await getFile(fileId);
   if (!isSharedBookFile(file)) throw new ValidationError(['not_shared_book']);
   await joinBook(fileId);
-  const book = await readBook(fileId);
+  const book = await readBook(fileId, { withMembers: true });
   const list = addBook(books.filter((item) => item.fileId !== fileId), bookOf(file));
   saveBookList(deps.storage(), { sub: sub(), books: list });
   remember(fileId, book);
@@ -167,11 +172,11 @@ export async function importPersonalBook({ fileId = null, data }) {
 // category) to the book open. The book is read again first, so the names
 // are matched against what is in the Sheet now.
 export async function importIntoBook(fileId, data) {
-  const current = await readBook(fileId);
+  const current = await read(fileId);
   const errors = validateImport(data, current);
   if (errors.length) throw new ValidationError(errors.map((error) => error.code));
   await appendBookRows(fileId, buildImport(data, current));
-  const book = await readBook(fileId);
+  const book = await read(fileId);
   remember(fileId, book);
   return { status: 'ready', fileId, book };
 }

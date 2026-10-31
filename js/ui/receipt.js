@@ -3,14 +3,16 @@
 // of a line changes in one place. Touches the DOM only when called.
 
 import { formatEuros, formatShortDate, labelOf } from './format.js';
+import { personName } from '../domain/members.js';
 
 // What a movement line says, without the DOM. entry: from groupEntries or
 // historyEntries. lookups: { accountById, categoryById } (Maps).
 // withAccount adds " · Cuenta" after the category.
 // Returns { label, amount, tone, note }; tone is 'expense', 'income' or ''
 // (a transfer is neither, so it stays in plain ink); note is the movement's
-// note, shown in grey where the line asks for it (History).
-export function movementLineModel(entry, { accountById, categoryById }, { withAccount = false } = {}) {
+// note, shown in grey where the line asks for it (History). In a shared
+// book the person who paid goes first: "Ana · cena".
+export function movementLineModel(entry, { accountById, categoryById, members = [] }, { withAccount = false } = {}) {
   const date = formatShortDate(entry.date);
   if (entry.kind === 'transfer') {
     const from = labelOf(accountById.get(entry.from));
@@ -21,11 +23,12 @@ export function movementLineModel(entry, { accountById, categoryById }, { withAc
   const category = labelOf(categoryById.get(movement.categoryId));
   const account = withAccount ? ` · ${labelOf(accountById.get(movement.accountId))}` : '';
   const isExpense = movement.type === 'expense';
+  const person = personName(members, movement.personId);
   return {
     label: `${date}  ${category}${account}`,
     amount: isExpense ? -movement.amount : movement.amount,
     tone: isExpense ? 'expense' : 'income',
-    note: movement.note,
+    note: [person, movement.note].filter(Boolean).join(' · '),
   };
 }
 
@@ -68,9 +71,10 @@ export function movementLine(entry, lookups, { withAccount = false, withNote = f
 }
 
 // Maps for the lookups above, built once per screen.
-export function lookupsOf({ accounts, categories }) {
+export function lookupsOf({ accounts, categories, members = [] }) {
   return {
     accountById: new Map(accounts.map((account) => [account.id, account])),
     categoryById: new Map(categories.map((category) => [category.id, category])),
+    members,
   };
 }

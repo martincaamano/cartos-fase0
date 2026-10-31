@@ -69,8 +69,9 @@ export function quickDates(today) {
 }
 
 // A new version of a saved movement: same id, author, creation time, type
-// and transferId; only the editable fields and updatedAt change. Validate
-// the result with validateMovement.
+// and transferId; only the editable fields and updatedAt change. personId
+// changes only when given (the Add form of a shared book). Validate the
+// result with validateMovement.
 export function editMovement(original, fields, now = new Date()) {
   return {
     ...original,
@@ -79,6 +80,7 @@ export function editMovement(original, fields, now = new Date()) {
     date: fields.date,
     categoryId: fields.categoryId,
     note: String(fields.note ?? ''),
+    personId: fields.personId ?? original.personId ?? '',
     updatedAt: now.toISOString(),
   };
 }

@@ -13,7 +13,10 @@ const OLD_KEY = 'cartos.book';
 const isSnapshot = (snapshot) => Boolean(snapshot)
   && ['accounts', 'categories', 'movements'].every((list) => Array.isArray(snapshot[list]));
 
-const pick = ({ accounts, categories, movements }) => ({ accounts, categories, movements });
+// members: the people of a shared book (tarea 18b); a copy saved before
+// has none.
+const pick = ({ accounts, categories, movements, members }) =>
+  ({ accounts, categories, movements, members: Array.isArray(members) ? members : [] });
 
 const empty = (sub) => ({ sub, current: null, books: [], snapshots: {} });
 

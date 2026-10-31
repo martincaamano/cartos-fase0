@@ -4,12 +4,14 @@
 // Transferencia. A transfer to an account of another book is an expense
 // here and an income there, each with a category the user picks.
 // The same form edits or deletes a saved entry from the History: its type
-// is fixed, and a transfer changes both halves together.
+// is fixed, and a transfer changes both halves together. In a shared book
+// an expense also says who paid it, or «Común» (tarea 18b).
 
 import { es } from '../../i18n/es.js';
 import { parseAmountInput } from '../domain/money.js';
 import { rankCategories } from '../domain/category.js';
 import { activeOnly } from '../domain/active.js';
+import { defaultPersonId, memberName } from '../domain/members.js';
 import {
   queueCrossBookTransfer, queueDelete, queueEdit, queueMovement, queueTransfer, queueTransferEdit,
 } from '../data/movements.js';
@@ -60,10 +62,11 @@ function fillOtherBooks(select, otherBooks) {
 // otherBooks: [{ fileId, name, book }] the other books with a copy on the
 // device, offered as transfer destinations (not when editing).
 // storage: where the account used last and the categories of the last
-// transfer to another book are remembered.
+// transfer to another book are remembered. ownEmail: the signed-in person,
+// who pays a new expense of a shared book unless another one is chosen.
 export function renderAddMovement(root, {
   book, bookName = '', fileId, params = {}, entry = null, today = new Date(), onSaved,
-  otherBooks = [], storage = globalThis.localStorage,
+  otherBooks = [], storage = globalThis.localStorage, ownEmail = '',
 }) {
   const t = es.add;
   root.innerHTML = `
@@ -108,6 +111,7 @@ export function renderAddMovement(root, {
           </label>
         </div>
         <div class="only-single category-picker" role="group"></div>
+        <div class="chip-row person-picker" role="group" hidden></div>
         <div class="date-picker" role="group"></div>
         <div class="note-field">
           <button type="button" class="link-button note-toggle" data-text="addNote"></button>
@@ -174,10 +178,34 @@ export function renderAddMovement(root, {
   const original = entry?.kind === 'movement' ? entry.movement : null;
   const halves = entry?.kind === 'transfer' ? entry.halves : null;
   const initialType = halves ? 'transfer' : original?.type ?? params.type;
+  const members = book.members ?? [];
   const state = {
     type: TYPES.includes(initialType) ? initialType : 'expense',
     categoryId: null,
     date: null,
+    personId: original ? original.personId : defaultPersonId(members, ownEmail),
+  };
+
+  // Who paid an expense: only in a book with people (a shared one).
+  const personPicker = root.querySelector('.person-picker');
+  personPicker.setAttribute('aria-label', t.person);
+  const paintPeople = () => {
+    personPicker.hidden = members.length === 0 || state.type !== 'expense';
+    if (personPicker.hidden) return;
+    const choices = [...members.map((member) => [member.id, memberName(member)]), ['', t.common]];
+    personPicker.replaceChildren(...choices.map(([id, text]) => {
+      const chip = document.createElement('button');
+      chip.type = 'button';
+      chip.className = 'chip';
+      chip.textContent = text;
+      chip.classList.toggle('is-selected', id === state.personId);
+      chip.setAttribute('aria-pressed', String(id === state.personId));
+      chip.addEventListener('click', () => {
+        state.personId = id;
+        paintPeople();
+      });
+      return chip;
+    }));
   };
 
   const categoryChoices = () => {
@@ -242,6 +270,7 @@ export function renderAddMovement(root, {
     error.textContent = '';
     paintCategories();
     paintCross();
+    paintPeople();
   };
   for (const type of TYPES) {
     const tab = document.createElement('button');
@@ -299,6 +328,7 @@ export function renderAddMovement(root, {
     };
     const transfer = { ...common, fromAccountId: fromSelect.value, toAccountId: toSelect.value };
     const single = { ...common, accountId: accountSelect.value, type: state.type, categoryId: state.categoryId };
+    if (!personPicker.hidden) single.personId = state.personId;
     const other = state.type === 'transfer' ? otherBookOf(toSelect.value) : null;
     let saving;
     if (other) {

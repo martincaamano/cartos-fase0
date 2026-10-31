@@ -9,7 +9,7 @@ import { es } from '../../i18n/es.js';
 import { toIsoDate } from '../domain/movement.js';
 import { monthRange, shiftMonth } from '../domain/stats.js';
 import {
-  categoryChanges, categoryTrends, countable, fixedCosts, keyFigures, largestExpenses, monthlySeries, monthPace,
+  categoryChanges, categoryTrends, countable, fixedCosts, spendingByPerson, keyFigures, largestExpenses, monthlySeries, monthPace,
   periodMonths, previousMonths, weekdayPattern,
 } from '../domain/analysis.js';
 import { rankCategories } from '../domain/category.js';
@@ -20,6 +20,7 @@ import { fillTexts } from '../ui/components.js';
 import { renderNavbar } from '../ui/navbar.js';
 import { barChart, lineChart, paceChart, sparkline } from '../ui/charts.js';
 import { loadExcluded, saveExcluded } from '../storage/analysis-exclude.js';
+import { personName } from '../domain/members.js';
 
 const PERIODS = ['month', 'year', 'all'];
 // Categories shown in "¿En qué?" before "+ N más".
@@ -281,6 +282,28 @@ export function renderAnalysis(root, { book, fileId = '', params = {}, today = n
     body.appendChild(list);
   }
 
+  // A shared book (tarea 18b): what each person paid, and the common part.
+  function paintPeople(movements, months) {
+    const members = book.members ?? [];
+    if (members.length === 0) return;
+    const rows = spendingByPerson(movements, months);
+    if (rows.length === 0) return;
+    body.appendChild(heading(t.who));
+    const list = element('ul', 'receipt-list stat-people');
+    for (const row of rows) {
+      const right = element('span', 'receipt-amount stat-amount');
+      right.append(formatEuros(row.amount), ' ', element('span', 'stat-change text-muted', `${row.share} %`));
+      const item = receiptLine(personName(members, row.personId) || t.common, right, { className: 'stat-category' });
+      const bar = element('span', 'stat-bar');
+      const fill = element('span', 'stat-bar-fill');
+      fill.style.width = `${Math.max(1, row.share)}%`;
+      bar.appendChild(fill);
+      item.appendChild(bar);
+      list.appendChild(item);
+    }
+    body.appendChild(list);
+  }
+
   function paintTrends(movements) {
     const months = periodMonths('year', { today: day });
     const trends = categoryTrends(movements, months, 4);
@@ -356,6 +379,7 @@ export function renderAnalysis(root, { book, fileId = '', params = {}, today = n
     const figures = paintKeyFigures(movements, months);
     paintEvolution(movements, months);
     paintCategories(movements, months);
+    paintPeople(movements, months);
     paintTrends(movements);
     paintPace(movements, figures.projection - figures.projectionOverUsual);
     paintWeekdays(movements, months);

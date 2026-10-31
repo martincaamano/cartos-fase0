@@ -55,8 +55,9 @@ export function renderBookNew(root, { books, onCreated }) {
   renderNavbar(root, { active: 'settings' });
 }
 
-// The name of the book open. onRenamed(books).
-export function renderBookEdit(root, { books, fileId, onRenamed }) {
+// The name of the book open. onRenamed(books); onShared() after sharing it
+// (the book is read again, now with its people).
+export function renderBookEdit(root, { books, fileId, onRenamed, onShared = () => {} }) {
   const t = es.books;
   root.innerHTML = skeleton(`
     <form class="form book-rename" novalidate>
@@ -108,14 +109,14 @@ export function renderBookEdit(root, { books, fileId, onRenamed }) {
   });
 
   const info = books.find((book) => book.fileId === fileId);
-  if (info?.bookType === 'shared') renderPeople(root.querySelector('.book-people-section'), { fileId, canShare: info.canShare !== false, t });
+  if (info?.bookType === 'shared') renderPeople(root.querySelector('.book-people-section'), { fileId, canShare: info.canShare !== false, t, onShared });
 
   renderNavbar(root, { active: 'settings' });
 }
 
 // A shared book's people (tab Members) and, for whoever can share it, the
 // form to share it with someone.
-function renderPeople(section, { fileId, canShare, t }) {
+function renderPeople(section, { fileId, canShare, t, onShared }) {
   section.hidden = false;
   const list = section.querySelector('.book-people');
   const paint = (members) => {
@@ -157,6 +158,7 @@ function renderPeople(section, { fileId, canShare, t }) {
       paint(members);
       done.textContent = t.shared.replace('{email}', address);
       email.value = '';
+      onShared();
     }).catch((err) => {
       console.warn('Book share failed', err);
       error.textContent = err instanceof ValidationError ? t[EMAIL_ERRORS[err.errors[0]]] : (navigator.onLine ? t.shareFailed : t.shareOffline);

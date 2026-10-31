@@ -6,7 +6,8 @@ import {
   updateAccount, updateCategory,
 } from '../js/data/book.js';
 import { HEADERS, toRow } from '../js/data/rows.js';
-import { ValidationError } from '../js/data/errors.js';
+import { ApiError, ValidationError } from '../js/data/errors.js';
+import { TokenExpiredError } from '../js/data/auth.js';
 import { setupGoogleApi, TOKEN } from './helpers/fake-google.js';
 
 const isWrite = (call) => call.method === 'POST' && call.url.hostname === 'sheets.googleapis.com'
@@ -57,6 +58,96 @@ test('readBook returns typed accounts, categories and movements', async () => {
   assert.deepEqual(book.accounts.map((a) => [a.id, a.initialBalance, a.deleted]), [['acc-1', 100, false], ['acc-old', 0, true]]);
   assert.equal(book.categories[0].isDefault, true);
   assert.equal(book.movements[0].amount, 12.5);
+});
+
+// --- readBook with the people of a shared book (tarea 18b) ---
+
+const memberRows = [HEADERS.Members, ['p-1', 'martin@example.com', 'Martín', '2026-10-20T00:00:00.000Z'], ['p-2', 'ana@example.com', 'Ana', '2026-10-21T00:00:00.000Z']];
+
+// A Sheet that answers like Sheets: 400 when a range names a missing tab.
+function sheetWith(members) {
+  const tabs = { ...Object.fromEntries(['Accounts', 'Categories', 'Movements'].map((sheet, i) => [sheet, bookResponse().body.valueRanges[i].values])) };
+  if (members) tabs.Members = members;
+  return (call) => {
+    const ranges = call.url.searchParams.getAll('ranges');
+    if (ranges.some((sheet) => !tabs[sheet])) return { status: 400 };
+    return { body: { valueRanges: ranges.map((sheet) => ({ values: tabs[sheet] })) } };
+  };
+}
+
+test('readBook without withMembers reads only the three tabs and returns members []', async () => {
+  const calls = setupGoogleApi(sheetWith(memberRows));
+  const book = await readBook('file-1');
+  assert.equal(calls.length, 1);
+  assert.deepEqual(calls[0].url.searchParams.getAll('ranges'), ['Accounts', 'Categories', 'Movements']);
+  assert.deepEqual(book.members, []);
+  assert.deepEqual(Object.keys(book), ['accounts', 'categories', 'movements', 'members']);
+});
+
+test('readBook with withMembers false behaves as without it', async () => {
+  const calls = setupGoogleApi(sheetWith(memberRows));
+  const book = await readBook('file-1', { withMembers: false });
+  assert.deepEqual(calls[0].url.searchParams.getAll('ranges'), ['Accounts', 'Categories', 'Movements']);
+  assert.deepEqual(book.members, []);
+});
+
+test('readBook withMembers reads the four tabs in one batchGet and returns the members', async () => {
+  const calls = setupGoogleApi(sheetWith(memberRows));
+  const book = await readBook('file-1', { withMembers: true });
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0].method, 'GET');
+  assert.equal(calls[0].url.pathname, '/v4/spreadsheets/file-1/values:batchGet');
+  assert.equal(calls[0].headers.Authorization, `Bearer ${TOKEN}`);
+  assert.deepEqual(calls[0].url.searchParams.getAll('ranges'), ['Accounts', 'Categories', 'Movements', 'Members']);
+  assert.deepEqual(book.members.map((m) => [m.id, m.email, m.name, m.createdAt]), [
+    ['p-1', 'martin@example.com', 'Martín', '2026-10-20T00:00:00.000Z'],
+    ['p-2', 'ana@example.com', 'Ana', '2026-10-21T00:00:00.000Z'],
+  ]);
+  assert.equal(book.accounts[0].initialBalance, 100);
+  assert.equal(book.movements[0].amount, 12.5);
+});
+
+test('readBook withMembers of a Members tab with only the header gives members []', async () => {
+  setupGoogleApi(sheetWith([HEADERS.Members]));
+  const book = await readBook('file-1', { withMembers: true });
+  assert.deepEqual(book.members, []);
+});
+
+test('readBook withMembers without a Members tab (400) reads again without it and returns members []', async () => {
+  const calls = setupGoogleApi(sheetWith(null));
+  const book = await readBook('file-1', { withMembers: true });
+  assert.equal(calls.length, 2);
+  assert.deepEqual(calls[0].url.searchParams.getAll('ranges'), ['Accounts', 'Categories', 'Movements', 'Members']);
+  assert.deepEqual(calls[1].url.searchParams.getAll('ranges'), ['Accounts', 'Categories', 'Movements']);
+  assert.deepEqual(book.members, []);
+  assert.deepEqual(book.accounts.map((a) => a.id), ['acc-1', 'acc-old']);
+});
+
+test('readBook withMembers: an error other than 400 propagates, no second read', async () => {
+  for (const status of [403, 404, 429, 500, 503]) {
+    const calls = setupGoogleApi(() => ({ status }));
+    await assert.rejects(readBook('file-1', { withMembers: true }),
+      (err) => err instanceof ApiError && err.status === status, String(status));
+    assert.equal(calls.length, 1, `one call for ${status}`);
+  }
+});
+
+test('readBook withMembers: a 400 on the second read propagates', async () => {
+  const calls = setupGoogleApi(() => ({ status: 400 }));
+  await assert.rejects(readBook('file-1', { withMembers: true }), (err) => err instanceof ApiError && err.status === 400);
+  assert.equal(calls.length, 2, 'retried once, not more');
+});
+
+test('readBook without withMembers: a 400 propagates, no retry', async () => {
+  const calls = setupGoogleApi(() => ({ status: 400 }));
+  await assert.rejects(readBook('file-1'), (err) => err instanceof ApiError && err.status === 400);
+  assert.equal(calls.length, 1);
+});
+
+test('readBook withMembers: an expired token (401) propagates as TokenExpiredError, no retry', async () => {
+  const calls = setupGoogleApi(() => ({ status: 401 }));
+  await assert.rejects(readBook('file-1', { withMembers: true }), (err) => err instanceof TokenExpiredError);
+  assert.equal(calls.length, 1);
 });
 
 test('addAccount appends a valid account and rejects an invalid one', async () => {

@@ -67,6 +67,19 @@ test('historyEntries with empty filter values behaves as no filter', () => {
   assert.equal(all.length, 6);
 });
 
+test('historyEntries filters by who paid; common (empty id) covers transfers and movements without a person', () => {
+  const movements = [
+    mov('m-ana', { personId: 'p-ana' }),
+    mov('m-martin', { personId: 'p-martin', date: '2026-10-16' }),
+    mov('m-common', { date: '2026-10-17' }),
+    ...transferHalves('t-1'),
+  ];
+  assert.deepEqual(ids(historyEntries(movements, { personIds: ['p-ana'] })), ['m-ana']);
+  assert.deepEqual(ids(historyEntries(movements, { personIds: [''] })), ['m-common', 't-1']);
+  assert.deepEqual(ids(historyEntries(movements, { personIds: ['p-ana', 'p-martin'] })), ['m-martin', 'm-ana']);
+  assert.equal(activeFilterCount({ personIds: ['p-ana', ''] }), 2);
+});
+
 test('historyEntries on an empty list returns an empty list', () => {
   assert.deepEqual(historyEntries([]), []);
   assert.deepEqual(historyEntries([], { accountIds: ['acc-1'] }), []);
@@ -332,6 +345,29 @@ test('editMovement turns a missing note into an empty string and does not mutate
   assert.equal(edited.note, '');
   assert.deepEqual(original, snapshot);
   assert.notEqual(edited, original);
+});
+
+test('editMovement keeps personId when fields has none', () => {
+  const original = mov('m-1', { personId: 'p-1' });
+  const edited = editMovement(original, { accountId: 'acc-1', amount: 5, date: '2026-10-15', categoryId: 'cat-food' }, editNow);
+  assert.equal(edited.personId, 'p-1');
+  const undef = editMovement(original, { accountId: 'acc-1', amount: 5, date: '2026-10-15', categoryId: 'cat-food', personId: undefined }, editNow);
+  assert.equal(undef.personId, 'p-1', 'undefined means not given');
+});
+
+test('editMovement uses fields.personId when given, including empty (Común)', () => {
+  const original = mov('m-1', { personId: 'p-1' });
+  const base = { accountId: 'acc-1', amount: 5, date: '2026-10-15', categoryId: 'cat-food' };
+  assert.equal(editMovement(original, { ...base, personId: 'p-2' }, editNow).personId, 'p-2');
+  assert.equal(editMovement(original, { ...base, personId: '' }, editNow).personId, '');
+  assert.equal(editMovement(mov('m-2', { personId: '' }), { ...base, personId: 'p-1' }, editNow).personId, 'p-1');
+  assert.equal(original.personId, 'p-1', 'the original is not mutated');
+});
+
+test('editMovement of a movement without personId (old row) gives an empty string', () => {
+  const { personId, ...old } = mov('m-1');
+  const edited = editMovement(old, { accountId: 'acc-1', amount: 5, date: '2026-10-15', categoryId: 'cat-food' }, editNow);
+  assert.equal(edited.personId, '');
 });
 
 test('an edited movement changes the balance by the difference', () => {

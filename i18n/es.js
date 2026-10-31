@@ -109,6 +109,8 @@ export const es = {
     revealHint: 'Pulsa INICIO otra vez para ver las cifras.',
   },
   add: {
+    person: 'Quién paga',
+    common: 'Común',
     expense: 'Gasto',
     income: 'Ingreso',
     transfer: 'Transferencia',
@@ -149,6 +151,8 @@ export const es = {
     looseHalf: 'Es una mitad de una transferencia cuya otra mitad ya no está. Lo que cambies aquí no afecta a la otra cuenta.',
   },
   history: {
+    people: 'QUIÉN',
+    common: 'Común',
     filter: 'Filtrar',
     filterCount: 'Filtrar · {n}',
     clear: 'Quitar',
@@ -186,6 +190,8 @@ export const es = {
     net: 'Neto',
     tapAgain: 'toca otra vez para verlo en Historial',
     onWhat: '¿EN QUÉ?',
+    who: '¿QUIÉN?',
+    common: 'Común',
     markBefore: '▏ periodo anterior',
     noSpending: 'Sin gastos en este periodo.',
     more: '+ {n} más',

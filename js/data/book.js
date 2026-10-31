@@ -3,7 +3,7 @@
 
 import { es } from '../../i18n/es.js';
 import { createSpreadsheetFile } from './drive.js';
-import { ValidationError } from './errors.js';
+import { ApiError, ValidationError } from './errors.js';
 import { append, batchClear, batchGet, batchUpdate, batchUpdateValues } from './sheets.js';
 import { findRowById, HEADERS, SHEET_NAMES, toRow, rowsToObjects } from './rows.js';
 import { createAccount, editAccount, validateAccount } from '../domain/account.js';
@@ -36,12 +36,23 @@ export async function createBook({ name = 'Personal', bookType = 'personal', cat
   return { fileId: file.id, bookId, name, bookType };
 }
 
-export async function readBook(fileId) {
-  const [accounts, categories, movements] = await batchGet(fileId, SHEET_NAMES);
+// withMembers: a shared book also brings its people (tab Members, tarea
+// 18b). A book nobody has joined yet has no such tab, and Sheets refuses
+// the whole read (400): it is read again without it.
+export async function readBook(fileId, { withMembers = false } = {}) {
+  let tabs;
+  try {
+    tabs = await batchGet(fileId, withMembers ? [...SHEET_NAMES, 'Members'] : SHEET_NAMES);
+  } catch (err) {
+    if (!withMembers || !(err instanceof ApiError) || err.status !== 400) throw err;
+    tabs = await batchGet(fileId, SHEET_NAMES);
+  }
+  const [accounts, categories, movements, members] = tabs;
   return {
     accounts: rowsToObjects('Accounts', accounts),
     categories: rowsToObjects('Categories', categories),
     movements: rowsToObjects('Movements', movements),
+    members: members ? rowsToObjects('Members', members) : [],
   };
 }
 

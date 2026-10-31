@@ -7,6 +7,7 @@
 // from domain/history.js.
 
 import { es } from '../../i18n/es.js';
+import { memberName } from '../domain/members.js';
 import {
   activeFilterCount, historyEntries, monthOf, monthsSpan, selectMonth, summarizeHistory, sumEntries, transferAmount,
 } from '../domain/history.js';
@@ -76,6 +77,10 @@ export function renderHistory(root, { book, params = {}, today = new Date(), sto
         <div class="chip-strip history-accounts"></div>
         <p class="history-filter-head"><span data-text="categories"></span><span class="history-count-categories"></span></p>
         <div class="chip-strip history-categories"></div>
+        <div class="history-people-filter" hidden>
+          <p class="history-filter-head"><span data-text="people"></span><span class="history-count-people"></span></p>
+          <div class="chip-strip history-people"></div>
+        </div>
       </div>
       <div class="history-list"></div>
       <button type="button" class="link-button history-more" data-text="more" hidden></button>
@@ -97,11 +102,13 @@ export function renderHistory(root, { book, params = {}, today = new Date(), sto
     range: /^\d{4}-\d{2}$/.test(params.month ?? '') ? { from: params.month, to: params.month, open: false } : null,
     accountIds: new Set(book.accounts.some((a) => a.id === params.account) ? [params.account] : []),
     categoryIds: new Set(),
+    personIds: new Set(),
     open: new Set(),
   };
   const filters = () => ({
     accountIds: [...state.accountIds],
     categoryIds: [...state.categoryIds],
+    personIds: [...state.personIds],
     fromMonth: state.range?.from ?? '',
     toMonth: state.range?.to ?? '',
   });
@@ -261,6 +268,12 @@ export function renderHistory(root, { book, params = {}, today = new Date(), sto
       filterChip(labelOf(category), state.categoryIds.has(category.id), toggleIn(state.categoryIds, category.id))));
     root.querySelector('.history-count-accounts').textContent = state.accountIds.size || '';
     root.querySelector('.history-count-categories').textContent = state.categoryIds.size || '';
+    // In a shared book: who paid, and «Común».
+    const members = book.members ?? [];
+    root.querySelector('.history-people-filter').hidden = members.length === 0;
+    root.querySelector('.history-people').replaceChildren(...[...members.map((m) => [m.id, memberName(m)]), ['', t.common]]
+      .map(([id, text]) => filterChip(text, state.personIds.has(id), toggleIn(state.personIds, id))));
+    root.querySelector('.history-count-people').textContent = state.personIds.size || '';
   };
 
   const paintViews = () => {
@@ -321,6 +334,7 @@ export function renderHistory(root, { book, params = {}, today = new Date(), sto
     state.range = null;
     state.accountIds.clear();
     state.categoryIds.clear();
+    state.personIds.clear();
     apply();
   });
   more.addEventListener('click', paintPage);

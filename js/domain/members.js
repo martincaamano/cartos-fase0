@@ -35,7 +35,10 @@ export function createMember({ email, name = '' }, deps = {}) {
   };
 }
 
-export const isMember = (members, email) => members.some((member) => normalizeEmail(member.email) === normalizeEmail(email));
+// An empty email identifies nobody.
+const sameEmail = (a, b) => normalizeEmail(a) !== '' && normalizeEmail(a) === normalizeEmail(b);
+
+export const isMember = (members, email) => members.some((member) => sameEmail(member.email, email));
 
 // How a person is shown: the first word of their name, or their email when
 // the name is empty ("Martín Caamaño" → "Martín").
@@ -48,4 +51,17 @@ export function memberName(member) {
 // it is a Cartos book and not someone's personal one.
 export function isSharedBookFile(file) {
   return file?.appProperties?.app === 'cartos' && file.appProperties.bookType !== 'personal';
+}
+
+// Who pays an expense in a shared book (tarea 18b): a person's member id, or
+// '' for «Común». A new expense starts with whoever is signed in.
+export function defaultPersonId(members, email) {
+  return members.find((member) => sameEmail(member.email, email))?.id ?? '';
+}
+
+// The name shown for a movement's personId: the person's, or '' when it is
+// common (or the person is not in the book).
+export function personName(members, personId) {
+  const member = personId ? members.find((item) => item.id === personId) : null;
+  return member ? memberName(member) : '';
 }

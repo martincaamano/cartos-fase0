@@ -17,6 +17,8 @@ function fakeStorage() {
 
 const snapshot = { accounts: [{ id: 'a' }], categories: [], movements: [] };
 const other = { accounts: [{ id: 'b' }], categories: [{ id: 'c' }], movements: [{ id: 'm' }] };
+// What a stored snapshot reads back as: members [] when it had none.
+const stored = (snap) => ({ ...snap, members: [] });
 const t1 = new Date('2026-10-25T10:00:00Z');
 const books = [
   { fileId: 'file-1', name: 'Personal', bookType: 'personal', isPersonal: true },
@@ -26,7 +28,7 @@ const books = [
 test('a copy survives a round trip for the same user', () => {
   const storage = fakeStorage();
   saveBookCache(storage, { sub: 'user-1', fileId: 'file-1', snapshot }, t1);
-  assert.deepEqual(loadBookCache(storage, 'user-1', 'file-1'), { fileId: 'file-1', snapshot, savedAt: '2026-10-25T10:00:00.000Z' });
+  assert.deepEqual(loadBookCache(storage, 'user-1', 'file-1'), { fileId: 'file-1', snapshot: stored(snapshot), savedAt: '2026-10-25T10:00:00.000Z' });
 });
 
 test('saveBookCache does not change the book open', () => {
@@ -45,8 +47,8 @@ test('each book keeps its own copy; without fileId the open one is returned', ()
   saveBookCache(storage, { sub: 'user-1', fileId: 'file-1', snapshot }, t1);
   saveBookCache(storage, { sub: 'user-1', fileId: 'file-2', snapshot: other }, new Date('2026-10-26T00:00:00Z'));
   saveCurrentBook(storage, { sub: 'user-1', fileId: 'file-2' });
-  assert.deepEqual(loadBookCache(storage, 'user-1'), { fileId: 'file-2', snapshot: other, savedAt: '2026-10-26T00:00:00.000Z' });
-  assert.deepEqual(loadBookCache(storage, 'user-1', 'file-1').snapshot, snapshot);
+  assert.deepEqual(loadBookCache(storage, 'user-1'), { fileId: 'file-2', snapshot: stored(other), savedAt: '2026-10-26T00:00:00.000Z' });
+  assert.deepEqual(loadBookCache(storage, 'user-1', 'file-1').snapshot, stored(snapshot));
   assert.equal(loadBookCache(storage, 'user-1', 'file-3'), null);
 });
 
@@ -57,10 +59,52 @@ test('the open book without a copy gives null', () => {
   assert.equal(loadBooksCache(storage, 'user-1').current, 'file-2');
 });
 
-test('only accounts, categories and movements are stored', () => {
+test('only accounts, categories, movements and members are stored', () => {
   const storage = fakeStorage();
-  saveBookCache(storage, { sub: 'user-1', fileId: 'file-1', snapshot: { ...snapshot, extra: 'x' } }, t1);
-  assert.deepEqual(Object.keys(loadBookCache(storage, 'user-1', 'file-1').snapshot), ['accounts', 'categories', 'movements']);
+  saveBookCache(storage, { sub: 'user-1', fileId: 'file-1', snapshot: { ...snapshot, members: [], extra: 'x', token: 'nope' } }, t1);
+  assert.deepEqual(Object.keys(loadBookCache(storage, 'user-1', 'file-1').snapshot), ['accounts', 'categories', 'movements', 'members']);
+  assert.equal(storage.getItem('cartos.books').includes('nope'), false, 'other keys never reach the storage');
+});
+
+// --- members of a shared book (tarea 18b) ---
+
+const members = [
+  { id: 'p-1', email: 'martin@example.com', name: 'Martín Inventado', createdAt: '2026-10-20T00:00:00.000Z' },
+  { id: 'p-2', email: 'ana@example.com', name: '', createdAt: '2026-10-21T00:00:00.000Z' },
+];
+
+test('the members of a shared book survive a round trip', () => {
+  const storage = fakeStorage();
+  saveBookCache(storage, { sub: 'user-1', fileId: 'file-2', snapshot: { ...other, members } }, t1);
+  assert.deepEqual(loadBookCache(storage, 'user-1', 'file-2').snapshot, { ...other, members });
+});
+
+test('the members of a shared book survive in the stored text too (parseBooksCache)', () => {
+  const storage = fakeStorage();
+  saveBookCache(storage, { sub: 'user-1', fileId: 'file-2', snapshot: { ...other, members } }, t1);
+  const parsed = parseBooksCache(storage.getItem('cartos.books'), 'user-1');
+  assert.deepEqual(parsed.snapshots['file-2'].snapshot.members, members);
+});
+
+test('a missing or invalid members becomes []', () => {
+  for (const bad of [undefined, null, 'ana', 7, { id: 'p-1' }, true]) {
+    const storage = fakeStorage();
+    saveBookCache(storage, { sub: 'user-1', fileId: 'file-1', snapshot: { ...snapshot, members: bad } }, t1);
+    assert.deepEqual(loadBookCache(storage, 'user-1', 'file-1').snapshot.members, [], JSON.stringify(bad));
+  }
+});
+
+test('a stored copy without members (saved before tarea 18b) reads with members []', () => {
+  const raw = JSON.stringify({ sub: 'user-1', current: 'file-1', books, snapshots: { 'file-1': { snapshot, savedAt: 'x' } } });
+  assert.deepEqual(parseBooksCache(raw, 'user-1').snapshots['file-1'].snapshot, stored(snapshot));
+  const withBad = JSON.stringify({ sub: 'user-1', current: 'file-1', books, snapshots: { 'file-1': { snapshot: { ...snapshot, members: 'x' }, savedAt: 'x' } } });
+  assert.deepEqual(parseBooksCache(withBad, 'user-1').snapshots['file-1'].snapshot.members, []);
+});
+
+test('an empty members list is kept as []', () => {
+  const storage = fakeStorage();
+  saveBookCache(storage, { sub: 'user-1', fileId: 'file-1', snapshot: { ...snapshot, members: [] } }, t1);
+  assert.deepEqual(loadBookCache(storage, 'user-1', 'file-1').snapshot.members, []);
 });
 
 test('saveBookList stores the list and drops copies of books no longer listed', () => {
@@ -122,9 +166,9 @@ test('the old single-book copy is read as the open book with its snapshot', () =
     sub: 'user-1',
     current: 'file-1',
     books: [],
-    snapshots: { 'file-1': { snapshot, savedAt: '2026-10-20T08:00:00.000Z' } },
+    snapshots: { 'file-1': { snapshot: stored(snapshot), savedAt: '2026-10-20T08:00:00.000Z' } },
   });
-  assert.deepEqual(loadBookCache(storage, 'user-1'), { fileId: 'file-1', snapshot, savedAt: '2026-10-20T08:00:00.000Z' });
+  assert.deepEqual(loadBookCache(storage, 'user-1'), { fileId: 'file-1', snapshot: stored(snapshot), savedAt: '2026-10-20T08:00:00.000Z' });
 });
 
 test('the old copy of another user, or a broken one, is ignored', () => {
@@ -147,7 +191,7 @@ test('any write converts the old copy and removes the old key', () => {
   const cache = loadBooksCache(storage, 'user-1');
   assert.equal(cache.current, 'file-1');
   assert.deepEqual(cache.books, books);
-  assert.deepEqual(cache.snapshots['file-1'].snapshot, snapshot);
+  assert.deepEqual(cache.snapshots['file-1'].snapshot, stored(snapshot));
 });
 
 test('saveCurrentBook also removes the old key', () => {
@@ -186,7 +230,7 @@ test('parseBooksCache drops incomplete snapshots and fixes bad current or books'
     snapshots: { good: { snapshot, savedAt: 'x' }, bad: { snapshot: { accounts: [] } }, empty: null },
   });
   assert.deepEqual(parseBooksCache(raw, 'user-1'), {
-    sub: 'user-1', current: null, books: [], snapshots: { good: { snapshot, savedAt: 'x' } },
+    sub: 'user-1', current: null, books: [], snapshots: { good: { snapshot: stored(snapshot), savedAt: 'x' } },
   });
 });
 

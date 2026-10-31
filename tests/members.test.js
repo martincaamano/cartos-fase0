@@ -4,6 +4,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   normalizeEmail, validateShareEmail, createMember, isMember, memberName, isSharedBookFile,
+  defaultPersonId, personName,
 } from '../js/domain/members.js';
 
 // --- normalizeEmail ---
@@ -135,4 +136,60 @@ test('isSharedBookFile: personal books, other apps and missing data are false', 
     undefined,
   ];
   for (const file of cases) assert.equal(isSharedBookFile(file), false, JSON.stringify(file));
+});
+
+// --- defaultPersonId and personName (tarea 18b) ---
+
+const people = [
+  { id: 'p-1', email: 'martin@example.com', name: 'Martín Inventado', createdAt: 't0' },
+  { id: 'p-2', email: 'Ana@Example.com', name: '  Ana  María ', createdAt: 't1' },
+  { id: 'p-3', email: 'luis@example.com', name: '', createdAt: 't2' },
+];
+
+test('defaultPersonId finds the member id by email', () => {
+  assert.equal(defaultPersonId(people, 'martin@example.com'), 'p-1');
+  assert.equal(defaultPersonId(people, 'luis@example.com'), 'p-3');
+});
+
+test('defaultPersonId ignores case and surrounding spaces on both sides', () => {
+  assert.equal(defaultPersonId(people, '  MARTIN@example.COM '), 'p-1');
+  assert.equal(defaultPersonId(people, 'ana@example.com'), 'p-2');
+});
+
+test('defaultPersonId is empty when the email is not a member or missing', () => {
+  assert.equal(defaultPersonId(people, 'otra@example.com'), '');
+  assert.equal(defaultPersonId(people, ''), '');
+  assert.equal(defaultPersonId(people, null), '');
+  assert.equal(defaultPersonId(people, undefined), '');
+  assert.equal(defaultPersonId([], 'martin@example.com'), '');
+});
+
+test('defaultPersonId with an empty email does not match a member with an empty email', () => {
+  // A broken row without email must not become the default payer.
+  const withBlank = [{ id: 'p-x', email: '', name: 'Nadie' }, ...people];
+  assert.equal(defaultPersonId(withBlank, ''), '', 'an anonymous row is never the default');
+});
+
+test('personName gives the first name of the member', () => {
+  assert.equal(personName(people, 'p-1'), 'Martín');
+  assert.equal(personName(people, 'p-2'), 'Ana');
+});
+
+test('personName of a member without name falls back to the email (as memberName)', () => {
+  assert.equal(personName(people, 'p-3'), 'luis@example.com');
+});
+
+test('personName is empty for Común, unknown ids or no members', () => {
+  assert.equal(personName(people, ''), '');
+  assert.equal(personName(people, null), '');
+  assert.equal(personName(people, undefined), '');
+  assert.equal(personName(people, 'p-9'), '');
+  assert.equal(personName([], 'p-1'), '');
+});
+
+test('defaultPersonId and personName do not mutate the members', () => {
+  const before = structuredClone(people);
+  defaultPersonId(people, 'ANA@example.com');
+  personName(people, 'p-2');
+  assert.deepEqual(people, before);
 });

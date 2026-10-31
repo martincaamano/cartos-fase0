@@ -162,10 +162,110 @@ test('fetchBooks opens the last book open when it is still in Drive', async () =
   const result = await fetchBooks();
   assert.equal(result.fileId, 'file-c');
   assert.equal(result.book.accounts[0].name, 'Cuenta común');
-  assert.equal(calls.filter(isAnyRead).length, 1);
-  assert.ok(calls.some(readOf('file-c')));
+  // Casa has no Members tab yet: read with Members (400), then without it.
+  assert.ok(calls.filter(isAnyRead).length >= 1);
+  assert.ok(calls.filter(isAnyRead).every(readOf('file-c')), 'only file-c is read');
   assert.equal(calls.some(readOf('file-p')), false, 'the personal book is not read');
+  assert.deepEqual(result.book.members, []);
   assert.equal(loadBooksCache(storage, SUB).current, 'file-c');
+});
+
+// --- the people of a shared book are read with it (tarea 18b) ---
+
+const rangesOf = (call) => call.url.searchParams.getAll('ranges');
+const casaMembers = () => [
+  HEADERS.Members,
+  ['p-1', 'martin@example.com', 'Martín Inventado', '2026-10-20T00:00:00.000Z'],
+  ['p-2', 'ana@example.com', 'Ana', '2026-10-21T00:00:00.000Z'],
+];
+const casaWithMembers = () => casaFile({ ...casaTabs(), Members: casaMembers() });
+
+test('fetchBooks opening a shared book with a Members tab: one read that includes Members', async () => {
+  const { calls } = fakeDrive([personalFile(personalTabs()), casaWithMembers()]);
+  saveCurrentBook(storage, { sub: SUB, fileId: 'file-c' });
+  const result = await fetchBooks();
+  const reads = calls.filter(isAnyRead);
+  assert.equal(reads.length, 1);
+  assert.ok(readOf('file-c')(reads[0]));
+  assert.deepEqual(rangesOf(reads[0]), ['Accounts', 'Categories', 'Movements', 'Members']);
+  assert.deepEqual(result.book.members.map((m) => [m.id, m.email, m.name]), [
+    ['p-1', 'martin@example.com', 'Martín Inventado'],
+    ['p-2', 'ana@example.com', 'Ana'],
+  ]);
+  assert.deepEqual(cachedBook('file-c').members, result.book.members, 'the device copy keeps them');
+});
+
+test('fetchBooks opening the personal book never asks for Members', async () => {
+  const { calls } = fakeDrive([casaWithMembers(), personalFile({ ...personalTabs(), Members: casaMembers() })]);
+  const result = await fetchBooks();
+  assert.equal(result.fileId, 'file-p');
+  const reads = calls.filter(isAnyRead);
+  assert.equal(reads.length, 1);
+  assert.deepEqual(rangesOf(reads[0]), ['Accounts', 'Categories', 'Movements']);
+  assert.deepEqual(result.book.members, []);
+});
+
+test('reloadBook of the personal book never asks for Members, even when listed', async () => {
+  const { calls } = fakeDrive([personalFile({ ...personalTabs(), Members: casaMembers() }), casaWithMembers()]);
+  await fetchBooks();
+  calls.length = 0;
+  const result = await reloadBook('file-p');
+  assert.equal(calls.length, 1);
+  assert.deepEqual(rangesOf(calls[0]), ['Accounts', 'Categories', 'Movements']);
+  assert.deepEqual(result.book.members, []);
+});
+
+test('reloadBook of a listed shared book reads it with its Members', async () => {
+  const { calls } = fakeDrive([personalFile(personalTabs()), casaWithMembers()]);
+  await fetchBooks();
+  calls.length = 0;
+  const result = await reloadBook('file-c');
+  assert.equal(calls.length, 1);
+  assert.ok(readOf('file-c')(calls[0]));
+  assert.deepEqual(rangesOf(calls[0]), ['Accounts', 'Categories', 'Movements', 'Members']);
+  assert.deepEqual(result.book.members.map((m) => m.id), ['p-1', 'p-2']);
+  assert.deepEqual(cachedBook('file-c').members.map((m) => m.id), ['p-1', 'p-2']);
+});
+
+test('reloadBook of a listed shared book without Members tab: reads again without it, members []', async () => {
+  const { calls } = fakeDrive([personalFile(personalTabs()), casaFile(casaTabs())]);
+  await fetchBooks();
+  calls.length = 0;
+  const result = await reloadBook('file-c');
+  assert.deepEqual(calls.map(rangesOf), [
+    ['Accounts', 'Categories', 'Movements', 'Members'],
+    ['Accounts', 'Categories', 'Movements'],
+  ]);
+  assert.equal(result.status, 'ready');
+  assert.deepEqual(result.book.members, []);
+});
+
+test('reloadBook of a book not in the cached list reads only the three tabs', async () => {
+  const { calls } = fakeDrive([casaWithMembers()]);
+  const result = await reloadBook('file-c');
+  assert.deepEqual(calls.map(rangesOf), [['Accounts', 'Categories', 'Movements']]);
+  assert.deepEqual(result.book.members, []);
+});
+
+test('importIntoBook of a listed shared book reads it with Members before and after', async () => {
+  const drive = bookWithData();
+  drive.tabs['file-1'].Members = casaMembers();
+  saveBookList(storage, { sub: SUB, books: [{ fileId: 'file-1', name: 'Casa do medio', bookType: 'shared' }] });
+  const result = await importIntoBook('file-1', importData);
+  const reads = drive.calls.filter(isAnyRead);
+  assert.equal(reads.length, 2);
+  for (const read of reads) assert.deepEqual(rangesOf(read), ['Accounts', 'Categories', 'Movements', 'Members']);
+  assert.deepEqual(result.book.members.map((m) => m.id), ['p-1', 'p-2']);
+});
+
+test('importIntoBook of the personal book never asks for Members', async () => {
+  const drive = bookWithData();
+  saveBookList(storage, { sub: SUB, books: [{ fileId: 'file-1', name: 'Personal', bookType: 'personal', isPersonal: true }] });
+  const result = await importIntoBook('file-1', importData);
+  const reads = drive.calls.filter(isAnyRead);
+  assert.equal(reads.length, 2);
+  for (const read of reads) assert.deepEqual(rangesOf(read), ['Accounts', 'Categories', 'Movements']);
+  assert.deepEqual(result.book.members, []);
 });
 
 test('fetchBooks with a last book that is gone opens the personal one and drops the old copy', async () => {
@@ -717,6 +817,14 @@ test('openSharedBook of a shared book without Members: gets the file, joins, rea
   assert.equal(result.fileId, 'file-s');
   assert.equal(result.book.accounts[0].name, 'Cuenta común');
   assert.deepEqual(Object.keys(result).sort(), ['book', 'books', 'fileId', 'status']);
+});
+
+test('openSharedBook reads the book with its Members, the user included', async () => {
+  const drive = fakeDrive([sharedFile([HEADERS.Members, ['m-2', 'ana@example.com', 'Ana', 't0']])]);
+  const result = await openSharedBook('file-s', otherBooks);
+  const reads = drive.calls.filter(isAnyRead).filter(readOf('file-s'));
+  assert.deepEqual(reads.at(-1).url.searchParams.getAll('ranges'), ['Accounts', 'Categories', 'Movements', 'Members']);
+  assert.deepEqual(result.book.members.map((m) => m.email), ['ana@example.com', 'martin@example.com']);
 });
 
 test('openSharedBook adds the book to the list once, in name order, and opens it', async () => {
