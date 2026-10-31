@@ -4,6 +4,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createBookState } from '../js/book-state.js';
 import { TokenExpiredError } from '../js/data/auth.js';
+import { ApiError } from '../js/data/errors.js';
 
 const tick = () => new Promise((resolve) => setImmediate(resolve));
 
@@ -552,4 +553,173 @@ test('reset forgets the book, the list and the pending movements', async () => {
   assert.equal(state.fileId, null);
   assert.deepEqual(state.books, []);
   assert.equal(state.bookInfo, null);
+});
+
+// --- reset during a Drive read (tarea 21) ---
+
+test('a fetchBooks that resolves after reset changes nothing and emits no data', async () => {
+  let release;
+  const slow = new Promise((resolve) => { release = resolve; });
+  const { state, log, count } = setup({
+    fetchBooks: async () => { log.push('fetch'); await slow; return { ...ready([m1]), books: BOOKS }; },
+  });
+  const loading = state.refresh();
+  await tick();
+  state.reset();
+  log.length = 0;
+  release();
+  await loading;
+  assert.equal(state.status, 'unknown');
+  assert.equal(state.fileId, null);
+  assert.deepEqual(state.books, []);
+  assert.equal(count('data'), 0);
+  assert.equal(count('syncOutbox:f1'), 0, 'nothing of the old session is uploaded');
+});
+
+test('a fetchBooks that fails after reset emits neither loadFailed nor route', async () => {
+  let fail;
+  const slow = new Promise((_, reject) => { fail = reject; });
+  const { state, log } = setup({ fetchBooks: async () => { await slow; } });
+  const loading = state.refresh();
+  await tick();
+  state.reset();
+  log.length = 0;
+  fail(new Error('network'));
+  await loading;
+  assert.deepEqual(log, []);
+});
+
+test('a refresh right after reset is not blocked by the stale read', async () => {
+  let release;
+  const slow = new Promise((resolve) => { release = resolve; });
+  let calls = 0;
+  const { state, log } = setup({
+    fetchBooks: async () => {
+      calls += 1;
+      log.push(`fetch${calls}`);
+      if (calls === 1) { await slow; return { ...ready([m1], 'f1'), books: BOOKS }; }
+      return { ...ready([m3], 'f2'), books: BOOKS.slice(1) };
+    },
+  });
+  const first = state.refresh();
+  await tick();
+  state.reset();
+  await state.refresh();
+  assert.equal(calls, 2, 'the new session reads Drive at once');
+  assert.equal(state.fileId, 'f2');
+  // The stale read ends late: the new session keeps its book and list.
+  release();
+  await first;
+  assert.equal(state.fileId, 'f2');
+  assert.deepEqual(state.savedBook.movements, [m3]);
+  assert.deepEqual(state.books, BOOKS.slice(1));
+});
+
+test('after the stale read ends, a later refresh still reads Drive (its finally does not lock)', async () => {
+  let release;
+  const slow = new Promise((resolve) => { release = resolve; });
+  let calls = 0;
+  let hold;
+  const { state } = setup({
+    fetchBooks: async () => {
+      calls += 1;
+      const call = calls;
+      if (call === 1) await slow;
+      if (call === 2) await new Promise((resolve) => { hold = resolve; });
+      return { ...ready([m1]), books: BOOKS };
+    },
+  });
+  const first = state.refresh();
+  await tick();
+  state.reset();
+  const second = state.refresh();
+  await tick();
+  // The stale read ends while the new one is still running: it must not free the new one's lock.
+  release();
+  await first;
+  await state.refresh();
+  assert.equal(calls, 2, 'a refresh while the new read runs does not start a third');
+  hold();
+  await second;
+  await state.refresh();
+  assert.equal(calls, 3);
+});
+
+// --- blockedCount: books that refuse the upload (tarea 21) ---
+
+const refusing = (statusByFile) => async (fileId) => {
+  const status = statusByFile[fileId];
+  if (status) throw new ApiError(status, 'sheets.append');
+  return { appended: 0, updated: 0 };
+};
+
+for (const status of [403, 404]) {
+  test(`blockedCount counts the queued movements of a book that answers ${status}`, async () => {
+    const { state, logged } = setup({ syncOutbox: refusing({ f2: status }) }, {
+      outbox: [
+        { fileId: 'f2', movement: m1 },
+        { fileId: 'f2', movement: m3 },
+        { fileId: 'f1', movement: m2 },
+        { fileId: 'f3', movement: { ...m1, id: 'm5' } },
+      ],
+    });
+    state.setUp({ ...ready([m1]), books: BOOKS });
+    assert.equal(state.blockedCount, 0);
+    await state.sync();
+    assert.equal(state.blockedCount, 2);
+    assert.equal(logged.length, 1);
+    assert.match(logged[0].result, new RegExp(`^sync:\\w+:${status}$`));
+    assert.doesNotMatch(JSON.stringify(logged), /m1|m3|12\.5|0\.01/);
+  });
+}
+
+test('blockedCount adds up several refusing books', async () => {
+  const { state } = setup({ syncOutbox: refusing({ f2: 403, f3: 404 }) }, {
+    outbox: [
+      { fileId: 'f2', movement: m1 },
+      { fileId: 'f3', movement: m2 },
+      { fileId: 'f3', movement: m3 },
+    ],
+  });
+  state.setUp({ ...ready([m1]), books: BOOKS });
+  await state.sync();
+  assert.equal(state.blockedCount, 3);
+});
+
+test('a later successful sync of that book clears blockedCount', async () => {
+  let status = 403;
+  const { state } = setup({
+    syncOutbox: async (fileId) => {
+      if (status) throw new ApiError(status, 'sheets.batchGet');
+      return { appended: 1, updated: 0 };
+    },
+  }, { outbox: [{ fileId: 'f2', movement: m1 }] });
+  state.setUp({ ...ready([m1]), books: BOOKS });
+  await state.sync();
+  assert.equal(state.blockedCount, 1);
+  status = 0;
+  await state.sync();
+  assert.equal(state.blockedCount, 0);
+});
+
+test('reset clears blockedCount', async () => {
+  const { state } = setup({ syncOutbox: refusing({ f2: 404 }) }, { outbox: [{ fileId: 'f2', movement: m1 }] });
+  state.setUp({ ...ready([m1]), books: BOOKS });
+  await state.sync();
+  assert.equal(state.blockedCount, 1);
+  state.reset();
+  assert.equal(state.blockedCount, 0);
+});
+
+test('other errors (400, 500, 503, network 0, not an ApiError) do not count as blocked', async () => {
+  for (const error of [
+    new ApiError(400, 'sheets.append'), new ApiError(500, 'sheets.append'),
+    new ApiError(503, 'sheets.append'), new ApiError(0, 'sheets.append'),
+    Object.assign(new Error('x'), { status: 403 }),
+  ]) {
+    const { state } = setup({ syncOutbox: async () => { throw error; } }, { outbox: [{ fileId: 'f2', movement: m1 }] });
+    state.setUp({ ...ready([m1]), books: BOOKS });
+    await state.sync();
+    assert.equal(state.blockedCount, 0, `${error.name}:${error.status}`);
+  }
 });

@@ -77,7 +77,7 @@ export function renderDashboard(root, {
   const lookups = lookupsOf(book);
   for (const entry of latest) {
     const line = movementLine(entry, lookups, { withNote: true });
-    if (!revealed) line.querySelector('.receipt-amount').textContent = HIDDEN;
+    if (!revealed) line.querySelector('.receipt-amount').textContent = t.hidden;
     movementList.appendChild(line);
   }
 

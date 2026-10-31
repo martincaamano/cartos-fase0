@@ -489,3 +489,79 @@ test('largestExpenses with fewer expenses than asked, a custom count and cents',
   assert.deepEqual(largestExpenses([a, b, c], ['2026-10'], 1), { items: [c], averageWithout: 0.3 });
   assert.deepEqual(largestExpenses([], ['2026-10']), { items: [], averageWithout: 0 });
 });
+
+// --- periodMonths 'year' with the first month of the book (tarea 21) ---
+
+test("periodMonths 'year' starts at first when it is within the last 12 months", () => {
+  assert.deepEqual(periodMonths('year', { today: '2026-10-31', first: '2026-10' }), ['2026-10']);
+  assert.deepEqual(periodMonths('year', { today: '2026-10-31', first: '2026-09' }), ['2026-09', '2026-10']);
+  // Crossing the year.
+  assert.deepEqual(periodMonths('year', { today: '2026-02-01', first: '2025-12' }), ['2025-12', '2026-01', '2026-02']);
+  // first one month after today−11: 11 months.
+  const eleven = periodMonths('year', { today: '2026-10-31', first: '2025-12' });
+  assert.equal(eleven.length, 11);
+  assert.equal(eleven[0], '2025-12');
+});
+
+test("periodMonths 'year' starts at today−11 when first is that month or older", () => {
+  const twelve = periodMonths('year', { today: '2026-10-31' });
+  for (const first of ['2025-11', '2025-10', '2020-01']) {
+    assert.deepEqual(periodMonths('year', { today: '2026-10-31', first }), twelve, first);
+  }
+  assert.equal(twelve[0], '2025-11');
+});
+
+test("periodMonths 'year' without first is unchanged (12 months), also from January", () => {
+  assert.equal(periodMonths('year', { today: '2026-10-31', first: undefined }).length, 12);
+  assert.equal(periodMonths('year', { today: '2026-10-31', first: null }).length, 12);
+  assert.equal(periodMonths('year', { today: '2026-01-01' })[0], '2025-02');
+});
+
+// --- keyFigures usual (tarea 21) ---
+
+test('keyFigures usual averages only the months from the first movement on', () => {
+  // A book started in July: July 300, August 0, September 600 → 900 / 3 = 300.
+  const movements = [expense(300, '2026-07-20'), expense(600, '2026-09-30'), expense(100, '2026-10-05')];
+  const figures = keyFigures(movements, ['2026-10'], '2026-10-10');
+  assert.equal(figures.usual, 300);
+  // projection = 100 / 10 × 31 = 310
+  assert.equal(figures.projection, 310);
+  assert.equal(figures.projectionOverUsual, 10);
+});
+
+test('keyFigures usual with only one cent in the month before', () => {
+  const figures = keyFigures([expense(0.01, '2026-09-30')], ['2026-10'], '2026-10-31');
+  assert.equal(figures.usual, 0.01);
+  assert.equal(figures.projection, 0);
+  assert.equal(figures.projectionOverUsual, -0.01);
+});
+
+test('keyFigures usual is 0, not null, when the months before only had income', () => {
+  const figures = keyFigures([income(1000, '2026-09-01'), expense(31, '2026-10-31')], ['2026-10'], '2026-10-31');
+  assert.equal(figures.usual, 0);
+  assert.equal(figures.projectionOverUsual, 31);
+});
+
+test('keyFigures usual crosses the year: from November to December for a January today', () => {
+  const movements = [expense(1000, '2025-11-15'), expense(500, '2025-12-31'), expense(10, '2026-01-01')];
+  assert.equal(keyFigures(movements, ['2026-01'], '2026-01-01').usual, 750);
+});
+
+test('keyFigures usual counts at most the 12 months before, with large amounts', () => {
+  const movements = [expense(999999.99, '2024-01-15')]; // older than 12 months: not counted
+  for (const month of periodMonths('year', { today: '2026-09-15' })) movements.push(expense(1200, `${month}-01`));
+  assert.equal(keyFigures(movements, ['2026-10'], '2026-10-15').usual, 1200);
+});
+
+test('keyFigures usual is null when the only movements are in this month or later', () => {
+  const figures = keyFigures([expense(50, '2026-10-01'), expense(70, '2026-11-02')], ['2026-10'], '2026-10-15');
+  assert.equal(figures.usual, null);
+  assert.equal(figures.projectionOverUsual, null);
+});
+
+test('keyFigures usual does not depend on the period on view', () => {
+  const movements = [expense(300, '2026-08-05'), expense(100, '2026-09-05'), expense(10, '2026-10-05')];
+  const year = periodMonths('year', { today: '2026-10-15', first: '2026-08' });
+  assert.equal(keyFigures(movements, ['2026-10'], '2026-10-15').usual, 200);
+  assert.equal(keyFigures(movements, year, '2026-10-15').usual, 200);
+});
