@@ -4,11 +4,9 @@
 
 import { es } from '../../i18n/es.js';
 import { SECTION_HASH } from '../ui/router.js';
-import { fillTexts } from '../ui/components.js';
+import { fillTexts, renderChoices } from '../ui/components.js';
 import { renderNavbar } from '../ui/navbar.js';
-import { applyTheme, loadTheme, saveTheme, THEMES } from '../ui/theme.js';
-
-const THEME_TEXT = { system: 'themeSystem', light: 'themeLight', dark: 'themeDark' };
+import { applyTheme, loadTheme, saveTheme, THEME_TEXT, THEMES } from '../ui/theme.js';
 
 export function renderTheme(root) {
   const t = es.themeScreen;
@@ -25,29 +23,14 @@ export function renderTheme(root) {
 
   const row = root.querySelector('.theme-picker');
   row.setAttribute('aria-label', t.mode);
-  let current = loadTheme();
-  const mark = () => {
-    for (const chip of row.children) {
-      const selected = chip.dataset.theme === current;
-      chip.classList.toggle('is-selected', selected);
-      chip.setAttribute('aria-pressed', String(selected));
-    }
-  };
-  for (const theme of THEMES) {
-    const chip = document.createElement('button');
-    chip.type = 'button';
-    chip.className = 'chip';
-    chip.dataset.theme = theme;
-    chip.textContent = es.settings[THEME_TEXT[theme]];
-    chip.addEventListener('click', () => {
-      current = theme;
+  renderChoices(row, THEMES.map((theme) => ({ value: theme, label: es.settings[THEME_TEXT[theme]] })), {
+    selected: loadTheme(),
+    dataKey: 'theme',
+    onSelect: (theme) => {
       saveTheme(theme);
       applyTheme(theme);
-      mark();
-    });
-    row.appendChild(chip);
-  }
-  mark();
+    },
+  });
 
   renderNavbar(root, { active: 'settings' });
 }

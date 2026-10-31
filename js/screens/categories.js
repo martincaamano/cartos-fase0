@@ -6,7 +6,7 @@
 import { es } from '../../i18n/es.js';
 import { rankCategories, TRANSFER_CATEGORY_ID } from '../domain/category.js';
 import { labelOf } from '../ui/format.js';
-import { receiptLine } from '../ui/receipt.js';
+import { appendFolded, receiptLine } from '../ui/receipt.js';
 import { fillTexts } from '../ui/components.js';
 import { SECTION_HASH } from '../ui/router.js';
 import { renderNavbar } from '../ui/navbar.js';
@@ -41,17 +41,9 @@ export function renderCategories(root, { book }) {
   const incomes = rankCategories(categories, movements, 'income').filter((c) => c.kind !== 'both');
 
   const expenseList = root.querySelector('.list-expense');
-  expenseList.append(...expenses.slice(0, SHOWN_EXPENSES).map(cardLine));
-  if (expenses.length > SHOWN_EXPENSES) {
-    const rest = expenses.slice(SHOWN_EXPENSES);
-    const more = document.createElement('button');
-    more.type = 'button';
-    more.className = 'link-button category-more-link';
-    more.textContent = t.more.replace('{n}', rest.length);
-    const item = receiptLine('', more, { className: 'more-row' });
-    more.addEventListener('click', () => item.replaceWith(...rest.map(cardLine)));
-    expenseList.appendChild(item);
-  }
+  appendFolded(expenseList, expenses, {
+    shown: SHOWN_EXPENSES, line: cardLine, moreText: t.more, className: 'link-button category-more-link', rowClass: 'more-row',
+  });
 
   const incomeList = root.querySelector('.list-income');
   incomeList.append(...incomes.map(cardLine));

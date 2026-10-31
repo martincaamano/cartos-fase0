@@ -13,48 +13,15 @@ import {
 import { activeOnly } from '../domain/active.js';
 import { rankCategories, TRANSFER_CATEGORY_ID } from '../domain/category.js';
 import { toIsoDate } from '../domain/movement.js';
-import { formatEuros, formatSums, labelOf } from '../ui/format.js';
-import { lookupsOf, movementLine } from '../ui/receipt.js';
+import { formatEuros, formatMonth, formatMonthRange, formatShortMonth, formatSums, labelOf } from '../ui/format.js';
+import { lookupsOf, movementLine, sumLine } from '../ui/receipt.js';
 import { SECTION_HASH } from '../ui/router.js';
-import { fillTexts } from '../ui/components.js';
+import { el, fillTexts, renderChoices, toggleChip } from '../ui/components.js';
 import { renderNavbar } from '../ui/navbar.js';
 import { HISTORY_VIEWS, loadHistoryView, saveHistoryView } from '../storage/history-view.js';
 
 // Lines painted at once in the list view; "Mostrar más" adds another page.
 const PAGE_SIZE = 200;
-
-const monthName = (month) => {
-  const [year, number] = month.split('-');
-  return `${es.months[Number(number) - 1]} ${year}`;
-};
-const shortMonth = (month) => es.monthsShort[Number(month.slice(5)) - 1];
-
-function element(tag, className, text = '') {
-  const node = document.createElement(tag);
-  node.className = className;
-  if (text) node.textContent = text;
-  return node;
-}
-
-// "+1.601,27 − 3.547,58 = −1.946,31 €". withNet false leaves out "= net"
-// where the net is already on the line above (Resumen).
-function sumLine(sums, { withNet = true } = {}) {
-  const { income, expense, net } = formatSums(sums);
-  const line = element('p', withNet ? 'sum-line' : 'sum-line sum-line-short');
-  line.append(element('span', 'amount-income', income), element('span', 'sum-op', '−'), element('span', 'amount-expense', expense));
-  if (withNet) line.append(element('span', 'sum-op', '='), element('strong', 'sum-net', net));
-  return line;
-}
-
-// A chip of a filter row; `on` marks it.
-function filterChip(text, on, onTap) {
-  const chip = element('button', 'chip', text);
-  chip.type = 'button';
-  chip.classList.toggle('is-selected', on);
-  chip.setAttribute('aria-pressed', String(on));
-  chip.addEventListener('click', onTap);
-  return chip;
-}
 
 // book: movements already include the pending ones (mergePending).
 // params: { account } opens it filtered by that account (from INICIO);
@@ -129,8 +96,8 @@ export function renderHistory(root, { book, params = {}, today = new Date(), sto
     for (const entry of page) {
       if (monthOf(entry) !== month || !ul) {
         month = monthOf(entry);
-        ul = element('ul', 'receipt-list');
-        list.append(element('h2', 'receipt-heading', monthName(month)), sumLine(monthSums.get(month)), ul);
+        ul = el('ul', 'receipt-list');
+        list.append(el('h2', 'receipt-heading', formatMonth(month)), sumLine(monthSums.get(month)), ul);
       }
       ul.appendChild(movementItem(entry));
     }
@@ -141,15 +108,15 @@ export function renderHistory(root, { book, params = {}, today = new Date(), sto
   // --- Resumen: nodes that open on a tap. key: what is open, kept while the
   // screen lives.
   const node = ({ key, level, label, value = '', tone = '', sums = null, children }) => {
-    const wrap = element('div', `tree-node tree-${level}`);
-    const head = element('button', 'tree-head');
+    const wrap = el('div', `tree-node tree-${level}`);
+    const head = el('button', 'tree-head');
     head.type = 'button';
     const isOpen = state.open.has(key);
     head.setAttribute('aria-expanded', String(isOpen));
     head.append(
-      element('span', 'tree-twisty', isOpen ? '▾' : '▸'),
-      element('span', 'tree-label', label),
-      element('span', tone ? `tree-value amount-${tone}` : 'tree-value', value),
+      el('span', 'tree-twisty', isOpen ? '▾' : '▸'),
+      el('span', 'tree-label', label),
+      el('span', tone ? `tree-value amount-${tone}` : 'tree-value', value),
     );
     head.addEventListener('click', () => {
       if (state.open.has(key)) state.open.delete(key);
@@ -159,7 +126,7 @@ export function renderHistory(root, { book, params = {}, today = new Date(), sto
     wrap.appendChild(head);
     if (sums) wrap.appendChild(sumLine(sums, { withNet: false }));
     if (isOpen) {
-      const body = element('div', 'tree-body');
+      const body = el('div', 'tree-body');
       body.append(...children());
       wrap.appendChild(body);
     }
@@ -168,7 +135,7 @@ export function renderHistory(root, { book, params = {}, today = new Date(), sto
 
   const categoryNodes = (prefix, groups) => groups.map((group) => {
     const transfer = group.categoryId === TRANSFER_CATEGORY_ID;
-    const lines = element('ul', 'receipt-list');
+    const lines = el('ul', 'receipt-list');
     return node({
       key: `${prefix}/${group.categoryId}`,
       level: 'category',
@@ -185,7 +152,7 @@ export function renderHistory(root, { book, params = {}, today = new Date(), sto
   // "Ago – Oct 2026 · Abanca · Supermercado": what the total adds up.
   const describe = () => {
     const parts = [];
-    if (state.range) parts.push(rangeText(state.range));
+    if (state.range) parts.push(formatMonthRange(state.range));
     if (state.accountIds.size) parts.push(accounts.filter((a) => state.accountIds.has(a.id)).map((a) => a.name).join(', '));
     if (state.categoryIds.size) parts.push(categories.filter((c) => state.categoryIds.has(c.id)).map((c) => c.name).join(', '));
     return parts.length ? parts.join(' · ') : t.total;
@@ -205,7 +172,7 @@ export function renderHistory(root, { book, params = {}, today = new Date(), sto
       list.appendChild(node({
         key: month.month,
         level: 'month',
-        label: monthName(month.month),
+        label: formatMonth(month.month),
         value: formatSums(month).net,
         sums: month,
         children: () => categoryNodes(month.month, month.categories),
@@ -216,12 +183,6 @@ export function renderHistory(root, { book, params = {}, today = new Date(), sto
 
   // --- Filters
   const span = monthsSpan(movements, toIsoDate(today));
-  const rangeText = ({ from, to }) => {
-    const year = to.slice(0, 4);
-    if (from === to) return `${shortMonth(from)} ${year}`;
-    const fromYear = from.slice(0, 4) === year ? '' : ` ${from.slice(0, 4)}`;
-    return `${shortMonth(from)}${fromYear} – ${shortMonth(to)} ${year}`;
-  };
 
   const paintFilters = () => {
     const count = activeFilterCount(filters());
@@ -230,18 +191,18 @@ export function renderHistory(root, { book, params = {}, today = new Date(), sto
     clear.hidden = count === 0;
     if (panel.hidden) return;
 
-    root.querySelector('.history-range').textContent = state.range ? rangeText(state.range) : t.allMonths;
+    root.querySelector('.history-range').textContent = state.range ? formatMonthRange(state.range) : t.allMonths;
     const months = root.querySelector('.history-months');
     const scroll = months.scrollLeft;
     months.replaceChildren(...span.map((month) => {
-      const cell = element('button', 'month-cell');
+      const cell = el('button', 'month-cell');
       cell.type = 'button';
       const { from, to } = state.range ?? {};
       const inRange = Boolean(state.range) && month >= from && month <= to;
       cell.classList.toggle('is-edge', inRange && (month === from || month === to));
       cell.classList.toggle('is-inside', inRange && month !== from && month !== to);
       cell.setAttribute('aria-pressed', String(inRange));
-      cell.append(element('span', 'month-name', shortMonth(month)), element('span', 'month-year', month.slice(0, 4)));
+      cell.append(el('span', 'month-name', formatShortMonth(month)), el('span', 'month-year', month.slice(0, 4)));
       cell.addEventListener('click', () => {
         state.range = selectMonth(state.range, month);
         apply();
@@ -256,29 +217,24 @@ export function renderHistory(root, { book, params = {}, today = new Date(), sto
       apply();
     };
     root.querySelector('.history-accounts').replaceChildren(...accounts.map((account) =>
-      filterChip(labelOf(account), state.accountIds.has(account.id), toggleIn(state.accountIds, account.id))));
+      toggleChip(labelOf(account), state.accountIds.has(account.id), toggleIn(state.accountIds, account.id))));
     root.querySelector('.history-categories').replaceChildren(...categories.map((category) =>
-      filterChip(labelOf(category), state.categoryIds.has(category.id), toggleIn(state.categoryIds, category.id))));
+      toggleChip(labelOf(category), state.categoryIds.has(category.id), toggleIn(state.categoryIds, category.id))));
     root.querySelector('.history-count-accounts').textContent = state.accountIds.size || '';
     root.querySelector('.history-count-categories').textContent = state.categoryIds.size || '';
   };
 
   const paintViews = () => {
-    const views = root.querySelector('.history-views');
-    views.replaceChildren(...HISTORY_VIEWS.map((view) => {
-      const button = element('button', 'history-view', t[view]);
-      button.type = 'button';
-      button.dataset.view = view;
-      button.classList.toggle('is-selected', view === state.view);
-      button.setAttribute('aria-pressed', String(view === state.view));
-      button.addEventListener('click', () => {
+    renderChoices(root.querySelector('.history-views'), HISTORY_VIEWS.map((view) => ({ value: view, label: t[view] })), {
+      selected: state.view,
+      className: 'history-view',
+      dataKey: 'view',
+      onSelect: (view) => {
         state.view = view;
         saveHistoryView(storage, view);
-        paintViews();
         paint();
-      });
-      return button;
-    }));
+      },
+    });
   };
 
   // Paints the movements from `entries` in the view chosen.
@@ -286,7 +242,7 @@ export function renderHistory(root, { book, params = {}, today = new Date(), sto
     shown = 0;
     list.replaceChildren();
     if (entries.length === 0) {
-      list.appendChild(element('p', 'receipt-empty text-muted', activeFilterCount(filters()) ? t.noMatches : t.empty));
+      list.appendChild(el('p', 'receipt-empty text-muted', activeFilterCount(filters()) ? t.noMatches : t.empty));
       more.hidden = true;
       return;
     }
