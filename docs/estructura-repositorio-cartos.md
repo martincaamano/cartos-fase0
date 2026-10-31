@@ -40,7 +40,8 @@ cartos-fase0/
 │   │
 │   ├── storage/          (lo que vive en el dispositivo)
 │   │   ├── session.js, book-cache.js, transfer-categories.js, last-account.js, history-view.js, analysis-exclude.js
-│   │   ├── outbox.js, outbox-logic.js
+│   │   ├── outbox.js, outbox-logic.js, idb.js (IndexedDB compartido)
+│   │   ├── json-map.js       (mapas JSON pequeños en localStorage)
 │   │   └── logs.js
 │   │
 │   ├── screens/          (una pantalla por archivo)

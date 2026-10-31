@@ -4,16 +4,7 @@ import assert from 'node:assert/strict';
 import {
   parseBooksCache, loadBooksCache, loadBookCache, saveBookCache, saveBookList, saveCurrentBook, clearBookCache,
 } from '../js/storage/book-cache.js';
-
-function fakeStorage() {
-  const items = new Map();
-  return {
-    items,
-    getItem: (key) => (items.has(key) ? items.get(key) : null),
-    setItem: (key, value) => items.set(key, String(value)),
-    removeItem: (key) => items.delete(key),
-  };
-}
+import { fakeStorage } from './helpers/fake-storage.js';
 
 const snapshot = { accounts: [{ id: 'a' }], categories: [], movements: [] };
 const other = { accounts: [{ id: 'b' }], categories: [{ id: 'c' }], movements: [{ id: 'm' }] };

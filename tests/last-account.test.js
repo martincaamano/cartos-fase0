@@ -3,17 +3,9 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { loadLastAccount, saveLastAccount } from '../js/storage/last-account.js';
+import { fakeStorage } from './helpers/fake-storage.js';
 
 const KEY = 'cartos.lastAccount';
-
-function fakeStorage(initial = {}) {
-  const data = new Map(Object.entries(initial));
-  return {
-    data,
-    getItem: (key) => (data.has(key) ? data.get(key) : null),
-    setItem: (key, value) => { data.set(key, String(value)); },
-  };
-}
 
 const throwingStorage = {
   getItem: () => { throw new Error('denied'); },

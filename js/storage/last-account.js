@@ -3,27 +3,16 @@
 //
 // The storage area is passed in (localStorage in the app, a fake in the tests).
 
-const KEY = 'cartos.lastAccount';
+import { readMap, writeEntry } from './json-map.js';
 
-function read(storage) {
-  try {
-    const data = JSON.parse(storage.getItem(KEY) ?? '{}');
-    return data && typeof data === 'object' && !Array.isArray(data) ? data : {};
-  } catch {
-    return {};
-  }
-}
+const KEY = 'cartos.lastAccount';
 
 // → the account id, or null.
 export function loadLastAccount(storage, fileId) {
-  const id = read(storage)[fileId];
+  const id = readMap(storage, KEY)[fileId];
   return typeof id === 'string' ? id : null;
 }
 
 export function saveLastAccount(storage, fileId, accountId) {
-  try {
-    storage.setItem(KEY, JSON.stringify({ ...read(storage), [fileId]: accountId }));
-  } catch (err) {
-    console.warn('Last account write failed', err);
-  }
+  writeEntry(storage, KEY, fileId, accountId);
 }

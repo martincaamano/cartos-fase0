@@ -1,17 +1,9 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { loadExcluded, saveExcluded } from '../js/storage/analysis-exclude.js';
+import { fakeStorage } from './helpers/fake-storage.js';
 
 const KEY = 'cartos.analysisExclude';
-
-const fakeStorage = (initial = {}) => {
-  const data = new Map(Object.entries(initial));
-  return {
-    data,
-    getItem: (key) => (data.has(key) ? data.get(key) : null),
-    setItem: (key, value) => data.set(key, String(value)),
-  };
-};
 
 test('loadExcluded is empty when nothing was saved', () => {
   assert.deepEqual(loadExcluded(fakeStorage(), 'book-1'), []);

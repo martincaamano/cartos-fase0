@@ -2,22 +2,16 @@
 // and a fetch that records every call. Nothing here reaches Google.
 import { configureAuth } from '../../js/data/auth.js';
 import { configureHttp } from '../../js/data/http.js';
+import { fakeStorage } from './fake-storage.js';
 
 export const TOKEN = 'test-token';
 
-function fakeStorage(session) {
-  const items = new Map([['cartos.session', JSON.stringify(session)]]);
-  return {
-    getItem: (key) => (items.has(key) ? items.get(key) : null),
-    setItem: (key, value) => items.set(key, String(value)),
-    removeItem: (key) => items.delete(key),
-  };
-}
+const storageWith = (session) => fakeStorage([['cartos.session', JSON.stringify(session)]]);
 
 // respond(call) returns { status, body } for each request; defaults to 200 {}.
 export function setupGoogleApi(respond = () => ({ status: 200, body: {} })) {
   const now = 1_000_000;
-  const storage = fakeStorage({
+  const storage = storageWith({
     user: { sub: 'user-1', email: 'martin@example.com', name: 'Martín' },
     driveGranted: true,
     accessToken: TOKEN,

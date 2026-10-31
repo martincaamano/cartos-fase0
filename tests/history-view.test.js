@@ -1,16 +1,9 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { loadHistoryView, saveHistoryView, HISTORY_VIEWS } from '../js/storage/history-view.js';
+import { fakeStorage } from './helpers/fake-storage.js';
 
 // In-memory stand-in for localStorage.
-function fakeStorage(initial = {}) {
-  const data = new Map(Object.entries(initial));
-  return {
-    data,
-    getItem: (key) => (data.has(key) ? data.get(key) : null),
-    setItem: (key, value) => data.set(key, String(value)),
-  };
-}
 
 const throwing = () => ({
   getItem() { throw new Error('SecurityError'); },

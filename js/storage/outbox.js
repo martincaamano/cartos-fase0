@@ -6,32 +6,18 @@
 // the rules live in outbox-logic.js.
 
 import { ownPending } from './outbox-logic.js';
+import { openDb, txDone } from './idb.js';
 
 const DB_NAME = 'cartos-outbox';
 const DB_VERSION = 1;
 const STORE = 'pending';
 
-function openDb() {
-  return new Promise((resolve, reject) => {
-    const request = indexedDB.open(DB_NAME, DB_VERSION);
-    request.onupgradeneeded = () => {
-      request.result.createObjectStore(STORE, { keyPath: 'movement.id' });
-    };
-    request.onsuccess = () => resolve(request.result);
-    request.onerror = () => reject(request.error);
-  });
-}
-
 async function withStore(mode, work) {
-  const db = await openDb();
+  const db = await openDb(DB_NAME, DB_VERSION, (created) => created.createObjectStore(STORE, { keyPath: 'movement.id' }));
   try {
     const tx = db.transaction(STORE, mode);
     const result = work(tx.objectStore(STORE));
-    await new Promise((resolve, reject) => {
-      tx.oncomplete = resolve;
-      tx.onerror = () => reject(tx.error);
-      tx.onabort = () => reject(tx.error);
-    });
+    await txDone(tx);
     return result;
   } finally {
     db.close();
