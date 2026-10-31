@@ -9,7 +9,7 @@ Pasar el histórico de la reforma de la vivienda, que hoy vive en un Excel, al l
 ## Decisiones tomadas (2026-10-31)
 - Va antes que la 18 (libro compartido): no necesita código y deja Casa do Medio con datos reales cuanto antes.
 - Se usa el importador de la tarea 16 (Ajustes → Datos → Importar), con el JSON de Cartos para que las categorías nuevas traigan su emoji. Crea solo las categorías que falten. Se espera no tener que tocar el código; si hiciera falta, se para y se pregunta.
-- Las aportaciones siguen como categorías de ingreso («Aportación Martín», «Aportación Ana»), no como personas. La persona por movimiento llega en la 18, solo para los gastos.
+- Las aportaciones siguen como categorías de ingreso («Aportación Martín», «Aportación Ana»), no como personas (la persona por movimiento se descartó en la 18).
 - Los datos reales nunca entran en el repositorio:
   - el JSON se genera y se revisa fuera del repo;
   - se entrega al usuario como archivo, y él lo importa desde el iPhone.

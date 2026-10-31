@@ -133,14 +133,15 @@ test('keyFigures for a single month: average, change, savings, projection, per d
     income(1000, '2026-10-01'),
     expense(200, '2026-09-10'),
   ];
-  // usual = 200 € over the 12 months 2025-10..2026-09 = 16.67 €
+  // usual = the months before this one that the book has: only 2026-09, 200 €
   // projection = 300 / 15 × 31 = 620 €
   assert.deepEqual(keyFigures(movements, ['2026-10'], '2026-10-15'), {
     averageExpense: 300,
     averageChange: 50,
     savingsRate: 70,
     projection: 620,
-    projectionOverUsual: 603.33,
+    usual: 200,
+    projectionOverUsual: 420,
     perDay: 20,
   });
 });
@@ -191,6 +192,7 @@ test('keyFigures projectionOverUsual compares with the average of the 12 months 
     averageChange: -50,
     savingsRate: null,
     projection: 155,
+    usual: 100,
     projectionOverUsual: 55,
     perDay: 5,
   });
@@ -214,9 +216,20 @@ test('keyFigures with no movements gives zeros and nulls', () => {
     averageChange: null,
     savingsRate: null,
     projection: 0,
-    projectionOverUsual: 0,
+    usual: null,
+    projectionOverUsual: null,
     perDay: 0,
   });
+});
+
+test('keyFigures usual is null in the first month of a book, and 12 meses starts at the first month', () => {
+  const figures = keyFigures([expense(300, '2026-10-05')], ['2026-10'], '2026-10-15');
+  assert.equal(figures.usual, null);
+  assert.equal(figures.projectionOverUsual, null);
+  // A book started in August: 12 meses is August–October, averaged over 3.
+  const months = periodMonths('year', { today: '2026-10-15', first: '2026-08' });
+  assert.deepEqual(months, ['2026-08', '2026-09', '2026-10']);
+  assert.equal(keyFigures([expense(300, '2026-08-05')], months, '2026-10-15').averageExpense, 100);
 });
 
 // --- categoryChanges ---

@@ -4,19 +4,25 @@
 
 import { currentUserSub } from './auth.js';
 import { ValidationError } from './errors.js';
-import { addPending } from '../storage/outbox.js';
+import { addPending, addPendingAcross } from '../storage/outbox.js';
 import { createMovement, editMovement, markDeleted, validateMovement } from '../domain/movement.js';
 import {
   buildCrossBookTransfer, buildTransfer, deleteTransfer, editTransfer, validateTransfer,
 } from '../domain/transfer.js';
 import { activeIds } from '../domain/active.js';
 
-const defaults = { add: addPending };
+const defaults = { add: addPending, addAcross: addPendingAcross };
 let store = defaults;
 
-// Lets the tests swap the IndexedDB outbox for an in-memory one.
+// Lets the tests swap the IndexedDB outbox for an in-memory one. A fake
+// `add` alone also stands in for `addAcross`, one book after the other.
 export function configureMovements(overrides = {}) {
   store = { ...defaults, ...overrides };
+  if (overrides.add && !overrides.addAcross) {
+    store.addAcross = async (items, sub) => {
+      for (const { fileId, movement } of items) await overrides.add(fileId, [movement], sub);
+    };
+  }
 }
 
 // Validates a new movement against the book and stores it in the outbox at
@@ -28,7 +34,7 @@ export async function queueMovement(fileId, fields, book) {
     categoryIds: activeIds(book.categories),
   });
   if (errors.length) throw new ValidationError(errors);
-  await store.add(fileId, [movement]);
+  await store.add(fileId, [movement], currentUserSub());
   return movement;
 }
 
@@ -38,7 +44,7 @@ export async function queueTransfer(fileId, fields, book) {
   const errors = validateTransfer(fields, { accountIds: activeIds(book.accounts) });
   if (errors.length) throw new ValidationError(errors);
   const halves = buildTransfer(fields, { userSub: currentUserSub() });
-  await store.add(fileId, halves);
+  await store.add(fileId, halves, currentUserSub());
   return halves;
 }
 
@@ -55,8 +61,8 @@ export async function queueCrossBookTransfer(here, there, fields) {
     ...validateMovement(incoming, idsOf(there.book)),
   ])];
   if (errors.length) throw new ValidationError(errors);
-  await store.add(here.fileId, [outgoing]);
-  await store.add(there.fileId, [incoming]);
+  // Both halves or none, though they go to two books.
+  await store.addAcross([{ fileId: here.fileId, movement: outgoing }, { fileId: there.fileId, movement: incoming }], currentUserSub());
   return [outgoing, incoming];
 }
 
@@ -69,7 +75,7 @@ export async function queueEdit(fileId, original, fields, book) {
     categoryIds: [...activeIds(book.categories), original.categoryId],
   });
   if (errors.length) throw new ValidationError(errors);
-  await store.add(fileId, [movement]);
+  await store.add(fileId, [movement], currentUserSub());
   return movement;
 }
 
@@ -78,13 +84,13 @@ export async function queueTransferEdit(fileId, halves, fields, book) {
   const errors = validateTransfer(fields, { accountIds: activeIds(book.accounts) });
   if (errors.length) throw new ValidationError(errors);
   const edited = editTransfer(halves, fields);
-  await store.add(fileId, edited);
+  await store.add(fileId, edited, currentUserSub());
   return edited;
 }
 
 // Logical delete of one movement, or of both halves of a transfer.
 export async function queueDelete(fileId, movements) {
   const deleted = movements.length === 2 ? deleteTransfer(movements) : movements.map((m) => markDeleted(m));
-  await store.add(fileId, deleted);
+  await store.add(fileId, deleted, currentUserSub());
   return deleted;
 }

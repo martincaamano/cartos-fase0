@@ -287,10 +287,13 @@ export function renderAddMovement(root, {
     texts: { today: t.today, yesterday: t.yesterday, dayBefore: t.dayBefore, other: t.otherDate },
   });
 
+  const remove = root.querySelector('.form-delete');
   form.addEventListener('submit', (event) => {
     event.preventDefault();
+    if (remove.disabled) return;
     error.textContent = '';
     submit.disabled = true;
+    remove.disabled = true;
     submit.textContent = t.saving;
     const common = {
       amount: parseAmountInput(amount.value),
@@ -323,13 +326,14 @@ export function renderAddMovement(root, {
         const key = err.errors?.map((code) => ERROR_TEXT[code]).find(Boolean);
         error.textContent = key ? t[key] : t.failed;
         submit.disabled = false;
+        remove.disabled = false;
         submit.textContent = t.save;
       });
   });
 
   if (saved) {
-    // Two taps: the first one asks, the second one deletes.
-    const remove = root.querySelector('.form-delete');
+    // Two taps: the first one asks, the second one deletes. While it
+    // deletes, Guardar cannot bring the movement back.
     remove.textContent = t.delete;
     let armed = false;
     remove.addEventListener('click', () => {
@@ -339,12 +343,14 @@ export function renderAddMovement(root, {
         return;
       }
       remove.disabled = true;
+      submit.disabled = true;
       remove.textContent = t.deleting;
       queueDelete(fileId, halves ?? [original])
         .then(onSaved)
         .catch(() => {
           error.textContent = t.failed;
           remove.disabled = false;
+          submit.disabled = false;
           armed = false;
           remove.textContent = t.delete;
         });

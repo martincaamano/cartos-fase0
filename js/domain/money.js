@@ -23,6 +23,8 @@ export function parseAmountInput(text) {
   }
   if (value.includes(',')) value = value.replace(/\./g, '').replace(',', '.');
   else if (/^\d{1,3}(\.\d{3})+$/.test(value)) value = value.replace(/\./g, '');
+  // The iPhone keypad makes "12," and ",5" easy to type: 12 and 0,5.
+  value = value.replace(/^\.(?=\d)/, '0.').replace(/(\d)\.$/, '$1');
   if (!/^\d+(\.\d+)?$/.test(value)) return null;
   return sign * Number(value);
 }

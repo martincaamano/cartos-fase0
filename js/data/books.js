@@ -10,7 +10,7 @@
 import { getFile, listBooks, renameFile } from './drive.js';
 import { es } from '../../i18n/es.js';
 import { addAccount, appendBookRows, createBook, readBook, writeBookRows } from './book.js';
-import { currentUserSub } from './auth.js';
+import { currentUserSub, TokenExpiredError } from './auth.js';
 import { joinBook } from './members.js';
 import { ValidationError } from './errors.js';
 import {
@@ -62,9 +62,20 @@ export function cachedBook(fileId) {
 export async function fetchBooks() {
   const books = orderBooks(await listBooks());
   saveBookList(deps.storage(), { sub: sub(), books });
-  const chosen = chooseBook(books, loadBooksCache(deps.storage(), sub())?.current);
+  let chosen = chooseBook(books, loadBooksCache(deps.storage(), sub())?.current);
   if (!chosen) return { status: 'none', fileId: null, book: null, books };
-  const book = await readBook(chosen.fileId);
+  let book;
+  try {
+    book = await readBook(chosen.fileId);
+  } catch (err) {
+    // A book that cannot be read any more (access removed, file gone, tabs
+    // changed by hand) must not keep the app from starting: open the
+    // personal one instead.
+    const personal = books.find((item) => item.isPersonal);
+    if (!personal || personal === chosen || err instanceof TokenExpiredError) throw err;
+    chosen = personal;
+    book = await readBook(chosen.fileId);
+  }
   remember(chosen.fileId, book);
   open(chosen.fileId);
   return { status: statusOf(book), fileId: chosen.fileId, book, books };

@@ -37,3 +37,11 @@ export function mergePending(movements, queue) {
   }
   return merged;
 }
+
+// The entries of the outbox that belong to `sub` (tarea 21): another account
+// signed in on the same device neither sees nor uploads them. Entries saved
+// before tarea 21 have no sub and belong to whoever is signed in. sub null:
+// every entry.
+export function ownPending(items, sub) {
+  return items.filter((item) => sub === null || !item.sub || item.sub === sub);
+}

@@ -80,7 +80,6 @@
 }
 
 .dashboard-see-all {
-  min-height: 0;
   font-size: var(--text-sm);
 }
 

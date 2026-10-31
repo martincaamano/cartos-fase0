@@ -3,7 +3,7 @@
 // movements.test.js; here js/data/movements.js only fills the shared queue.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { enqueue, planSync, mergePending } from '../js/storage/outbox-logic.js';
+import { enqueue, planSync, mergePending, ownPending } from '../js/storage/outbox-logic.js';
 import { configureSync, syncOutbox } from '../js/data/sync.js';
 import { queueMovement, queueTransfer, queueEdit } from '../js/data/movements.js';
 import { HEADERS, toRow, rowsById } from '../js/data/rows.js';
@@ -96,6 +96,34 @@ test('mergePending: the queued version replaces the book version', () => {
   assert.equal(merged[0].deleted, true);
 });
 
+// --- ownPending ---
+
+test('ownPending keeps the entries of the sub and those without sub, drops the others', () => {
+  const items = [
+    { fileId: 'f1', movement: m('a'), sub: 'user-1' },
+    { fileId: 'f1', movement: m('b'), sub: 'user-2' },
+    { fileId: 'f2', movement: m('c') },
+    { fileId: 'f2', movement: m('d'), sub: '' },
+  ];
+  assert.deepEqual(ownPending(items, 'user-1').map((i) => i.movement.id), ['a', 'c', 'd']);
+  assert.deepEqual(ownPending(items, 'user-2').map((i) => i.movement.id), ['b', 'c', 'd']);
+  assert.deepEqual(ownPending(items, 'user-3').map((i) => i.movement.id), ['c', 'd']);
+});
+
+test('ownPending with sub null keeps every entry', () => {
+  const items = [
+    { fileId: 'f1', movement: m('a'), sub: 'user-1' },
+    { fileId: 'f1', movement: m('b'), sub: 'user-2' },
+    { fileId: 'f1', movement: m('c') },
+  ];
+  assert.deepEqual(ownPending(items, null), items);
+});
+
+test('ownPending of an empty outbox is empty', () => {
+  assert.deepEqual(ownPending([], 'user-1'), []);
+  assert.deepEqual(ownPending([], null), []);
+});
+
 // --- in-memory stores with the IndexedDB rule: remove only matching updatedAt ---
 
 function memoryOutbox(items) {
@@ -184,20 +212,173 @@ test('other books and an empty queue make no calls', async () => {
   assert.equal(calls.length, 0);
 });
 
-test('two syncs at once share a single run', async () => {
-  memoryOutbox([{ fileId: 'f1', movement: m('a') }]);
+test('two syncs at once upload a movement once: the extra run finds nothing left', async () => {
+  const state = memoryOutbox([{ fileId: 'f1', movement: m('a') }]);
   const calls = sheetWith([]);
-  await Promise.all([syncOutbox('f1'), syncOutbox('f1')]);
+  const results = await Promise.all([syncOutbox('f1'), syncOutbox('f1')]);
   assert.equal(calls.filter(isAppend).length, 1);
+  assert.deepEqual(results, [
+    { appended: 1, updated: 0, pending: 0 },
+    { appended: 1, updated: 0, pending: 0 },
+  ]);
+  assert.deepEqual(state.items, []);
 });
 
-test('two syncs of the same book at once get the very same run', async () => {
+test('two syncs of the same book at once get the very same promise', async () => {
   memoryOutbox([{ fileId: 'f1', movement: m('a') }]);
   sheetWith([]);
   const first = syncOutbox('f1');
   const second = syncOutbox('f1');
   assert.equal(first, second);
   await first;
+});
+
+// --- syncOutbox: one more run when called during a run (tarea 21) ---
+
+// An outbox that records each list() call with the sub it was given.
+function recordingOutbox(items) {
+  const state = { items: [...items], lists: [] };
+  configureSync({
+    list: async (sub) => { state.lists.push(sub); return state.items; },
+    remove: async (movements) => {
+      state.items = state.items.filter(
+        (i) => !movements.some((done) => done.id === i.movement.id && done.updatedAt === i.movement.updatedAt),
+      );
+    },
+  });
+  return state;
+}
+
+test('the outbox is listed with the signed-in sub', async () => {
+  const state = recordingOutbox([{ fileId: 'f1', movement: m('a') }]);
+  sheetWith([]);
+  await syncOutbox('f1');
+  // helpers/fake-google.js signs in user-1.
+  assert.deepEqual(state.lists, ['user-1']);
+});
+
+test('a movement added during a run is uploaded by one more run; the result sums both', async () => {
+  const state = recordingOutbox([{ fileId: 'f1', movement: m('a') }]);
+  let reads = 0;
+  let during;
+  const calls = setupGoogleApi((call) => {
+    if (call.url.pathname.endsWith('values:batchGet')) {
+      reads += 1;
+      if (reads === 1) {
+        // Saved while the first run is uploading; the app asks for a sync.
+        state.items.push({ fileId: 'f1', movement: m('b', { amount: 0.01 }) });
+        during = syncOutbox('f1');
+        return { body: { valueRanges: [{ values: [['id']] }] } };
+      }
+      return { body: { valueRanges: [{ values: [['id'], ['a']] }] } };
+    }
+    return {};
+  });
+  const first = syncOutbox('f1');
+  assert.deepEqual(await first, { appended: 2, updated: 0, pending: 0 });
+  assert.equal(during, first, 'the call during the run gets the same promise');
+  const appends = calls.filter(isAppend);
+  assert.equal(appends.length, 2);
+  assert.deepEqual(appends.map((c) => c.body.values.map((row) => row[0])), [['a'], ['b']]);
+  assert.deepEqual(state.lists, ['user-1', 'user-1'], 'exactly two runs');
+  assert.deepEqual(state.items, []);
+});
+
+test('several calls during a run coalesce into exactly one more run', async () => {
+  const state = recordingOutbox([{ fileId: 'f1', movement: m('a') }]);
+  let reads = 0;
+  setupGoogleApi((call) => {
+    if (call.url.pathname.endsWith('values:batchGet')) {
+      reads += 1;
+      if (reads === 1) {
+        state.items.push({ fileId: 'f1', movement: m('b') });
+        syncOutbox('f1');
+        syncOutbox('f1');
+        syncOutbox('f1');
+      }
+      return { body: { valueRanges: [{ values: [['id']] }] } };
+    }
+    return {};
+  });
+  const first = syncOutbox('f1');
+  const alsoDuring = syncOutbox('f1');
+  assert.equal(first, alsoDuring);
+  assert.deepEqual(await first, { appended: 2, updated: 0, pending: 0 });
+  assert.equal(reads, 2, 'two runs read the Sheet');
+  assert.equal(state.lists.length, 2, 'two runs listed the outbox');
+});
+
+test('the extra run sums an update too', async () => {
+  const edited = m('a', { amount: 999999.99, updatedAt: '2026-10-31T23:59:00.000Z' });
+  const state = recordingOutbox([{ fileId: 'f1', movement: m('a') }]);
+  let reads = 0;
+  setupGoogleApi((call) => {
+    if (call.url.pathname.endsWith('values:batchGet')) {
+      reads += 1;
+      if (reads === 1) {
+        // A newer version of 'a' replaces the queued one, like IndexedDB.
+        state.items = [{ fileId: 'f1', movement: edited }];
+        syncOutbox('f1');
+        return { body: { valueRanges: [{ values: [['id']] }] } };
+      }
+      return { body: { valueRanges: [{ values: [['id'], ['a']] }] } };
+    }
+    return {};
+  });
+  assert.deepEqual(await syncOutbox('f1'), { appended: 1, updated: 1, pending: 0 });
+  assert.deepEqual(state.items, []);
+});
+
+test('without a call during the run there is no second run', async () => {
+  const state = recordingOutbox([{ fileId: 'f1', movement: m('a') }]);
+  const calls = sheetWith([]);
+  await syncOutbox('f1');
+  assert.equal(state.lists.length, 1);
+  assert.equal(calls.filter((c) => c.url.pathname.endsWith('values:batchGet')).length, 1);
+});
+
+test('an error in the first run rejects and does not start the extra run', async () => {
+  const state = recordingOutbox([{ fileId: 'f1', movement: m('a') }]);
+  let reads = 0;
+  let during;
+  const calls = setupGoogleApi((call) => {
+    if (call.url.pathname.endsWith('values:batchGet')) {
+      reads += 1;
+      if (reads === 1) during = syncOutbox('f1');
+      return { body: { valueRanges: [{ values: [['id']] }] } };
+    }
+    if (isAppend(call)) return { status: 500 };
+    return {};
+  });
+  await assert.rejects(syncOutbox('f1'), (err) => err.status === 500);
+  await assert.rejects(during, (err) => err.status === 500);
+  assert.equal(reads, 1, 'no second run');
+  assert.equal(state.lists.length, 1);
+  assert.equal(calls.filter(isAppend).length, 1);
+  assert.equal(state.items.length, 1, 'the movement stays queued');
+  // The lock is free afterwards.
+  sheetWith([]);
+  assert.deepEqual(await syncOutbox('f1'), { appended: 1, updated: 0, pending: 0 });
+});
+
+test('an error in the extra run rejects the whole sync', async () => {
+  const state = recordingOutbox([{ fileId: 'f1', movement: m('a') }]);
+  let reads = 0;
+  setupGoogleApi((call) => {
+    if (call.url.pathname.endsWith('values:batchGet')) {
+      reads += 1;
+      if (reads === 1) {
+        state.items.push({ fileId: 'f1', movement: m('b') });
+        syncOutbox('f1').catch(() => {});
+        return { body: { valueRanges: [{ values: [['id']] }] } };
+      }
+      return { status: 503 };
+    }
+    return {};
+  });
+  await assert.rejects(syncOutbox('f1'), (err) => err.status === 503);
+  assert.equal(reads, 2);
+  assert.deepEqual(state.items.map((i) => i.movement.id), ['b'], 'a was uploaded, b stays queued');
 });
 
 test('a sync of another book while one runs runs on its own', async () => {

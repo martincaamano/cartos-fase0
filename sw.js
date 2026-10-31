@@ -3,7 +3,7 @@
 // antiguas de la app (aprendido en la Fase 0, donde cache-first daba problemas
 // de staleness al actualizar código).
 
-const CACHE_NAME = 'cartos-v22';
+const CACHE_NAME = 'cartos-v23';
 
 const APP_SHELL = [
   './',
@@ -116,10 +116,16 @@ self.addEventListener('fetch', (event) => {
   event.respondWith(
     fetch(request)
       .then((response) => {
-        const responseClone = response.clone();
-        caches.open(CACHE_NAME).then((cache) => cache.put(request, responseClone));
+        // Only good answers replace the copy: a 404 or 500 never does.
+        if (response.ok) {
+          const responseClone = response.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(request, responseClone));
+        }
         return response;
       })
-      .catch(() => caches.match(request))
+      // Offline: the copy; a page opened at any hash falls back to the app
+      // itself; anything else not kept fails as a network error would.
+      .catch(() => caches.match(request).then((cached) => cached
+        ?? (request.mode === 'navigate' ? caches.match('./index.html') : Response.error())))
   );
 });

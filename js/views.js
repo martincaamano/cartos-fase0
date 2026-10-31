@@ -54,6 +54,7 @@ export const VIEWS = Object.freeze({
       bookName: bookName(state),
       offline,
       pendingCount: state.pendingCount,
+      blockedCount: state.blockedCount,
       revealed: amountsRevealed,
       onReveal: () => {
         amountsRevealed = true;

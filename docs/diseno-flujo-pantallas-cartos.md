@@ -39,7 +39,7 @@ Tamaños de letra: `--text-2xs` (11 px) … `--text-2xl` (32 px). Un test (`test
 
 Barra de navegación fija inferior, patrón estándar tipo Instagram o Twitter, con cinco secciones. No hay botón flotante independiente.
 
-1. **Dashboard** (por defecto al abrir la app)
+1. **Inicio** (Dashboard). Desde la tarea 17 la app abre en Añadir.
 2. **Historial**
 3. **Añadir** (acción central)
 4. **Análisis**
@@ -112,7 +112,7 @@ Incluye:
 - **Categorías**: gestión de categorías — ver las del libro agrupadas en Gastos e Ingresos, crear las propias (nombre, emoji y tipo) y quitar cualquiera, también las que vienen por defecto, salvo `Transferencia`, que es fija (decidido el 2026-10-25). Quitar es un borrado lógico: los movimientos que ya la usan la conservan. Vive aquí y no en la barra principal porque se toca pocas veces.
 - Selector de tema: Sistema (por defecto) / Claro / Oscuro.
 - Acceso a la pantalla de Diagnóstico.
-- *(Fuera del MVP: gestión de cuentas compartidas, invitaciones.)*
+- Libros: compartir un libro y abrir uno compartido contigo (tarea 18).
 
 ### 3.9. Diagnóstico
 
@@ -120,7 +120,5 @@ Dentro de Ajustes. Lista de las últimas aproximadamente 500 entradas de log (fe
 
 ## 4. Fuera del MVP (no bloquea diseño actual)
 
-- Pantallas de invitación y aceptación de cuentas compartidas.
-- Selector "¿Quién lo pagó?" en Añadir (aparece solo en cuentas compartidas, con las personas del libro más la opción "Común").
 - Deep link `#/add?type=expense&amount=12` para Apple Shortcuts. La ruta `#/add` y el parámetro `type` ya existen desde la tarea 05; falta leer `amount`.
 - Pantalla o bloque de pagos programados.
