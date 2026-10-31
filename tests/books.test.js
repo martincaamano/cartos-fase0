@@ -18,7 +18,7 @@ test('bookFileName prefixes the name with "Cartos · "', () => {
 
 test('bookOf takes the name from appProperties.name and keeps id and createdTime', () => {
   const f = { id: 'f-1', name: 'Cartos · Viejo', createdTime: '2026-10-01T00:00:00Z', appProperties: { name: 'Casa', bookType: 'shared' } };
-  assert.deepEqual(bookOf(f), { fileId: 'f-1', name: 'Casa', bookType: 'shared', createdTime: '2026-10-01T00:00:00Z' });
+  assert.deepEqual(bookOf(f), { fileId: 'f-1', name: 'Casa', bookType: 'shared', createdTime: '2026-10-01T00:00:00Z', canShare: true });
 });
 
 test('bookOf without appProperties.name uses the file name without the prefix', () => {
@@ -38,8 +38,13 @@ test('bookOf is personal only when appProperties says so; anything else is share
   assert.equal(bookOf({ id: 'd', name: 'n' }).bookType, 'shared');
 });
 
+test('bookOf: canShare is false only when Drive says so (a book shared with me)', () => {
+  assert.equal(bookOf({ id: 'f', capabilities: { canShare: false } }).canShare, false);
+  assert.equal(bookOf({ id: 'f', capabilities: { canShare: true } }).canShare, true);
+});
+
 test('bookOf with no name nor createdTime gives empty strings', () => {
-  assert.deepEqual(bookOf({ id: 'f' }), { fileId: 'f', name: '', bookType: 'shared', createdTime: '' });
+  assert.deepEqual(bookOf({ id: 'f' }), { fileId: 'f', name: '', bookType: 'shared', createdTime: '', canShare: true });
 });
 
 // --- orderBooks ---

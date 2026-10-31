@@ -15,6 +15,8 @@ const HEADERS = {
   Movements: ['id', 'accountId', 'type', 'amount', 'date', 'categoryId', 'note', 'transferId',
     'personId', 'createdBy', 'createdAt', 'updatedAt', 'deleted'],
 };
+// Only in shared books, and only once someone joins (tarea 18).
+export const MEMBERS_HEADER = ['id', 'email', 'name', 'createdAt'];
 
 const AT = '2026-09-01T10:00:00.000Z';
 const movement = (id, accountId, type, amount, date, categoryId, note = '') =>
@@ -51,6 +53,11 @@ export function sampleBook() {
 // none until the app creates one) and Sheets reads and writes the rows of
 // each. `rows` are those of the first book. Every call is kept in `calls`
 // as { op, fileId?, ranges?, body? }.
+//
+// A file with `hidden: true` was shared with the user but not picked yet:
+// under drive.file the list leaves it out until the Picker (a fake script
+// that picks `picked`) and a read by id reach it. `canShare: false` marks
+// a book shared with the user.
 function fakeGoogle(book) {
   const rows = book ?? {};
   // fileId → { name, appProperties, createdTime, rows }.
@@ -68,11 +75,32 @@ function fakeGoogle(book) {
   const json = (route, body) =>
     route.fulfill({ status: 200, contentType: 'application/json', headers: CORS, body: JSON.stringify(body) });
   const preflight = (route) => route.request().method() === 'OPTIONS' && route.fulfill({ status: 204, headers: CORS });
+  const fake = { picked: null };
+  const metadata = (id, { name, appProperties, createdTime, canShare = true }) =>
+    ({ id, name, createdTime, appProperties, capabilities: { canShare } });
 
   async function install(context) {
     // Google Identity Services: an empty script, the session is seeded.
     await context.route('https://accounts.google.com/**', (route) =>
       route.fulfill({ status: 200, contentType: 'text/javascript', body: '' }));
+
+    // The Picker's script: picks `fake.picked` at once, or is closed.
+    await context.route('https://apis.google.com/**', (route) => {
+      calls.push({ op: 'picker' });
+      return route.fulfill({ status: 200, contentType: 'text/javascript', body: `
+        window.gapi = { load: (name, options) => setTimeout(options.callback) };
+        window.google = window.google || {};
+        const picked = ${JSON.stringify(fake.picked)};
+        class DocsView { setMode() { return this; } }
+        class PickerBuilder {
+          addView() { return this; } setOAuthToken() { return this; } setDeveloperKey() { return this; }
+          setAppId() { return this; } setCallback(cb) { this.cb = cb; return this; } build() { return this; }
+          setVisible() { setTimeout(() => this.cb(picked ? { action: 'picked', docs: [{ id: picked }] } : { action: 'cancel' })); }
+        }
+        window.google.picker = { DocsView, PickerBuilder, ViewId: { SPREADSHEETS: 's' }, DocsViewMode: { LIST: 'l' },
+          Action: { PICKED: 'picked', CANCEL: 'cancel' } };
+      ` });
+    });
 
     await context.route('https://www.googleapis.com/drive/**', (route) => {
       if (preflight(route)) return undefined;
@@ -80,25 +108,43 @@ function fakeGoogle(book) {
       const body = JSON.parse(request.postData() ?? '{}');
       // Creating a book: an empty spreadsheet whose tabs come next. The
       // first one is `book-new` and uses `rows`.
+      const path = new URL(request.url()).pathname;
+      const [, fileOf, sub] = path.match(/\/files\/([^/]+)(?:\/(\w+))?$/) ?? [];
+      const fileId = fileOf && decodeURIComponent(fileOf);
+      if (request.method() === 'POST' && sub === 'permissions') {
+        calls.push({ op: 'drive.share', fileId, body });
+        return json(route, { id: 'perm-1' });
+      }
       if (request.method() === 'POST') {
-        const fileId = files.size === 0 ? 'book-new' : `book-new-${files.size}`;
+        const newId = files.size === 0 ? 'book-new' : `book-new-${files.size}`;
         const tabs = files.size === 0 ? rows : {};
         for (const tab of Object.keys(HEADERS)) tabs[tab] = [];
-        files.set(fileId, { name: body.name, appProperties: body.appProperties, createdTime: `2026-10-20T0${files.size}:00:00.000Z`, rows: tabs });
-        calls.push({ op: 'drive.create', fileId, body });
-        return json(route, { id: fileId, name: body.name });
+        files.set(newId, { name: body.name, appProperties: body.appProperties, createdTime: `2026-10-20T0${files.size}:00:00.000Z`, rows: tabs });
+        calls.push({ op: 'drive.create', fileId: newId, body });
+        return json(route, { id: newId, name: body.name });
       }
       if (request.method() === 'PATCH') {
-        const fileId = decodeURIComponent(new URL(request.url()).pathname.split('/').pop());
         const file = files.get(fileId);
+        if ('writersCanShare' in body) {
+          calls.push({ op: 'drive.noReshare', fileId, body });
+          return json(route, { id: fileId });
+        }
         file.name = body.name;
         file.appProperties = { ...file.appProperties, ...body.appProperties };
         calls.push({ op: 'drive.rename', fileId, body });
         return json(route, { id: fileId, name: body.name });
       }
+      if (fileId) {
+        // A read by id: the Picker granted access to it.
+        calls.push({ op: 'drive.get', fileId });
+        const file = files.get(fileId);
+        if (!file) return route.fulfill({ status: 404, headers: CORS });
+        file.hidden = false;
+        return json(route, metadata(fileId, file));
+      }
       calls.push({ op: 'drive.list' });
       return json(route, {
-        files: [...files].map(([id, { name, appProperties, createdTime }]) => ({ id, name, createdTime, appProperties })),
+        files: [...files].filter(([, file]) => !file.hidden).map(([id, file]) => metadata(id, file)),
       });
     });
 
@@ -115,6 +161,8 @@ function fakeGoogle(book) {
       if (url.pathname.endsWith('values:batchGet')) {
         const ranges = url.searchParams.getAll('ranges');
         calls.push({ op: 'batchGet', fileId, ranges });
+        // Sheets refuses a range on a tab that does not exist.
+        if (ranges.some((range) => !tabs[range.split('!')[0]])) return route.fulfill({ status: 400, headers: CORS });
         return json(route, {
           valueRanges: ranges.map((range) => {
             const [tab, columns] = range.split('!');
@@ -126,6 +174,10 @@ function fakeGoogle(book) {
       // Renaming and adding tabs when a book is created.
       if (/spreadsheets\/[^/]+:batchUpdate$/.test(url.pathname)) {
         calls.push({ op: 'structure', fileId });
+        for (const request of body.requests ?? []) {
+          const title = request.addSheet?.properties?.title;
+          if (title) tabs[title] ??= [];
+        }
         return json(route, {});
       }
       if (url.pathname.endsWith('values:batchClear')) {
@@ -166,6 +218,8 @@ function fakeGoogle(book) {
     files,
     calls,
     install,
+    // The file the fake Picker picks (null: the user closes it).
+    pick: (fileId) => { fake.picked = fileId; },
     // Movements of a book as objects, header left out.
     movements: (fileId = null) => (fileId ? files.get(fileId).rows : rows).Movements.slice(1).map((row) =>
       Object.fromEntries(HEADERS.Movements.map((name, i) => [name, row[i]]))),

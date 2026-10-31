@@ -144,6 +144,10 @@ export const VIEWS = Object.freeze({
       state.switchBook(fileId);
       location.hash = SECTION_HASH.home;
     },
+    onShared: (result) => {
+      state.setUp(result);
+      location.hash = SECTION_HASH.home;
+    },
   }),
 
   [SECTIONS.BOOK_NEW]: ({ root, state }) => renderBookNew(root, {

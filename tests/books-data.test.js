@@ -4,7 +4,7 @@ import { test, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   configureBooks, cachedBooks, cachedBook, fetchBooks, reloadBook, openBook, createNewBook, renameBook,
-  setUpPersonalBook, importPersonalBook, importIntoBook, startingBook,
+  setUpPersonalBook, importPersonalBook, importIntoBook, startingBook, openSharedBook,
 } from '../js/data/books.js';
 import { loadBooksCache, saveBookCache, saveBookList, saveCurrentBook } from '../js/storage/book-cache.js';
 import { ValidationError, ApiError } from '../js/data/errors.js';
@@ -26,7 +26,8 @@ const accountRow = (id, name, balance = 0, deleted = false) => [id, name, '🏦'
 const emptyTabs = () => ({ Accounts: [HEADERS.Accounts], Categories: [HEADERS.Categories], Movements: [HEADERS.Movements] });
 
 const isDrive = (call) => call.url.hostname === 'www.googleapis.com';
-const isList = (call) => isDrive(call) && call.method === 'GET';
+const isList = (call) => isDrive(call) && call.method === 'GET' && call.url.pathname === '/drive/v3/files';
+const isGetFile = (call) => isDrive(call) && call.method === 'GET' && call.url.pathname.startsWith('/drive/v3/files/');
 const isCreate = (call) => isDrive(call) && call.method === 'POST';
 const isRename = (call) => isDrive(call) && call.method === 'PATCH';
 const readOf = (fileId) => (call) => call.url.pathname === `/v4/spreadsheets/${fileId}/values:batchGet`;
@@ -45,6 +46,10 @@ function fakeDrive(files = [], { failRename = false } = {}) {
   drive.calls = setupGoogleApi((call) => {
     const path = call.url.pathname;
     if (isList(call)) return { body: { files: drive.files } };
+    if (isGetFile(call)) {
+      const meta = drive.files.find((f) => f.id === decodeURIComponent(path.split('/').at(-1)));
+      return meta ? { body: meta } : { status: 404 };
+    }
     if (isCreate(call)) {
       drive.created += 1;
       const id = `new-file-${drive.created}`;
@@ -75,7 +80,13 @@ function fakeDrive(files = [], { failRename = false } = {}) {
       const sheet = decodeURIComponent(path.match(/values\/(.+):append$/)[1]);
       tabs[sheet].push(...call.body.values);
     } else if (path.endsWith('values:batchGet')) {
-      return { body: { valueRanges: call.url.searchParams.getAll('ranges').map((sheet) => ({ values: tabs[sheet] })) } };
+      const ranges = call.url.searchParams.getAll('ranges');
+      if (ranges.some((sheet) => !tabs[sheet])) return { status: 400 }; // like Sheets for a missing tab
+      return { body: { valueRanges: ranges.map((sheet) => ({ values: tabs[sheet] })) } };
+    } else if (path.endsWith(':batchUpdate')) {
+      for (const request of call.body.requests) {
+        if (request.addSheet) tabs[request.addSheet.properties.title] ??= [];
+      }
     }
     return {};
   });
@@ -657,4 +668,97 @@ test('importIntoBook with hasInitialBalance false ignores a different balance', 
   data.accounts[0].hasInitialBalance = false;
   const { book } = await importIntoBook('file-1', data);
   assert.equal(book.accounts[0].initialBalance, 500, 'the book keeps its own initial balance');
+});
+
+// --- openSharedBook (tarea 18): a book picked in the Picker ---
+
+const isSheetsWrite = (call) => call.url.hostname === 'sheets.googleapis.com' && call.method === 'POST';
+// helpers/fake-google.js signs in martin@example.com, named Martín.
+const sharedFile = (members) => ({
+  ...casaFile({ ...casaTabs(), ...(members ? { Members: members } : {}) }),
+  id: 'file-s', capabilities: { canShare: false },
+});
+const otherBooks = [
+  { fileId: 'file-p', name: 'Personal', bookType: 'personal', createdTime: '2026-10-01T00:00:00Z', isPersonal: true, canShare: true },
+  { fileId: 'file-z', name: 'Zeta', bookType: 'shared', createdTime: '2026-10-02T00:00:00Z', canShare: true },
+];
+
+test('openSharedBook rejects a personal or non-Cartos file with not_shared_book and writes nothing', async () => {
+  const files = [
+    { ...personalFile(personalTabs()), id: 'file-s' },
+    { id: 'file-s', name: 'Presupuesto', createdTime: '2026-10-01T00:00:00Z', appProperties: { app: 'otra' } },
+    { id: 'file-s', name: 'Hoja suelta', createdTime: '2026-10-01T00:00:00Z' },
+  ];
+  for (const file of files) {
+    const drive = fakeDrive([file]);
+    const before = structuredClone(drive.tabs);
+    await assert.rejects(openSharedBook('file-s', otherBooks),
+      (err) => err instanceof ValidationError && err.errors.length === 1 && err.errors[0] === 'not_shared_book', file.name);
+    assert.equal(drive.calls.length, 1, `only the drive.get (${file.name})`);
+    assert.ok(isGetFile(drive.calls[0]));
+    assert.equal(drive.calls[0].url.pathname, '/drive/v3/files/file-s');
+    assert.deepEqual(drive.tabs, before);
+    assert.equal(loadBooksCache(storage, SUB), null, 'nothing saved');
+  }
+});
+
+test('openSharedBook of a shared book without Members: gets the file, joins, reads the book', async () => {
+  const drive = fakeDrive([sharedFile(null)]);
+  const result = await openSharedBook('file-s', otherBooks);
+
+  assert.ok(isGetFile(drive.calls[0]), 'checks the file first');
+  assert.ok(drive.calls.some((c) => c.url.pathname === '/v4/spreadsheets/file-s:batchUpdate'), 'adds the Members tab');
+  assert.deepEqual(drive.tabs['file-s'].Members[0], HEADERS.Members);
+  assert.deepEqual(drive.tabs['file-s'].Members.slice(1).map((r) => r.slice(1, 3)), [['martin@example.com', 'Martín']]);
+  assert.ok(readOf('file-s')(drive.calls.at(-1)), 'reads the book last');
+  for (const call of drive.calls) assert.equal(call.headers.Authorization, `Bearer ${TOKEN}`);
+
+  assert.equal(result.status, 'ready');
+  assert.equal(result.fileId, 'file-s');
+  assert.equal(result.book.accounts[0].name, 'Cuenta común');
+  assert.deepEqual(Object.keys(result).sort(), ['book', 'books', 'fileId', 'status']);
+});
+
+test('openSharedBook adds the book to the list once, in name order, and opens it', async () => {
+  fakeDrive([sharedFile([HEADERS.Members])]);
+  const result = await openSharedBook('file-s', otherBooks);
+  assert.deepEqual(result.books.map((b) => b.fileId), ['file-p', 'file-s', 'file-z']);
+  assert.deepEqual(result.books[1], {
+    fileId: 'file-s', name: 'Casa do medio', bookType: 'shared', createdTime: '2026-10-20T00:00:00Z', canShare: false,
+  });
+  const cache = loadBooksCache(storage, SUB);
+  assert.deepEqual(cache.books, result.books);
+  assert.equal(cache.current, 'file-s');
+  assert.deepEqual(cachedBook('file-s'), result.book);
+  assert.equal(otherBooks.length, 2, 'the list given is not changed');
+});
+
+test('openSharedBook of a book already in the list does not duplicate it', async () => {
+  fakeDrive([sharedFile([HEADERS.Members])]);
+  const listed = [...otherBooks, { fileId: 'file-s', name: 'Nombre viejo', bookType: 'shared', createdTime: '', canShare: true }];
+  const result = await openSharedBook('file-s', listed);
+  assert.equal(result.books.filter((b) => b.fileId === 'file-s').length, 1);
+  assert.equal(result.books.length, 3);
+  assert.equal(result.books.find((b) => b.fileId === 'file-s').name, 'Casa do medio', 'replaced by the file as Drive has it');
+});
+
+test('openSharedBook when the user is already a member writes nothing to the Sheet', async () => {
+  const drive = fakeDrive([sharedFile([HEADERS.Members, ['m-1', 'Martin@Example.com', 'Martín', 't0']])]);
+  await openSharedBook('file-s', otherBooks);
+  assert.equal(drive.calls.some(isSheetsWrite), false);
+  assert.equal(drive.tabs['file-s'].Members.length, 2);
+});
+
+test('openSharedBook when someone else joined only appends the user', async () => {
+  const drive = fakeDrive([sharedFile([HEADERS.Members, ['m-2', 'ana@example.com', 'Ana', 't0']])]);
+  await openSharedBook('file-s', otherBooks);
+  const writes = drive.calls.filter(isSheetsWrite);
+  assert.deepEqual(writes.map((c) => c.url.pathname), ['/v4/spreadsheets/file-s/values/Members:append']);
+  assert.equal(writes[0].url.searchParams.get('valueInputOption'), 'RAW');
+});
+
+test('openSharedBook: a file Drive cannot find rejects and saves nothing', async () => {
+  fakeDrive([]);
+  await assert.rejects(openSharedBook('file-s', otherBooks), (err) => err instanceof ApiError && err.op === 'drive.get' && err.status === 404);
+  assert.equal(loadBooksCache(storage, SUB), null);
 });

@@ -7,17 +7,19 @@
 // { status: 'ready' | 'none', fileId, book, books? }; books is the list of
 // the user's books (domain/books.js) when it was read too.
 
-import { listBooks, renameFile } from './drive.js';
+import { getFile, listBooks, renameFile } from './drive.js';
 import { es } from '../../i18n/es.js';
 import { addAccount, appendBookRows, createBook, readBook, writeBookRows } from './book.js';
 import { currentUserSub } from './auth.js';
+import { joinBook } from './members.js';
 import { ValidationError } from './errors.js';
 import {
   loadBookCache, loadBooksCache, saveBookCache, saveBookList, saveCurrentBook,
 } from '../storage/book-cache.js';
 import { isActive } from '../domain/active.js';
 import { createAccount, validateAccount } from '../domain/account.js';
-import { addBook, bookFileName, chooseBook, orderBooks, validateBookName } from '../domain/books.js';
+import { addBook, bookFileName, bookOf, chooseBook, orderBooks, validateBookName } from '../domain/books.js';
+import { isSharedBookFile } from '../domain/members.js';
 import { buildDefaultCategories, TRANSFER_CATEGORY_ID } from '../domain/category.js';
 import { buildImport, validateImport } from '../domain/import.js';
 
@@ -99,6 +101,22 @@ export async function createNewBook({ name, account }, books) {
   remember(created.fileId, book);
   open(created.fileId);
   return { status: 'ready', fileId: created.fileId, book, books: ordered };
+}
+
+// Ajustes → Libros → «Abrir un libro compartido conmigo»: the file picked
+// in the Picker (data/picker.js) becomes one of the user's books, opened at
+// once. Only a shared Cartos book is accepted. The signed-in person joins
+// it (tab Members).
+export async function openSharedBook(fileId, books) {
+  const file = await getFile(fileId);
+  if (!isSharedBookFile(file)) throw new ValidationError(['not_shared_book']);
+  await joinBook(fileId);
+  const book = await readBook(fileId);
+  const list = addBook(books.filter((item) => item.fileId !== fileId), bookOf(file));
+  saveBookList(deps.storage(), { sub: sub(), books: list });
+  remember(fileId, book);
+  open(fileId);
+  return { status: statusOf(book), fileId, book, books: list };
 }
 
 // Ajustes → Libros: renames a book (its file in Drive too). Returns the
