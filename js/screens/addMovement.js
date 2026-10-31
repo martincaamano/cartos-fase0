@@ -10,6 +10,7 @@ import { es } from '../../i18n/es.js';
 import { parseAmountInput } from '../domain/money.js';
 import { rankCategories } from '../domain/category.js';
 import { activeOnly } from '../domain/active.js';
+import { startingAccounts } from '../domain/movement.js';
 import {
   queueCrossBookTransfer, queueDelete, queueEdit, queueMovement, queueTransfer, queueTransferEdit,
 } from '../data/movements.js';
@@ -162,15 +163,12 @@ export function renderAddMovement(root, {
   const otherBookOf = (accountId) =>
     destinations.find((other) => other.book.accounts.some((account) => account.id === accountId)) ?? null;
   const otherAccounts = destinations.reduce((count, other) => count + activeOnly(other.book.accounts).length, 0);
-  if (accounts.length > 1) toSelect.value = accounts[1].id;
-  else if (otherAccounts > 0) toSelect.selectedIndex = accounts.length;
   // A new movement starts from the account used last in this book.
-  const lastAccount = entry ? null : loadLastAccount(storage, fileId);
-  if (accounts.some((account) => account.id === lastAccount)) {
-    accountSelect.value = lastAccount;
-    fromSelect.value = lastAccount;
-    if (toSelect.value === lastAccount) toSelect.value = accounts.find((account) => account.id !== lastAccount)?.id ?? '';
-  }
+  const start = startingAccounts(accounts.map((account) => account.id), entry ? null : loadLastAccount(storage, fileId), otherAccounts > 0);
+  accountSelect.value = start.account;
+  fromSelect.value = start.from;
+  if (start.to === null) toSelect.selectedIndex = accounts.length;
+  else toSelect.value = start.to;
 
   // What is being edited: one movement, or both halves of a transfer.
   const original = entry?.kind === 'movement' ? entry.movement : null;

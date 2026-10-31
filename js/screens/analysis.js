@@ -9,8 +9,8 @@ import { es } from '../../i18n/es.js';
 import { toIsoDate } from '../domain/movement.js';
 import { dayOf, isMonth, monthRange, shiftMonth } from '../domain/stats.js';
 import {
-  categoryChanges, categoryTrends, countable, fixedCosts, keyFigures, largestExpenses, monthlySeries, monthPace,
-  periodMonths, previousMonths, weekdayPattern,
+  canCompare, categoryChanges, categoryTrends, countable, fixedCosts, fixedSummary, keyFigures, largestExpenses, monthlySeries, monthPace,
+  periodMonths, weekdayPattern,
 } from '../domain/analysis.js';
 import { rankAllCategories } from '../domain/category.js';
 import {
@@ -225,8 +225,7 @@ export function renderAnalysis(root, { book, fileId = '', params = {}, today = n
   function paintCategories(movements, months) {
     // Compared only when the book reaches back to the start of the period
     // before; the same rule as the key figures (the movements that count).
-    const firstCounted = monthRange(movements, day).first;
-    const compare = state.period !== 'all' && firstCounted <= previousMonths(months)[0];
+    const compare = state.period !== 'all' && canCompare(movements, months);
     const rows = categoryChanges(movements, months, { compare });
     body.appendChild(heading(t.onWhat, compare ? t.markBefore : ''));
     const list = el('ul', 'receipt-list stat-categories');
@@ -303,8 +302,7 @@ export function renderAnalysis(root, { book, fileId = '', params = {}, today = n
       list.appendChild(receiptLine(label, formatEuros(cost.amount)));
     }
     body.appendChild(list);
-    const total = fixed.reduce((sum, cost) => sum + Math.round(cost.amount * 100), 0) / 100;
-    const share = average > 0 ? Math.round((total / average) * 100) : null;
+    const { total, share } = fixedSummary(fixed, average);
     body.appendChild(el('p', 'text-muted form-note', t.fixedTotal.replace('{total}', formatEuros(total)).replace('{share}', share ?? '—')));
   }
 

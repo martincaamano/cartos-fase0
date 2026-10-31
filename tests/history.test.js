@@ -12,7 +12,7 @@ import {
   monthsSpan,
   selectMonth,
 } from '../js/domain/history.js';
-import { editMovement, markDeleted } from '../js/domain/movement.js';
+import { editMovement, markDeleted, startingAccounts } from '../js/domain/movement.js';
 import { editTransfer, deleteTransfer } from '../js/domain/transfer.js';
 import { accountBalance } from '../js/domain/balance.js';
 
@@ -737,4 +737,21 @@ test('a closed selectMonth range filters historyEntries', () => {
     ids(historyEntries(book(), { fromMonth: range.from, toMonth: range.to })),
     ['m-nov', 'm-salary', 'm-food-2', 't-1', 'm-food-1'],
   );
+});
+
+// --- startingAccounts (tarea 22c) ---
+
+test('startingAccounts: the last account used, and the next one as destination', () => {
+  assert.deepEqual(startingAccounts(['a', 'b', 'c'], null, false), { account: 'a', from: 'a', to: 'b' });
+  assert.deepEqual(startingAccounts(['a', 'b', 'c'], 'c', false), { account: 'c', from: 'c', to: 'b' });
+  assert.deepEqual(startingAccounts(['a', 'b'], 'b', false), { account: 'b', from: 'b', to: 'a' });
+  assert.deepEqual(startingAccounts(['a', 'b'], 'gone', false), { account: 'a', from: 'a', to: 'b' });
+});
+
+test('startingAccounts: one account sends to another book when there is one', () => {
+  assert.deepEqual(startingAccounts(['a'], 'a', true), { account: 'a', from: 'a', to: null });
+  // Alone, the destination stays on it (a transfer is not possible then).
+  assert.deepEqual(startingAccounts(['a'], null, false), { account: 'a', from: 'a', to: 'a' });
+  assert.deepEqual(startingAccounts(['a'], 'a', false), { account: 'a', from: 'a', to: '' });
+  assert.deepEqual(startingAccounts([], null, false), { account: '', from: '', to: '' });
 });

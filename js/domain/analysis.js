@@ -54,6 +54,13 @@ export function periodMonths(period, { today, first, month = monthOf(today) }) {
   return monthsBetween(start, last);
 }
 
+// Whether a period can be compared with the one before it: only when the
+// book reaches back to the start of that one. movements: countable.
+export function canCompare(movements, months) {
+  const start = previousMonths(months)[0];
+  return movements.some((m) => monthOf(m.date) <= start);
+}
+
 // The same number of months right before `months` (to compare with).
 export function previousMonths(months) {
   return months.map((month) => shiftMonth(month, -months.length));
@@ -92,7 +99,7 @@ export function keyFigures(movements, months, today) {
   const income = sumOf(series, 'income');
   const average = Math.round(expense / months.length);
   // Only compared when the book reaches back to the start of that period.
-  const hadBefore = movements.some((m) => monthOf(m.date) <= previousMonths(months)[0]);
+  const hadBefore = canCompare(movements, months);
   const averageBefore = Math.round(sumOf(before, 'expense') / months.length);
 
   // This month at this pace, against the average of the 12 months before it.
@@ -254,4 +261,12 @@ export function largestExpenses(movements, months, count = LARGEST_COUNT) {
   const items = [...expenses].sort((a, b) => toCents(b.amount) - toCents(a.amount) || b.date.localeCompare(a.date)).slice(0, count);
   const rest = sumOf(expenses, 'amount') - sumOf(items, 'amount');
   return { items, averageWithout: fromCents(Math.round(rest / months.length)) };
+}
+
+// What the fixed costs add up to per month and their share of the average
+// spending (null when nothing was spent). fixed: from fixedCosts.
+export function fixedSummary(fixed, averageExpense) {
+  const total = sumCents(fixed);
+  const average = toCents(averageExpense);
+  return { total: fromCents(total), share: average > 0 ? Math.round((total / average) * 100) : null };
 }

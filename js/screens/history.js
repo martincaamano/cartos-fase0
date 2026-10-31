@@ -8,7 +8,7 @@
 
 import { es } from '../../i18n/es.js';
 import {
-  activeFilterCount, entryMonth, historyEntries, monthsSpan, selectMonth, summarizeHistory, sumEntries, transferAmount,
+  activeFilterCount, entryMonth, historyEntries, monthsSpan, selectMonth, summarizeHistory, transferAmount,
 } from '../domain/history.js';
 import { activeOnly } from '../domain/active.js';
 import { rankAllCategories, TRANSFER_CATEGORY_ID } from '../domain/category.js';
@@ -86,7 +86,8 @@ export function renderHistory(root, { book, params = {}, today = new Date(), sto
   });
 
   // --- Lista: every movement, a heading with the sums wherever the month changes.
-  const monthSums = new Map();
+  let summary = null;
+  let monthSums = new Map();
   const paintPage = () => {
     const page = entries.slice(shown, shown + PAGE_SIZE);
     let month = shown > 0 ? entryMonth(entries[shown - 1]) : '';
@@ -157,7 +158,7 @@ export function renderHistory(root, { book, params = {}, today = new Date(), sto
   };
 
   const paintSummary = () => {
-    const { total, months } = summarizeHistory(entries);
+    const { total, months } = summary;
     list.append(node({
       key: 'total',
       level: 'total',
@@ -250,13 +251,9 @@ export function renderHistory(root, { book, params = {}, today = new Date(), sto
 
   function apply() {
     entries = historyEntries(movements, filters());
-    monthSums.clear();
-    const byMonth = new Map();
-    for (const entry of entries) {
-      if (!byMonth.has(entryMonth(entry))) byMonth.set(entryMonth(entry), []);
-      byMonth.get(entryMonth(entry)).push(entry);
-    }
-    for (const [month, monthEntries] of byMonth) monthSums.set(month, sumEntries(monthEntries));
+    // The sums of the total and of each month, for both views.
+    summary = summarizeHistory(entries);
+    monthSums = new Map(summary.months.map((month) => [month.month, month]));
     paintFilters();
     paint();
   }
