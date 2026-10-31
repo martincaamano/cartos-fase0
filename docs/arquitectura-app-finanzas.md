@@ -28,7 +28,7 @@ Dentro de un libro, las pestañas son:
 - **Accounts**: las cuentas que viven en ese libro. Columnas: `id`, `name`, `emoji`, `initialBalance`, `createdAt`, `updatedAt`, `deleted`.
 - **Categories**: categorías disponibles en ese libro, con las por defecto (incluida `Transferencia`, con id fijo `transfer`) más las que cree el usuario. Columnas: `id`, `name`, `emoji`, `kind` (`expense`, `income` o `both`), `isDefault`, `updatedAt`, `deleted`.
 - **Movements**: todos los movimientos de todas las cuentas del libro, con columna `accountId` para saber a cuál pertenece cada uno. Columnas: `id`, `accountId`, `type`, `amount`, `date`, `categoryId`, `note`, `transferId`, `personId`, `createdBy`, `createdAt`, `updatedAt`, `deleted`. Se guarda el id de la categoría, no su nombre, para que renombrarla no rompa nada.
-- **Members** (solo libros compartidos, fase posterior): email, nombre y rol de cada persona con acceso.
+- **Members** (solo libros compartidos, tarea 18): `id`, `email`, `name`, `createdAt`. Se crea la primera vez que hace falta; cada persona se apunta sola al abrir el libro.
 
 La primera fila de cada pestaña es la cabecera, y su orden es un contrato con el código (`js/data/rows.js`): si alguien reordena las columnas a mano, la app se niega a leer el libro en vez de mezclar datos. `createdAt` y `updatedAt` van en ISO 8601; `deleted` e `isDefault` son booleanos; los importes, números.
 
@@ -86,13 +86,12 @@ Bajo `drive.file`, esta consulta solo devuelve archivos a los que la app ya tien
 
 **Qué libro se abre** (tarea 17, 2026-10-29): el último libro abierto en ese dispositivo, si sigue en la lista; si no, el personal. Los demás libros se crean con `bookType=shared` y su nombre va en `appProperties.name` (renombrar cambia ese valor y el nombre del archivo, `Cartos · <nombre>`). El dispositivo guarda una copia de cada libro leído y cuál está abierto, así que cambiar de libro y trabajar sin conexión funciona con cualquiera. La cola de salida guarda el `fileId` de cada cambio y la sincronización sube los de todos los libros, no solo los del abierto.
 
-## 5. Invitación a un libro compartido (fase posterior al MVP)
+## 5. Invitación a un libro compartido (tarea 18)
 
-1. El propietario crea el libro compartido → la app llama a `permissions.create` de Drive para compartirlo como Editor con el email del invitado, y desactiva que los editores puedan volver a compartirlo.
-2. Se envía un enlace de invitación por el canal que sea (WhatsApp, iMessage). No hay backend que mande avisos push — es "pásale el enlace".
-3. El invitado abre el enlace, ve una pantalla de aceptación, y pulsa Aceptar.
-4. Se abre el Picker (confirmado funcionando en modo standalone en la Fase 0, con `setAppId` correctamente configurado); al seleccionar el archivo compartido, `drive.file` concede acceso permanente a ese Sheet — no hace falta repetir el Picker en logins futuros.
-5. Cada persona se registra sola en la pestaña `Members` la primera vez que abre el libro.
+1. Desde la ficha del libro compartido (Ajustes → Libros), el propietario escribe el email de la otra persona. La app llama a `permissions.create` de Drive para compartirlo como Editor (Drive le manda su propio aviso por email) y desactiva que los editores puedan volver a compartirlo (`writersCanShare=false`).
+2. No hay enlace de invitación ni pantalla de aceptación: en iPhone un enlace se abre en Safari, no en la app instalada, que guarda sus datos aparte. Decidido el 2026-10-31.
+3. La otra persona, en su Cartos, va a Ajustes → Libros → «Abrir un libro compartido conmigo». Se abre el Picker (confirmado funcionando en modo standalone en la Fase 0, con `setAppId` correctamente configurado); solo se aceptan libros de Cartos de tipo compartido. Al seleccionarlo, `drive.file` concede acceso permanente a ese Sheet — no hace falta repetir el Picker en logins futuros.
+4. Cada persona se registra sola en la pestaña `Members` la primera vez que abre el libro. Quitar el acceso a alguien no está en la app: se hace desde Drive.
 
 Límite conocido y aceptado para el MVP de esta fase: el propietario del libro es un punto único de fallo (si borra el archivo o su cuenta, los demás miembros lo pierden). Drive tampoco distingue roles propios de Cartos más allá de owner/editor — cualquier editor podría, en teoría, modificar el Sheet directamente desde la interfaz de Drive. Se acepta por ahora, pensado para grupos de confianza.
 
