@@ -86,3 +86,16 @@ export function editMovement(original, fields, now = new Date()) {
 export function markDeleted(movement, now = new Date()) {
   return { ...movement, deleted: true, updatedAt: now.toISOString() };
 }
+
+// The accounts a new movement starts with (tarea 20a). accountIds: the
+// book's active accounts, in order; last: the one used last in this book
+// (ignored when it is not among them); hasOtherBooks: accounts of other
+// books can receive a transfer. → { account, from, to }; to is null for
+// "the first account of another book".
+export function startingAccounts(accountIds, last, hasOtherBooks) {
+  const known = accountIds.includes(last) ? last : null;
+  const from = known ?? accountIds[0] ?? '';
+  let to = accountIds[1] ?? (hasOtherBooks ? null : accountIds[0] ?? '');
+  if (known && to === known) to = accountIds.find((id) => id !== known) ?? '';
+  return { account: from, from, to };
+}
