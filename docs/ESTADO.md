@@ -122,10 +122,17 @@ Decidido el 2026-10-29: empezar el libro personal con el histórico real (import
 | Tarea | Título | Estado | Notas |
 |---|---|---|---|
 | 16 | Importar y descargar los datos | Hecha (2026-10-29) | Libro personal real importado y cuadrado; plantilla e importar en Ajustes sin probar en iPhone |
-| 17 | Varios libros | Pendiente | 17a: crear, cambiar y renombrar libros, abrir en Añadir. 17b: transferir a otro libro con una categoría en cada lado |
+| 17 | Varios libros | Hecha (2026-10-30) | Probada en iPhone: Casa do Medio creado y transferencia desde Personal que aparece en los dos libros |
 | 20 | Experiencia: pantallas más simples | Pendiente | Definida pantalla a pantalla con bocetos; en cuatro partes (20a Añadir, 20b Historial, 20c Libros/Cuentas/Categorías, 20d Ajustes/INICIO, 20e Análisis). Antes de la 18 |
 | 18 | Libro compartido | Pendiente | Personas por movimiento, compartir con la pareja y abrirlo desde su app (Picker, clave nueva restringida) |
 | 19 | Importar la reforma | Pendiente | El Excel de la reforma a «Casa do medio»; el Excel queda en Drive como copia |
+
+### Decisiones tomadas en la tarea 17
+- Partida en 17a (PR #42) y 17b (PR #43); arreglo posterior en el PR #44.
+- La transferencia a otro libro se hace desde Añadir → Transferencia. En el iPhone se confundió con un gasto «Casa do medio» hecho desde Gasto, que solo se apunta en Personal.
+  - Por eso las cuentas de otro libro se muestran como «Abanca · Casa do Medio» (PR #44).
+- Arquitectura §6 ya recoge la transferencia entre libros: dos movimientos sin `transferId`, cada uno con la categoría que elige el usuario.
+- Casa do Medio se creó con la cuenta Abanca y saldo inicial 841,28 €. El saldo correcto, 1.200,28 €, se recalcula en la tarea 19, porque el banco aún no refleja 359 € de entradas pendientes de devolver.
 
 ### Decisiones tomadas en la tarea 16
 - Ampliada durante la tarea, a petición del usuario: además del onboarding, Ajustes → DATOS con importar movimientos, plantilla CSV y descarga.
