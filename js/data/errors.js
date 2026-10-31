@@ -5,6 +5,7 @@
 export class ValidationError extends Error {
   constructor(errors) {
     super(`Invalid data: ${errors.join(', ')}`);
+    this.name = 'ValidationError';
     this.errors = errors;
   }
 }
@@ -13,6 +14,8 @@ export class ValidationError extends Error {
 export class ApiError extends Error {
   constructor(status, op) {
     super(`Google API ${op} failed with ${status}`);
+    // The name goes to the log (sync:ApiError:403), so it says what failed.
+    this.name = 'ApiError';
     this.status = status;
     this.op = op;
   }

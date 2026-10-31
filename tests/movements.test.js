@@ -282,3 +282,63 @@ test('queueCrossBookTransfer makes no call to Google', async () => {
   await queueCrossBookTransfer(here, there, cross);
   assert.equal(google.length, 0);
 });
+
+// --- the signed-in sub goes with every save (tarea 21) ---
+
+// A store that records add and addAcross with every argument.
+function subStore() {
+  const adds = [];
+  const across = [];
+  configureMovements({
+    add: async (fileId, movements, sub) => { adds.push({ fileId, movements, sub }); },
+    addAcross: async (items, sub) => { across.push({ items, sub }); },
+  });
+  return { adds, across };
+}
+
+test('every save passes the signed-in sub to store.add', async () => {
+  const { adds, across } = subStore();
+  const shop = { accounts: [{ id: 'acc-1', deleted: false }], categories: [{ id: 'c', deleted: false }] };
+  const created = await queueMovement('f1', { accountId: 'acc-1', type: 'expense', amount: 0.01, date: '2026-10-31', categoryId: 'c' }, shop);
+  await queueEdit('f1', created, { accountId: 'acc-1', amount: 2, date: '2026-10-31', categoryId: 'c' }, shop);
+  const halves = await queueTransfer('f1', transfer, book);
+  await queueTransferEdit('f1', halves, { ...transfer, amount: 60 }, book);
+  await queueDelete('f1', [created]);
+  await queueDelete('f1', halves);
+  assert.equal(adds.length, 6);
+  // helpers/fake-google.js signs in user-1.
+  for (const call of adds) {
+    assert.equal(call.sub, 'user-1');
+    assert.equal(call.fileId, 'f1');
+  }
+  assert.deepEqual(adds.map((call) => call.movements.length), [1, 1, 2, 2, 1, 2]);
+  assert.equal(across.length, 0, 'saves in one book do not use addAcross');
+});
+
+test('queueCrossBookTransfer calls addAcross once with both halves and the sub', async () => {
+  const { adds, across } = subStore();
+  const [out, inc] = await queueCrossBookTransfer(here, there, cross);
+  assert.equal(adds.length, 0, 'add is not used');
+  assert.equal(across.length, 1);
+  assert.deepEqual(across[0].items, [
+    { fileId: 'file-mine', movement: out },
+    { fileId: 'file-house', movement: inc },
+  ]);
+  assert.equal(across[0].sub, 'user-1');
+});
+
+test('queueCrossBookTransfer invalid: addAcross is never called', async () => {
+  const { across } = subStore();
+  await assert.rejects(queueCrossBookTransfer(here, there, { ...cross, amount: 0 }), ValidationError);
+  assert.equal(across.length, 0);
+});
+
+test('configureMovements with only add: addAcross falls back to add per book, with the sub', async () => {
+  const calls = [];
+  configureMovements({ add: async (fileId, movements, sub) => { calls.push({ fileId, movements, sub }); } });
+  const [out, inc] = await queueCrossBookTransfer(here, there, cross);
+  assert.deepEqual(calls, [
+    { fileId: 'file-mine', movements: [out], sub: 'user-1' },
+    { fileId: 'file-house', movements: [inc], sub: 'user-1' },
+  ]);
+});

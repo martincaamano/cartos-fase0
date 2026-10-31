@@ -47,7 +47,7 @@ export function renderBooks(root, { books, fileId, onOpen, onShared }) {
   // A book someone shared: picked in Google's Picker, which is what lets the
   // app reach it under drive.file.
   const error = root.querySelector('.books-error');
-  const openShared = receiptLine(`+ ${t.openShared}`, '', { className: 'add-row book-open-shared' });
+  const openShared = receiptLine(t.openSharedLink, '', { className: 'add-row book-open-shared' });
   openShared.setAttribute('role', 'button');
   openShared.tabIndex = 0;
   list.appendChild(openShared);
@@ -57,10 +57,14 @@ export function renderBooks(root, { books, fileId, onOpen, onShared }) {
     if (busy) return;
     error.textContent = '';
     if (!navigator.onLine) { error.textContent = t.pickerUnavailable; return; }
+    // A second tap while the Picker opens does nothing.
+    busy = true;
     try {
       const picked = await pickSpreadsheet();
-      if (!picked) return;
-      busy = true;
+      if (!picked) {
+        busy = false;
+        return;
+      }
       label.textContent = t.openingShared;
       onShared(await openSharedBook(picked, books));
     } catch (err) {
@@ -69,7 +73,7 @@ export function renderBooks(root, { books, fileId, onOpen, onShared }) {
       else if (err instanceof ValidationError) error.textContent = t.notSharedBook;
       else error.textContent = t.openSharedFailed;
       busy = false;
-      label.textContent = `+ ${t.openShared}`;
+      label.textContent = t.openSharedLink;
     }
   });
 

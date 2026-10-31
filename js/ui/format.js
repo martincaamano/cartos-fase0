@@ -19,11 +19,13 @@ export function formatSums({ income, expense, net }) {
   return { income: `+${bare(income)}`, expense: bare(expense), net: `${net > 0 ? '+' : ''}${formatEuros(net)}` };
 }
 
-// What the amount field shows when editing: 1250.5 → "1250,50". No
-// thousands dot, so it reads back the same with parseAmountInput.
+// What the amount field shows when editing: 1250.5 → "1250,50", −10.5 →
+// "-10,50". No thousands dot, so it reads back the same with
+// parseAmountInput.
 export function formatAmountInput(amount) {
   const cents = toCents(amount);
-  return `${Math.floor(cents / 100)},${String(cents % 100).padStart(2, '0')}`;
+  const units = Math.abs(cents);
+  return `${cents < 0 ? '-' : ''}${Math.floor(units / 100)},${String(units % 100).padStart(2, '0')}`;
 }
 
 // A log entry as one line: local day and time, type, result and duration.

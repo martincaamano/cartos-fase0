@@ -116,10 +116,11 @@ test('Analysis leaves out the categories chosen, and remembers them', async ({ p
 
 test('Analysis: a month tapped on the chart shows its figures, tapped again opens it in History', async ({ page, app }) => {
   await app.open('#/analysis', '.stat-categories');
-  // The last column is October.
-  await page.locator('.chart-hit').nth(11).click();
+  // The book starts in September: 12 meses shows September and October.
+  await expect(page.locator('.chart-hit')).toHaveCount(2);
+  await page.locator('.chart-hit').last().click();
   await expect(page.locator('.stat-picked')).toContainText('OCTUBRE 2026 +1.500,00 − 65,50 = +1.434,50 €');
-  await page.locator('.chart-hit').nth(11).click();
+  await page.locator('.chart-hit').last().click();
   await expect(page).toHaveURL(/#\/history\?month=2026-10/);
   await expect(page.locator('.tree-month .tree-label')).toHaveText(['OCTUBRE 2026']);
 });

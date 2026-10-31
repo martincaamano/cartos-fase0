@@ -11,7 +11,7 @@
 | Almacenamiento local | IndexedDB nativo | Sin npm no se puede instalar `idb`; la API nativa es autocontenida |
 | Offline / cache assets | Service Worker escrito a mano, estrategia *network-first* con fallback a caché | Evita servir versiones antiguas de la app; ya validado en Fase 0 |
 | Identidad + acceso a datos | Google Identity Services: ID token (identidad) + OAuth token con scope `drive.file` | Scope "no sensible / recomendado", ver punto 3 |
-| Selector de archivos | Google Picker API (versión web) | Necesario para aceptar un Sheet compartido (fase posterior al MVP). Requiere `setAppId(numeroDeProyecto)` — confirmado en Fase 0: sin esto el Picker concede la selección pero no el acceso real, y falla con 404 después |
+| Selector de archivos | Google Picker API (versión web) | Necesario para abrir un libro compartido (tarea 18). Requiere `setAppId(numeroDeProyecto)` — confirmado en Fase 0: sin esto el Picker concede la selección pero no el acceso real, y falla con 404 después |
 | Backend propio | Ninguno en el MVP | Ver punto 8 sobre por qué se aplaza, no se descarta |
 | Base de datos | 1 Google Sheet por **libro** (no por cuenta, no por usuario del desarrollador) | Ver punto 3 |
 | Hosting frontend | GitHub Pages | Gratis, 100% configurable desde Safari sin ordenador ni terminal |
@@ -47,9 +47,9 @@ Motivo del cambio frente al modelo anterior ("un Sheet por cuenta"): dentro de u
 Cada movimiento distingue dos datos independientes:
 
 - `createdBy`: quién registró el movimiento (el usuario logueado que guarda). Lo rellena la app sola, sirve para depuración.
-- `personId`: quién efectuó el gasto o ingreso. Es un campo de negocio, editable en el formulario, y **opcional**: puede quedar vacío para un movimiento común de la cuenta (por ejemplo, una factura que no es de nadie en particular). En cuentas personales este selector no se muestra, porque solo hay una persona posible. En cuentas compartidas (fase posterior) se muestra con las personas del libro más la opción "Común".
+- `personId`: reservado para quién efectuó un movimiento. No se usa (decidido el 2026-10-31, tarea 18): en un libro compartido el gasto es de la cuenta común, y lo que pone cada persona se ve en sus categorías de ingreso («Aportación …») y en la transferencia hecha desde su propio libro. La columna queda vacía.
 
-Ambas columnas se incluyen en `Movements` desde el MVP, aunque de momento el MVP sea solo personal, para no tener que migrar datos cuando se añadan cuentas compartidas.
+Ambas columnas existen en `Movements` desde el MVP.
 
 ### Dirección e importe de un movimiento
 
@@ -205,5 +205,5 @@ Barra de navegación fija inferior (patrón estándar tipo Instagram/Twitter), c
 
 - **Fase 0 (completada):** validación de los 4 riesgos técnicos de arriba.
 - **MVP actual:** login, acceso a Drive, onboarding, libro personal con varias cuentas, Dashboard, Añadir (gasto/ingreso/transferencia), Historial, Categorías, Diagnóstico. Sin backend, sync solo con la app abierta.
-- **Fase siguiente:** cuentas compartidas (invitación, Picker, permisos, `Members`).
+- **Hecho después del MVP:** sincronización, importar y descargar, varios libros, libro compartido (Picker, permisos, `Members`; tarea 18).
 - **Fases posteriores:** Apple Shortcuts vía deep link, pagos programados, backend mínimo de refresco de tokens si la fricción o el crecimiento de usuarios lo justifican, interruptor de transferencias en resúmenes.

@@ -9,7 +9,8 @@ import {
 import { loadBooksCache, saveBookCache, saveBookList, saveCurrentBook } from '../js/storage/book-cache.js';
 import { ValidationError, ApiError } from '../js/data/errors.js';
 import { IMPORTED_BY } from '../js/domain/import.js';
-import { HEADERS } from '../js/data/rows.js';
+import { HEADERS, SheetFormatError } from '../js/data/rows.js';
+import { TokenExpiredError } from '../js/data/auth.js';
 import { setupGoogleApi, TOKEN } from './helpers/fake-google.js';
 
 function fakeStorage() {
@@ -212,6 +213,80 @@ test('fetchBooks: a Drive error rejects and leaves the device copy untouched', a
   saveCurrentBook(storage, { sub: SUB, fileId: 'file-p' });
   await assert.rejects(fetchBooks(), (err) => err instanceof ApiError && err.op === 'drive.list');
   assert.equal(cachedBooks().fileId, 'file-p');
+});
+
+// --- fetchBooks: the chosen book cannot be read (tarea 21) ---
+
+// Drive lists `files`; a read of a file in `failing` answers that status,
+// the others answer their tabs.
+function driveWithFailingRead(files, failing) {
+  const tabs = Object.fromEntries(files.map((f) => [f.id, f.tabs ?? emptyTabs()]));
+  return setupGoogleApi((call) => {
+    if (isList(call)) return { body: { files: files.map(({ tabs: _, ...meta }) => meta) } };
+    if (isAnyRead(call)) {
+      const id = fileOfCall(call);
+      if (failing[id]) return { status: failing[id] };
+      return { body: { valueRanges: call.url.searchParams.getAll('ranges').map((sheet) => ({ values: tabs[id][sheet] })) } };
+    }
+    return { status: 404 };
+  });
+}
+
+for (const status of [403, 404]) {
+  test(`fetchBooks: when the last book open answers ${status}, it opens the personal one and returns it`, async () => {
+    const calls = driveWithFailingRead([personalFile(personalTabs()), casaFile(casaTabs())], { 'file-c': status });
+    saveCurrentBook(storage, { sub: SUB, fileId: 'file-c' });
+    const result = await fetchBooks();
+    assert.equal(result.status, 'ready');
+    assert.equal(result.fileId, 'file-p');
+    assert.equal(result.book.accounts[0].name, 'Banco');
+    assert.deepEqual(result.books.map((b) => b.fileId), ['file-p', 'file-c'], 'the list keeps both books');
+    assert.deepEqual(calls.filter(isAnyRead).map(fileOfCall), ['file-c', 'file-p'], 'tries the chosen one first');
+    const cache = loadBooksCache(storage, SUB);
+    assert.equal(cache.current, 'file-p', 'the personal book is now the one open');
+    assert.ok(cache.snapshots['file-p']);
+    assert.equal(cache.snapshots['file-c'], undefined);
+  });
+}
+
+test('fetchBooks: when the last book open has bad headers, it opens the personal one', async () => {
+  const broken = { ...emptyTabs(), Accounts: [['wrong', 'header'], accountRow('acc-c', 'Cuenta común')] };
+  fakeDrive([personalFile(personalTabs()), casaFile(broken)]);
+  saveCurrentBook(storage, { sub: SUB, fileId: 'file-c' });
+  const result = await fetchBooks();
+  assert.equal(result.fileId, 'file-p');
+  assert.equal(result.status, 'ready');
+  assert.equal(loadBooksCache(storage, SUB).current, 'file-p');
+});
+
+test('fetchBooks: when the personal book is the chosen one and fails, the error propagates', async () => {
+  const calls = driveWithFailingRead([personalFile(personalTabs()), casaFile(casaTabs())], { 'file-p': 404 });
+  await assert.rejects(fetchBooks(), (err) => err instanceof ApiError && err.status === 404 && err.op === 'sheets.batchGet');
+  assert.deepEqual(calls.filter(isAnyRead).map(fileOfCall), ['file-p'], 'not read twice, no other book tried');
+});
+
+test('fetchBooks: bad headers in the personal book chosen propagate', async () => {
+  fakeDrive([personalFile({ ...emptyTabs(), Accounts: [['x']] }), casaFile(casaTabs())]);
+  await assert.rejects(fetchBooks(), SheetFormatError);
+});
+
+test('fetchBooks: a 401 reading the chosen book propagates as TokenExpiredError, no fallback', async () => {
+  const calls = driveWithFailingRead([personalFile(personalTabs()), casaFile(casaTabs())], { 'file-c': 401 });
+  saveCurrentBook(storage, { sub: SUB, fileId: 'file-c' });
+  await assert.rejects(fetchBooks(), TokenExpiredError);
+  assert.deepEqual(calls.filter(isAnyRead).map(fileOfCall), ['file-c'], 'the personal book is not read');
+});
+
+test('fetchBooks: when the fallback to the personal book fails too, that error propagates', async () => {
+  driveWithFailingRead([personalFile(personalTabs()), casaFile(casaTabs())], { 'file-c': 403, 'file-p': 503 });
+  saveCurrentBook(storage, { sub: SUB, fileId: 'file-c' });
+  await assert.rejects(fetchBooks(), (err) => err instanceof ApiError && err.status === 503);
+  assert.equal(loadBooksCache(storage, SUB).current, 'file-c', 'nothing opened');
+});
+
+test('fetchBooks: without a personal book, a failing chosen book propagates', async () => {
+  driveWithFailingRead([casaFile(casaTabs())], { 'file-c': 404 });
+  await assert.rejects(fetchBooks(), (err) => err instanceof ApiError && err.status === 404);
 });
 
 // --- cachedBooks / cachedBook ---

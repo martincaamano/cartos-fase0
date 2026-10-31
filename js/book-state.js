@@ -8,6 +8,7 @@
 // Drive could not be read).
 
 import { TokenExpiredError } from './data/auth.js';
+import { ApiError } from './data/errors.js';
 import { enqueue, mergePending } from './storage/outbox-logic.js';
 
 const UNKNOWN = Object.freeze({ status: 'unknown', fileId: null, book: null });
@@ -26,6 +27,13 @@ export function createBookState(deps) {
   // Grows each time another book is opened: a Drive read that started
   // before is then stale.
   let switches = 0;
+  // Grows on sign out: a Drive read that started before belongs to someone
+  // else and is dropped.
+  let generation = 0;
+  // Books whose outbox Drive refuses (403/404: access removed, file gone).
+  const blocked = new Set();
+  // Movements waiting in those books.
+  let blockedCount = 0;
   const listeners = new Set();
   const emit = (event) => { for (const listener of listeners) listener(event); };
 
@@ -74,17 +82,21 @@ export function createBookState(deps) {
   async function sync() {
     if (current.status !== 'ready' || !canReachDrive()) return;
     try {
-      const fileIds = new Set((await deps.listPending()).map((item) => item.fileId));
+      const queued = await deps.listPending();
+      const fileIds = new Set(queued.map((item) => item.fileId));
       let changed = false;
       for (const fileId of fileIds) {
         try {
           const { appended, updated } = await deps.syncOutbox(fileId);
+          blocked.delete(fileId);
           if (fileId === current.fileId && appended + updated > 0) changed = true;
         } catch (err) {
           if (err instanceof TokenExpiredError) throw err;
+          if (err instanceof ApiError && (err.status === 403 || err.status === 404)) blocked.add(fileId);
           logSyncError(err);
         }
       }
+      blockedCount = queued.filter((item) => blocked.has(item.fileId)).length;
       await loadPending();
       if (changed) await reloadBook();
       else emit('data');
@@ -106,8 +118,10 @@ export function createBookState(deps) {
     if (!canReachDrive() || fetching) return;
     fetching = true;
     const started = switches;
+    const mine = generation;
     try {
       const fresh = await deps.fetchBooks();
+      if (mine !== generation) return;
       books = fresh.books;
       // Another book was opened meanwhile: keep it, only the list is new.
       if (started === switches) {
@@ -117,10 +131,11 @@ export function createBookState(deps) {
       emit('data');
       await sync();
     } catch (err) {
+      if (mine !== generation) return;
       if (err instanceof TokenExpiredError) emit('route');
       else if (current.status !== 'ready') emit('loadFailed');
     } finally {
-      fetching = false;
+      if (mine === generation) fetching = false;
     }
   }
 
@@ -138,6 +153,8 @@ export function createBookState(deps) {
       return { ...current.book, movements: mergePending(current.book.movements, pending) };
     },
     get pendingCount() { return pending.length; },
+    // Movements that cannot be uploaded: their book refuses them (403/404).
+    get blockedCount() { return blockedCount; },
     refresh,
     reloadBook,
     sync,
@@ -173,9 +190,13 @@ export function createBookState(deps) {
     },
     // Signed out, or signed in as someone else: forget everything in memory.
     reset() {
+      generation += 1;
+      fetching = false;
       current = UNKNOWN;
       books = [];
       pending = [];
+      blocked.clear();
+      blockedCount = 0;
     },
   };
 }

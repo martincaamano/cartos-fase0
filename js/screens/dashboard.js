@@ -13,16 +13,13 @@ import { SECTION_HASH } from '../ui/router.js';
 
 const LATEST_COUNT = 4;
 
-// What a hidden amount shows (tarea 20d).
-const HIDDEN = '••••• €';
-
 // book: movements already include the pending ones (mergePending);
 // bookName: shown on top when there is more than one book;
 // pendingCount: how many of them are not in the Sheet yet.
 // revealed: the amounts are shown; they arrive hidden and tapping INICIO
 // again calls onReveal.
 export function renderDashboard(root, {
-  book, bookName = '', offline, pendingCount = 0, revealed = true, onReveal = null,
+  book, bookName = '', offline, pendingCount = 0, blockedCount = 0, revealed = true, onReveal = null,
 }) {
   const t = es.dashboard;
   root.innerHTML = `
@@ -41,13 +38,14 @@ export function renderDashboard(root, {
       <ul class="receipt-list receipt-movements"></ul>
     </main>
   `;
-  const euros = (amount) => (revealed ? formatEuros(amount) : HIDDEN);
+  const euros = (amount) => (revealed ? formatEuros(amount) : t.hidden);
   root.querySelector('main').classList.toggle('amounts-hidden', !revealed);
   root.querySelector('.dashboard-see-all').href = SECTION_HASH.history;
   fillTexts(root, t);
   showBookBanner(root.querySelector('main'), bookName);
   const pending = pendingCount === 1 ? t.pendingOne : t.pendingMany.replace('{n}', pendingCount);
-  root.querySelector('.dashboard-notice').textContent = [offline ? t.offline : '', pendingCount ? pending : '']
+  const blocked = blockedCount ? t.blocked.replace('{n}', blockedCount) : '';
+  root.querySelector('.dashboard-notice').textContent = [offline ? t.offline : '', pendingCount ? pending : '', blocked]
     .filter(Boolean)
     .join(' · ');
   root.querySelector('.receipt-total-label').textContent = t.total;
@@ -61,7 +59,8 @@ export function renderDashboard(root, {
   for (const account of active) {
     const balance = accountBalance(account, movements);
     accountList.appendChild(receiptLine(labelOf(account), euros(balance), {
-      tone: balance < 0 ? 'expense' : '',
+      // Hidden amounts hide their sign too.
+      tone: revealed && balance < 0 ? 'expense' : '',
       href: `${SECTION_HASH.history}?account=${encodeURIComponent(account.id)}`,
       className: 'dashboard-account',
     }));
@@ -78,7 +77,7 @@ export function renderDashboard(root, {
   const lookups = lookupsOf(book);
   for (const entry of latest) {
     const line = movementLine(entry, lookups, { withNote: true });
-    if (!revealed) line.querySelector('.receipt-amount').textContent = HIDDEN;
+    if (!revealed) line.querySelector('.receipt-amount').textContent = t.hidden;
     movementList.appendChild(line);
   }
 

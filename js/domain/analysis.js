@@ -26,11 +26,14 @@ export function daysInMonth(month) {
 }
 
 // The months of a period, oldest first. period: 'month' (just `month`),
-// 'year' (the 12 months that end with today's) or 'all' (from `first`).
+// 'year' (the 12 months that end with today's, but none before `first`:
+// a young book is not averaged over months it did not have) or 'all'
+// (from `first`).
 export function periodMonths(period, { today, first, month = monthOf(today) }) {
   const last = monthOf(today);
   if (period === 'month') return [month];
-  const start = period === 'year' ? shiftMonth(last, -11) : (first ?? last);
+  const yearStart = shiftMonth(last, -11);
+  const start = period === 'year' ? (first && first > yearStart ? first : yearStart) : (first ?? last);
   const months = [];
   for (let current = start; current <= last; current = shiftMonth(current, 1)) months.push(current);
   return months;
@@ -64,7 +67,9 @@ const change = (now, before) => (before > 0 ? Math.round(((now - before) / befor
 // The key figures of a period: average spending per month and its change
 // from the previous period of the same length, the share of income saved,
 // what this month would end at at this pace and the spending per day.
-// movements: already countable. today: YYYY-MM-DD.
+// movements: already countable. today: YYYY-MM-DD. usual (a usual month,
+// the average of the 12 before this one that the book has) and
+// projectionOverUsual are null when there is no month before.
 export function keyFigures(movements, months, today) {
   const series = monthlySeries(movements, months);
   const before = monthlySeries(movements, previousMonths(months));
@@ -80,8 +85,10 @@ export function keyFigures(movements, months, today) {
   const day = Number(today.slice(8, 10));
   const spentSoFar = sumOf(monthlySeries(movements.filter((m) => m.date <= today), [month]), 'expense');
   const projection = Math.round((spentSoFar / day) * daysInMonth(month));
-  const past = monthlySeries(movements, periodMonths('year', { today: `${shiftMonth(month, -1)}-01` }));
-  const usual = Math.round(sumOf(past, 'expense') / past.length);
+  const firstMonth = movements.reduce((min, m) => (monthOf(m.date) < min ? monthOf(m.date) : min), month);
+  const pastMonths = periodMonths('year', { today: `${shiftMonth(month, -1)}-01` }).filter((m) => m >= firstMonth);
+  const past = monthlySeries(movements, pastMonths);
+  const usual = past.length ? Math.round(sumOf(past, 'expense') / past.length) : null;
 
   // Days the period covers, up to today.
   const lastDay = months.at(-1) === month ? day : daysInMonth(months.at(-1));
@@ -92,7 +99,8 @@ export function keyFigures(movements, months, today) {
     averageChange: hadBefore ? change(average, averageBefore) : null,
     savingsRate: income > 0 ? Math.round(((income - expense) / income) * 100) : null,
     projection: fromCents(projection),
-    projectionOverUsual: fromCents(projection - usual),
+    usual: usual === null ? null : fromCents(usual),
+    projectionOverUsual: usual === null ? null : fromCents(projection - usual),
     perDay: fromCents(Math.round(expense / days)),
   };
 }

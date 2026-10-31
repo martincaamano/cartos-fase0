@@ -6,10 +6,11 @@
 import { es } from '../i18n/es.js';
 import { decideRoute, isRepaintable, parseHash, ROUTES, SECTION_HASH } from './ui/router.js';
 import { startTheme } from './ui/theme.js';
-import { getAuthState, signOut } from './data/auth.js';
+import { currentUserSub, getAuthState, signOut } from './data/auth.js';
 import { cachedBooks, fetchBooks, openBook, reloadBook } from './data/books.js';
 import { syncOutbox } from './data/sync.js';
 import { listPending } from './storage/outbox.js';
+import { toIsoDate } from './domain/movement.js';
 import { logEvent } from './storage/logs.js';
 import { createBookState } from './book-state.js';
 import { VIEWS } from './views.js';
@@ -24,7 +25,8 @@ const state = createBookState({
   reloadBook,
   openBook,
   syncOutbox,
-  listPending,
+  // Only what the signed-in user saved.
+  listPending: () => listPending(currentUserSub()),
   getAuthState,
   isOnline: () => navigator.onLine,
   logEvent,
@@ -33,6 +35,8 @@ const state = createBookState({
 const root = () => document.getElementById('app');
 // The screen on view: a route, or "dashboard:<section>" inside the app.
 let current = { key: null, section: null };
+// The day the screen on view was painted: «Hoy» and this month depend on it.
+let paintedDay = '';
 
 // repaint: the same screen again with fresh data (not a new visit).
 function showSection({ section, params }, offline, repaint) {
@@ -61,10 +65,14 @@ function show({ force = false } = {}) {
   const offline = !navigator.onLine;
   const route = decideRoute({ ...getAuthState(), offline, book: state.status });
   const section = route === ROUTES.DASHBOARD ? parseHash(location.hash) : null;
-  const key = section ? `${route}:${section.section}` : route;
+  // History keeps its filter in the URL (a month, an account): tapping
+  // HISTORIAL in the bar opens it clean.
+  const filter = section?.section === 'history' ? location.hash : '';
+  const key = section ? `${route}:${section.section}${filter}` : route;
   if (key === current.key && !force) return;
   const repaint = key === current.key;
   current = { key, section: section?.section ?? null };
+  paintedDay = toIsoDate(new Date());
 
   switch (route) {
     case ROUTES.LOGIN:
@@ -112,7 +120,10 @@ state.refresh();
 
 window.addEventListener('hashchange', () => show());
 document.addEventListener('visibilitychange', () => {
-  if (document.visibilityState === 'visible') state.refresh();
+  if (document.visibilityState !== 'visible') return;
+  // Left open overnight: paint again, so «Hoy» is today.
+  if (paintedDay && paintedDay !== toIsoDate(new Date())) show({ force: true });
+  state.refresh();
 });
 window.addEventListener('online', state.refresh);
 window.addEventListener('offline', repaint);

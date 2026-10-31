@@ -144,6 +144,9 @@ export function renderAnalysis(root, { book, fileId = '', params = {}, today = n
     ...rankCategories(categories, book.movements, 'expense'),
     ...rankCategories(categories, book.movements, 'income').filter((c) => c.kind !== 'both'),
   ];
+  // A category removed after it was excluded is not offered any more, so it
+  // stops being left out.
+  for (const id of [...state.excluded]) if (!choosable.some((c) => c.id === id)) state.excluded.delete(id);
   const paintExclude = () => {
     const names = choosable.filter((c) => state.excluded.has(c.id)).map((c) => c.name);
     excludeToggle.textContent = `${t.exclude}: ${names.length ? names.join(', ') : t.excludeNone} ${excludeChips.hidden ? '▾' : '▴'}`;
@@ -179,10 +182,13 @@ export function renderAnalysis(root, { book, fileId = '', params = {}, today = n
     else average.textContent = t.perMonth;
     const projection = document.createElement('span');
     const over = figures.projectionOverUsual;
-    projection.append(
-      element('span', over > 0 ? 'amount-expense' : 'amount-income', `${over > 0 ? '+' : ''}${wholeEuros(over)}`),
-      ` ${t.overUsual}`,
-    );
+    if (over === null) projection.textContent = t.noUsual;
+    else {
+      projection.append(
+        element('span', over > 0 ? 'amount-expense' : 'amount-income', `${over > 0 ? '+' : ''}${wholeEuros(over)}`),
+        ` ${t.overUsual}`,
+      );
+    }
     const tiles = element('div', 'stat-tiles');
     tiles.append(
       tile(t.averageExpense, wholeEuros(figures.averageExpense), average),
@@ -245,8 +251,10 @@ export function renderAnalysis(root, { book, fileId = '', params = {}, today = n
   }
 
   function paintCategories(movements, months) {
-    // Compared only when the book reaches back to the start of the period before.
-    const compare = state.period !== 'all' && first <= previousMonths(months)[0];
+    // Compared only when the book reaches back to the start of the period
+    // before; the same rule as the key figures (the movements that count).
+    const firstCounted = monthRange(movements, day).first;
+    const compare = state.period !== 'all' && firstCounted <= previousMonths(months)[0];
     const rows = categoryChanges(movements, months, { compare });
     body.appendChild(heading(t.onWhat, compare ? t.markBefore : ''));
     const list = element('ul', 'receipt-list stat-categories');
@@ -299,8 +307,9 @@ export function renderAnalysis(root, { book, fileId = '', params = {}, today = n
     body.appendChild(grid);
   }
 
+  // usual: a usual month, or null when the book has no month before.
   function paintPace(movements, usual) {
-    const pace = monthPace(movements, day, usual);
+    const pace = monthPace(movements, day, usual ?? 0);
     body.appendChild(heading(t.when, t.cumulative));
     const peakDay = pace.peak ? Number(pace.peak.date.slice(8, 10)) : null;
     const peakLabel = pace.peak ? `${formatShortDate(pace.peak.date)} ${pace.peak.note || categoryName(pace.peak.categoryId)}` : '';
@@ -309,7 +318,7 @@ export function renderAnalysis(root, { book, fileId = '', params = {}, today = n
       usual: pace.usual,
       peakDay,
       peakLabel,
-      usualLabel: `${t.usualMonth} ${wholeEuros(usual)}`,
+      usualLabel: usual === null ? '' : `${t.usualMonth} ${wholeEuros(usual)}`,
       label: t.when,
     }));
   }
@@ -357,7 +366,7 @@ export function renderAnalysis(root, { book, fileId = '', params = {}, today = n
     paintEvolution(movements, months);
     paintCategories(movements, months);
     paintTrends(movements);
-    paintPace(movements, figures.projection - figures.projectionOverUsual);
+    paintPace(movements, figures.usual);
     paintWeekdays(movements, months);
     paintFixed(movements, figures.averageExpense);
     paintLargest(movements, months);

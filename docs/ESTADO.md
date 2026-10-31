@@ -7,7 +7,7 @@ Fuente de verdad del progreso. Los agentes lo leen al empezar una tarea y lo act
 - Repositorio: `cartos-fase0` (se queda con ese nombre).
 - GitHub Pages publica `main` (carpeta raíz) en https://martincaamano.github.io/cartos-fase0/. El repo es público: con el plan gratuito, Pages no funciona en repos privados (estuvo sin publicar del 2026-09-27 al 2026-10-24 por eso).
 - Se desarrolla desde un Mac (`npm test`, `npm run dev` en http://localhost:5173). Las pruebas reales se hacen en el iPhone.
-- MVP completo (2026-10-25): las nueve tareas están hechas y probadas en iPhone. Siguiente paso: la tarea 15 (Sincronización).
+- MVP completo (2026-10-25): las nueve tareas están hechas y probadas en iPhone. Después: sincronización, importar, varios libros, libro compartido y pantallas más simples (tareas 15–21).
 
 ## Tareas del MVP
 
@@ -31,7 +31,7 @@ Transversal: ~~publicar la app de Google Cloud de "Testing" a "Production"~~ Hec
 - El botón de login es el oficial de Google (negro en claro, contorno en oscuro): GIS no permite uno propio.
 - Tras el login se ve una pantalla provisional (`js/screens/home.js`) hasta que exista el Dashboard (tarea 04).
 - Sin conexión y con sesión guardada, la app abre igualmente; sin sesión, el login avisa de que no hay conexión.
-- La clave de API del Picker del spike se eliminó en Google Cloud (era visible en el repo público). Cuando haga falta el Picker (cuentas compartidas, fuera del MVP), se crea una nueva restringida al dominio y a la Picker API.
+- La clave de API del Picker del spike se eliminó en Google Cloud (era visible en el repo público). Para el Picker de la tarea 18 se crea una nueva, restringida al dominio y a la Picker API.
 - Borrar la app de la pantalla de inicio borra su sesión (iOS borra sus datos): al reinstalarla hay que volver a iniciar sesión.
 
 ### Decisiones tomadas en la tarea 03
@@ -234,5 +234,5 @@ Regla del plan: cada tarea, al cerrarse, deja algo 100% usable en el iPhone. Nin
 
 ## Notas
 
-- Fuera del MVP, ya decidido: cuentas compartidas, Apple Shortcuts, pagos programados, backend mínimo de refresco de tokens, interruptor "incluir transferencias" en Análisis.
+- Fuera del MVP, ya decidido: Apple Shortcuts, pagos programados, backend mínimo de refresco de tokens, interruptor "incluir transferencias" en Análisis.
 - Visión a largo plazo (backend propio, cuentas propias, IA para categorizar): `docs/vision-producto-escala-cartos.md`. No forma parte del MVP.

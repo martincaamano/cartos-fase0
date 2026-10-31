@@ -211,3 +211,42 @@ test('shareBook: when Drive refuses to share, resharing is not touched', async (
     (err) => err instanceof ApiError && err.status === 403 && err.op === 'drive.share');
   assert.equal(calls.some(isNoReshare), false);
 });
+
+// --- a Members tab that exists but is empty (tarea 21) ---
+
+test('readMembers of an existing but empty tab is [] and does not throw', async () => {
+  const { calls } = fakeBook([]);
+  assert.deepEqual(await readMembers(FILE), []);
+  assert.equal(calls.length, 1);
+});
+
+test('readMembers of an empty tab answered without "values", as Sheets does, is []', async () => {
+  setupGoogleApi(() => ({ body: { valueRanges: [{ range: 'Members!A1:Z1000', majorDimension: 'ROWS' }] } }));
+  assert.deepEqual(await readMembers(FILE), []);
+});
+
+test('joinBook on an empty tab writes the header RAW and appends the user, without addSheet', async () => {
+  const book = fakeBook([]);
+  const members = await joinBook(FILE, user);
+  const { calls } = book;
+  assert.equal(calls.length, 3);
+  assert.ok(isMembersRead(calls[0]));
+  assert.equal(calls.some(isAddSheet), false, 'the tab is not added again');
+  assert.ok(isValuesUpdate(calls[1]));
+  assert.deepEqual(calls[1].body, { valueInputOption: 'RAW', data: [{ range: 'Members!A1', values: [header] }] });
+  assert.ok(isAppend(calls[2]));
+  assert.equal(calls[2].url.searchParams.get('valueInputOption'), 'RAW');
+  const [row] = calls[2].body.values;
+  assert.deepEqual(row.slice(1, 3), ['martin@example.com', 'Martín Caamaño']);
+  assert.deepEqual(members.map((m) => m.email), ['martin@example.com']);
+  assert.deepEqual(book.rows, [header, row]);
+});
+
+test('joinBook on a missing tab (400) still adds the sheet before the header', async () => {
+  const { calls } = fakeBook(null);
+  await joinBook(FILE, user);
+  const add = calls.findIndex(isAddSheet);
+  const head = calls.findIndex(isValuesUpdate);
+  assert.equal(calls.filter(isAddSheet).length, 1);
+  assert.ok(add > 0 && add < head);
+});

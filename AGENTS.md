@@ -71,7 +71,7 @@ Lee solo las secciones que necesites para la tarea en curso, no todos los docume
 
 - `git push`, y `git commit` salvo que el usuario lo pida.
 - Borrar archivos, cambiar la arquitectura o añadir dependencias.
-- Implementar funciones de fases futuras: cuentas compartidas, Apple Shortcuts, pagos programados, backend de tokens.
+- Implementar funciones de fases futuras: Apple Shortcuts, pagos programados, backend de tokens. (Los libros compartidos ya existen, tarea 18.)
 - Refactorizar código ajeno a la tarea en curso.
 
 ## Comandos
