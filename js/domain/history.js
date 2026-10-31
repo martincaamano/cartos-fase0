@@ -6,11 +6,12 @@
 
 import { TRANSFER_CATEGORY_ID } from './category.js';
 import { groupEntries, newestFirst } from './transfer.js';
-import { toCents, fromCents } from './money.js';
+import { fromCents, incomeExpenseNet, sumCents, toCents } from './money.js';
+import { monthOf, monthsBetween } from './stats.js';
 
 const accountsOf = (entry) => (entry.kind === 'transfer' ? [entry.from, entry.to] : [entry.movement.accountId]);
 const categoryOf = (entry) => (entry.kind === 'transfer' ? TRANSFER_CATEGORY_ID : entry.movement.categoryId);
-export const monthOf = (entry) => entry.date.slice(0, 7);
+export const entryMonth = (entry) => monthOf(entry.date);
 
 // A transfer, or a loose half of one (its category is still Transferencia).
 const isTransfer = (entry) => categoryOf(entry) === TRANSFER_CATEGORY_ID;
@@ -22,7 +23,7 @@ export function historyEntries(movements, { accountIds = [], categoryIds = [], f
   return groupEntries(movements)
     .filter((entry) => accountIds.length === 0 || accountsOf(entry).some((id) => accountIds.includes(id)))
     .filter((entry) => categoryIds.length === 0 || categoryIds.includes(categoryOf(entry)))
-    .filter((entry) => (!fromMonth || monthOf(entry) >= fromMonth) && (!toMonth || monthOf(entry) <= toMonth))
+    .filter((entry) => (!fromMonth || entryMonth(entry) >= fromMonth) && (!toMonth || entryMonth(entry) <= toMonth))
     .sort(newestFirst);
 }
 
@@ -38,15 +39,7 @@ export function findEntry(movements, id) {
 
 // income − expense = net of some entries, in euros; transfers left out.
 export function sumEntries(entries) {
-  let income = 0;
-  let expense = 0;
-  for (const entry of entries) {
-    if (isTransfer(entry)) continue;
-    const cents = toCents(entry.movement.amount);
-    if (entry.movement.type === 'income') income += cents;
-    else expense += cents;
-  }
-  return { income: fromCents(income), expense: fromCents(expense), net: fromCents(income - expense) };
+  return incomeExpenseNet(entries.filter((entry) => !isTransfer(entry)).map((entry) => entry.movement));
 }
 
 // Entries grouped by category, biggest first (by what they move, income or
@@ -70,7 +63,7 @@ export function byCategory(entries) {
 const amountOf = (entry) => (entry.kind === 'transfer' ? entry.amount : entry.movement.amount);
 
 export function transferAmount(entries) {
-  return fromCents(entries.filter(isTransfer).reduce((sum, entry) => sum + toCents(amountOf(entry)), 0));
+  return fromCents(sumCents(entries.filter(isTransfer), amountOf));
 }
 
 // The Resumen view: { total, months } where total and each month are
@@ -79,7 +72,7 @@ export function transferAmount(entries) {
 export function summarizeHistory(entries) {
   const months = new Map();
   for (const entry of entries) {
-    const month = monthOf(entry);
+    const month = entryMonth(entry);
     if (!months.has(month)) months.set(month, []);
     months.get(month).push(entry);
   }
@@ -93,20 +86,9 @@ export function summarizeHistory(entries) {
 // Every month from the first movement to the current one (YYYY-MM), oldest
 // first, for the month strip. today: YYYY-MM-DD.
 export function monthsSpan(movements, today) {
-  const last = today.slice(0, 7);
-  const dates = groupEntries(movements).map(monthOf).filter((month) => month <= last).sort();
-  const months = [];
-  let [year, month] = (dates[0] ?? last).split('-').map(Number);
-  for (;;) {
-    const current = `${year}-${String(month).padStart(2, '0')}`;
-    months.push(current);
-    if (current >= last) return months;
-    month += 1;
-    if (month > 12) {
-      month = 1;
-      year += 1;
-    }
-  }
+  const last = monthOf(today);
+  const first = groupEntries(movements).map(entryMonth).filter((month) => month <= last).sort()[0] ?? last;
+  return monthsBetween(first, last);
 }
 
 // Tapping a month in the strip. range: { from, to, open } or null; open

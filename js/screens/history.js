@@ -8,11 +8,12 @@
 
 import { es } from '../../i18n/es.js';
 import {
-  activeFilterCount, historyEntries, monthOf, monthsSpan, selectMonth, summarizeHistory, sumEntries, transferAmount,
+  activeFilterCount, entryMonth, historyEntries, monthsSpan, selectMonth, summarizeHistory, sumEntries, transferAmount,
 } from '../domain/history.js';
 import { activeOnly } from '../domain/active.js';
-import { rankCategories, TRANSFER_CATEGORY_ID } from '../domain/category.js';
+import { rankAllCategories, TRANSFER_CATEGORY_ID } from '../domain/category.js';
 import { toIsoDate } from '../domain/movement.js';
+import { isMonth } from '../domain/stats.js';
 import { formatEuros, formatMonth, formatMonthRange, formatShortMonth, formatSums, labelOf } from '../ui/format.js';
 import { lookupsOf, movementLine, sumLine } from '../ui/receipt.js';
 import { SECTION_HASH } from '../ui/router.js';
@@ -53,15 +54,12 @@ export function renderHistory(root, { book, params = {}, today = new Date(), sto
   const { movements } = book;
   const lookups = lookupsOf(book);
   const accounts = activeOnly(book.accounts);
-  const categories = [
-    ...rankCategories(book.categories, movements, 'expense'),
-    ...rankCategories(book.categories, movements, 'income').filter((c) => c.kind !== 'both'),
-  ];
+  const categories = rankAllCategories(book.categories, movements);
 
   // What is on screen. Filters start empty every time (tarea 20).
   const state = {
     view: loadHistoryView(storage),
-    range: /^\d{4}-\d{2}$/.test(params.month ?? '') ? { from: params.month, to: params.month, open: false } : null,
+    range: isMonth(params.month) ? { from: params.month, to: params.month, open: false } : null,
     accountIds: new Set(book.accounts.some((a) => a.id === params.account) ? [params.account] : []),
     categoryIds: new Set(),
     open: new Set(),
@@ -91,11 +89,11 @@ export function renderHistory(root, { book, params = {}, today = new Date(), sto
   const monthSums = new Map();
   const paintPage = () => {
     const page = entries.slice(shown, shown + PAGE_SIZE);
-    let month = shown > 0 ? monthOf(entries[shown - 1]) : '';
+    let month = shown > 0 ? entryMonth(entries[shown - 1]) : '';
     let ul = list.lastElementChild?.tagName === 'UL' ? list.lastElementChild : null;
     for (const entry of page) {
-      if (monthOf(entry) !== month || !ul) {
-        month = monthOf(entry);
+      if (entryMonth(entry) !== month || !ul) {
+        month = entryMonth(entry);
         ul = el('ul', 'receipt-list');
         list.append(el('h2', 'receipt-heading', formatMonth(month)), sumLine(monthSums.get(month)), ul);
       }
@@ -255,8 +253,8 @@ export function renderHistory(root, { book, params = {}, today = new Date(), sto
     monthSums.clear();
     const byMonth = new Map();
     for (const entry of entries) {
-      if (!byMonth.has(monthOf(entry))) byMonth.set(monthOf(entry), []);
-      byMonth.get(monthOf(entry)).push(entry);
+      if (!byMonth.has(entryMonth(entry))) byMonth.set(entryMonth(entry), []);
+      byMonth.get(entryMonth(entry)).push(entry);
     }
     for (const [month, monthEntries] of byMonth) monthSums.set(month, sumEntries(monthEntries));
     paintFilters();

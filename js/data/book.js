@@ -3,9 +3,9 @@
 
 import { es } from '../../i18n/es.js';
 import { createSpreadsheetFile } from './drive.js';
-import { ValidationError } from './errors.js';
+import { assertValid, ValidationError } from './errors.js';
 import { append, batchClear, batchGet, batchUpdate, batchUpdateValues } from './sheets.js';
-import { findRowById, HEADERS, SHEET_NAMES, toRow, rowsToObjects } from './rows.js';
+import { findRowById, HEADERS, rowRange, SHEET_NAMES, toRow, rowsToObjects } from './rows.js';
 import { createAccount, editAccount, validateAccount } from '../domain/account.js';
 import {
   buildDefaultCategories, canRemoveCategory, createCategory, editCategory, validateCategory, validateCategoryEdit,
@@ -69,7 +69,7 @@ export async function appendBookRows(fileId, { accounts, categories, movements }
 export async function addAccount(fileId, fields, existing = []) {
   const account = createAccount(fields);
   const errors = validateAccount(account, existing);
-  if (errors.length) throw new ValidationError(errors);
+  assertValid(errors);
   await append(fileId, 'Accounts', [toRow('Accounts', account)]);
   return account;
 }
@@ -78,13 +78,12 @@ export async function addAccount(fileId, fields, existing = []) {
 export async function addCategory(fileId, fields, existing) {
   const category = createCategory(fields);
   const errors = validateCategory(category, existing);
-  if (errors.length) throw new ValidationError(errors);
+  assertValid(errors);
   await append(fileId, 'Categories', [toRow('Categories', category)]);
   return category;
 }
 
 const columnLetter = (sheet, column) => String.fromCharCode(65 + HEADERS[sheet].indexOf(column));
-const lastColumn = (sheet) => String.fromCharCode(64 + HEADERS[sheet].length);
 
 // Writes a whole row over the one with the same id, found by its id (never
 // by a remembered row number), RAW.
@@ -92,7 +91,7 @@ async function writeRowById(fileId, sheet, item) {
   const [idColumn] = await batchGet(fileId, [`${sheet}!A:A`]);
   const row = findRowById(idColumn, item.id);
   if (row === null) throw new ValidationError([sheet === 'Accounts' ? 'account_unknown' : 'category_unknown']);
-  await batchUpdateValues(fileId, [{ range: `${sheet}!A${row}:${lastColumn(sheet)}${row}`, values: [toRow(sheet, item)] }]);
+  await batchUpdateValues(fileId, [{ range: rowRange(sheet, row), values: [toRow(sheet, item)] }]);
 }
 
 // Ajustes → Cuentas, the card of an account: name, emoji and initial
@@ -100,7 +99,7 @@ async function writeRowById(fileId, sheet, item) {
 export async function updateAccount(fileId, original, fields, existing = []) {
   const account = editAccount(original, fields);
   const errors = validateAccount(account, existing);
-  if (errors.length) throw new ValidationError(errors);
+  assertValid(errors);
   await writeRowById(fileId, 'Accounts', account);
   return account;
 }
@@ -110,7 +109,7 @@ export async function updateAccount(fileId, original, fields, existing = []) {
 export async function updateCategory(fileId, original, fields, book) {
   const category = editCategory(original, fields);
   const errors = validateCategoryEdit(category, original, book);
-  if (errors.length) throw new ValidationError(errors);
+  assertValid(errors);
   await writeRowById(fileId, 'Categories', category);
   return category;
 }

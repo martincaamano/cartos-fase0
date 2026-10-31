@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { monthOf, shiftMonth, monthRange } from '../js/domain/stats.js';
+import { dayOf, isMonth, monthOf, monthsBetween, shiftMonth, monthRange } from '../js/domain/stats.js';
 import { TRANSFER_CATEGORY_ID } from '../js/domain/category.js';
 import { buildTransfer } from '../js/domain/transfer.js';
 
@@ -74,4 +74,19 @@ test('monthRange with only deleted movements has first = last', () => {
 test('monthRange crosses the year boundary', () => {
   const movements = [income(10, '2025-12-31')];
   assert.deepEqual(monthRange(movements, '2026-01-01'), { first: '2025-12', last: '2026-01' });
+});
+
+// --- month helpers (tarea 22b) ---
+
+test('monthsBetween lists every month, both ends included, across a year', () => {
+  assert.deepEqual(monthsBetween('2025-11', '2026-02'), ['2025-11', '2025-12', '2026-01', '2026-02']);
+  assert.deepEqual(monthsBetween('2026-10', '2026-10'), ['2026-10']);
+  assert.deepEqual(monthsBetween('2026-11', '2026-10'), []);
+});
+
+test('dayOf and isMonth', () => {
+  assert.equal(dayOf('2026-10-05'), 5);
+  assert.equal(dayOf('2026-02-28'), 28);
+  assert.equal(isMonth('2026-10'), true);
+  for (const text of ['2026-1', '2026-10-01', '', null, undefined, 'x']) assert.equal(isMonth(text), false);
 });

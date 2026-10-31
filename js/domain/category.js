@@ -124,3 +124,13 @@ export function rankCategories(categories, movements, type) {
     .sort((a, b) => (uses.get(b.category.id) ?? 0) - (uses.get(a.category.id) ?? 0) || a.index - b.index)
     .map(({ category }) => category);
 }
+
+// Every category a list offers (History filters, Análisis exclusions,
+// Ajustes → Categorías): expenses first, then incomes, each most used
+// first. One of both kinds is listed once, with the expenses.
+export function rankAllCategories(categories, movements) {
+  return [
+    ...rankCategories(categories, movements, 'expense'),
+    ...rankCategories(categories, movements, 'income').filter((c) => c.kind !== 'both'),
+  ];
+}

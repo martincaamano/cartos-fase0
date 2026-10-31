@@ -14,6 +14,11 @@ export const HEADERS = Object.freeze({
 });
 
 // The tabs every book has, read and written together.
+// The last column letter of a tab ('M' for Movements) and the whole range
+// of one row: rowRange('Movements', 8) → 'Movements!A8:M8'.
+export const lastColumn = (sheet) => String.fromCharCode(64 + HEADERS[sheet].length);
+export const rowRange = (sheet, row) => `${sheet}!A${row}:${lastColumn(sheet)}${row}`;
+
 export const SHEET_NAMES = Object.freeze(['Accounts', 'Categories', 'Movements']);
 
 const NUMBER_COLUMNS = new Set(['initialBalance', 'amount']);

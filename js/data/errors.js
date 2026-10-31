@@ -10,6 +10,12 @@ export class ValidationError extends Error {
   }
 }
 
+// Stops when a domain check found problems (error codes); does nothing
+// when there are none.
+export function assertValid(errors) {
+  if (errors.length) throw new ValidationError(errors);
+}
+
 // A Google REST call failed. status 0 means it never got an answer.
 export class ApiError extends Error {
   constructor(status, op) {

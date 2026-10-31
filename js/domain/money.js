@@ -9,6 +9,18 @@ export function fromCents(cents) {
   return cents / 100;
 }
 
+// The sum of some amounts in cents, exact (0,1 + 0,2 is 30). amountOf picks
+// each one's amount in euros.
+export const sumCents = (items, amountOf = (item) => item.amount) =>
+  items.reduce((sum, item) => sum + toCents(amountOf(item)), 0);
+
+// income − expense = net of some movements, in euros.
+export function incomeExpenseNet(movements) {
+  const income = sumCents(movements.filter((m) => m.type === 'income'));
+  const expense = sumCents(movements.filter((m) => m.type !== 'income'));
+  return { income: fromCents(income), expense: fromCents(expense), net: fromCents(income - expense) };
+}
+
 // Reads an amount typed by the user in Spanish style: "1.250,50", "1250,5",
 // "-20", "12 €". A dot followed by groups of exactly three digits is a
 // thousands separator ("12.500" is 12500); any other dot is a decimal point

@@ -4,7 +4,7 @@
 // need a connection.
 
 import { es } from '../../i18n/es.js';
-import { validateBookName } from '../domain/books.js';
+import { BOOK_NAME_MAX, validateBookName } from '../domain/books.js';
 import { createNewBook, renameBook } from '../data/books.js';
 import { readMembers, shareBook } from '../data/members.js';
 import { ValidationError } from '../data/errors.js';
@@ -35,7 +35,7 @@ export function renderBookNew(root, { books, onCreated }) {
   root.innerHTML = skeleton(`
     <label class="field book-new-name">
       <span class="field-label" data-text="bookName"></span>
-      <input class="field-input" name="bookName" autocomplete="off" maxlength="40">
+      <input class="field-input" name="bookName" autocomplete="off" maxlength="${BOOK_NAME_MAX}">
     </label>
     <p class="text-muted form-note" data-text="newNote"></p>
   `);
@@ -62,7 +62,7 @@ export function renderBookEdit(root, { books, fileId, onRenamed }) {
     <form class="form book-rename" novalidate>
       <label class="field">
         <span class="field-label" data-text="bookName"></span>
-        <input class="field-input" name="name" autocomplete="off" maxlength="40">
+        <input class="field-input" name="name" autocomplete="off" maxlength="${BOOK_NAME_MAX}">
       </label>
       <p class="form-error" role="alert"></p>
       <button type="submit" class="btn-primary form-submit" data-text="rename"></button>
