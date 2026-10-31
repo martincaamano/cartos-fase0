@@ -3,15 +3,7 @@ import assert from 'node:assert/strict';
 import {
   emptySession, parseSession, isTokenExpired, loadSession, saveSession, clearSession, EXPIRY_MARGIN_MS,
 } from '../js/storage/session.js';
-
-function fakeStorage() {
-  const items = new Map();
-  return {
-    getItem: (key) => (items.has(key) ? items.get(key) : null),
-    setItem: (key, value) => items.set(key, String(value)),
-    removeItem: (key) => items.delete(key),
-  };
-}
+import { fakeStorage } from './helpers/fake-storage.js';
 
 test('a saved session survives a round trip', () => {
   const storage = fakeStorage();

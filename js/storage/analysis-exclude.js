@@ -3,27 +3,16 @@
 //
 // The storage area is passed in (localStorage in the app, a fake in the tests).
 
-const KEY = 'cartos.analysisExclude';
+import { readMap, writeEntry } from './json-map.js';
 
-function read(storage) {
-  try {
-    const data = JSON.parse(storage.getItem(KEY) ?? '{}');
-    return data && typeof data === 'object' && !Array.isArray(data) ? data : {};
-  } catch {
-    return {};
-  }
-}
+const KEY = 'cartos.analysisExclude';
 
 // → the category ids left out in that book ([] when none).
 export function loadExcluded(storage, fileId) {
-  const ids = read(storage)[fileId];
+  const ids = readMap(storage, KEY)[fileId];
   return Array.isArray(ids) ? ids.filter((id) => typeof id === 'string') : [];
 }
 
 export function saveExcluded(storage, fileId, ids) {
-  try {
-    storage.setItem(KEY, JSON.stringify({ ...read(storage), [fileId]: [...ids] }));
-  } catch (err) {
-    console.warn('Analysis exclusions write failed', err);
-  }
+  writeEntry(storage, KEY, fileId, [...ids]);
 }

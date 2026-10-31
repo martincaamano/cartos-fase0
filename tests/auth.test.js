@@ -8,15 +8,7 @@ import {
 } from '../js/data/auth.js';
 import { saveBookCache, saveCurrentBook, loadBookCache, loadBooksCache } from '../js/storage/book-cache.js';
 import { configureLogs } from '../js/storage/logs.js';
-
-function fakeStorage() {
-  const items = new Map();
-  return {
-    getItem: (key) => (items.has(key) ? items.get(key) : null),
-    setItem: (key, value) => items.set(key, String(value)),
-    removeItem: (key) => items.delete(key),
-  };
-}
+import { fakeStorage } from './helpers/fake-storage.js';
 
 function idToken(claims) {
   const encode = (obj) => Buffer.from(JSON.stringify(obj)).toString('base64url');

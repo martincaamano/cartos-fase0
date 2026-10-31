@@ -5,18 +5,14 @@
 // open the app and wait for it to settle).
 
 import { test as base, expect } from '@playwright/test';
+import { HEADERS, SHEET_NAMES } from '../js/data/rows.js';
 
 // The day the tests live in (local time, Europe/Madrid).
 export const TODAY = new Date('2026-10-20T12:00:00+02:00');
 
-const HEADERS = {
-  Accounts: ['id', 'name', 'emoji', 'initialBalance', 'createdAt', 'updatedAt', 'deleted'],
-  Categories: ['id', 'name', 'emoji', 'kind', 'isDefault', 'updatedAt', 'deleted'],
-  Movements: ['id', 'accountId', 'type', 'amount', 'date', 'categoryId', 'note', 'transferId',
-    'personId', 'createdBy', 'createdAt', 'updatedAt', 'deleted'],
-};
-// Only in shared books, and only once someone joins (tarea 18).
-export const MEMBERS_HEADER = ['id', 'email', 'name', 'createdAt'];
+// The Sheet's columns, from the app itself (a pure module).
+// Members only in shared books, and only once someone joins (tarea 18).
+export const MEMBERS_HEADER = HEADERS.Members;
 
 const AT = '2026-09-01T10:00:00.000Z';
 const movement = (id, accountId, type, amount, date, categoryId, note = '') =>
@@ -118,7 +114,7 @@ function fakeGoogle(book) {
       if (request.method() === 'POST') {
         const newId = files.size === 0 ? 'book-new' : `book-new-${files.size}`;
         const tabs = files.size === 0 ? rows : {};
-        for (const tab of Object.keys(HEADERS)) tabs[tab] = [];
+        for (const tab of SHEET_NAMES) tabs[tab] = [];
         files.set(newId, { name: body.name, appProperties: body.appProperties, createdTime: `2026-10-20T0${files.size}:00:00.000Z`, rows: tabs });
         calls.push({ op: 'drive.create', fileId: newId, body });
         return json(route, { id: newId, name: body.name });

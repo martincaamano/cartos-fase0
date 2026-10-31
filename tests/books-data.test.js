@@ -12,15 +12,7 @@ import { IMPORTED_BY } from '../js/domain/import.js';
 import { HEADERS, SheetFormatError } from '../js/data/rows.js';
 import { TokenExpiredError } from '../js/data/auth.js';
 import { setupGoogleApi, TOKEN } from './helpers/fake-google.js';
-
-function fakeStorage() {
-  const items = new Map();
-  return {
-    getItem: (key) => (items.has(key) ? items.get(key) : null),
-    setItem: (key, value) => items.set(key, String(value)),
-    removeItem: (key) => items.delete(key),
-  };
-}
+import { fakeStorage } from './helpers/fake-storage.js';
 
 const SUB = 'user-1'; // the user of the fake session (helpers/fake-google.js)
 const accountRow = (id, name, balance = 0, deleted = false) => [id, name, '🏦', balance, 't0', 't0', deleted];

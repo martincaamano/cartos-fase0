@@ -3,18 +3,9 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { THEMES, parseTheme, loadTheme, saveTheme } from '../js/ui/theme.js';
+import { fakeStorage } from './helpers/fake-storage.js';
 
 const KEY = 'cartos.theme';
-
-function fakeStorage(initial = []) {
-  const items = new Map(initial);
-  return {
-    items,
-    getItem: (key) => (items.has(key) ? items.get(key) : null),
-    setItem: (key, value) => items.set(key, String(value)),
-    removeItem: (key) => items.delete(key),
-  };
-}
 
 const throwingStorage = {
   getItem: () => { throw new Error('denied'); },
