@@ -4,7 +4,7 @@
 
 import { getCurrentUser } from './auth.js';
 import { disableResharing, shareFile } from './drive.js';
-import { ApiError, ValidationError } from './errors.js';
+import { ApiError, assertValid } from './errors.js';
 import { append, batchGet, batchUpdate, batchUpdateValues } from './sheets.js';
 import { HEADERS, rowsToObjects, toRow } from './rows.js';
 import { createMember, isMember, validateShareEmail } from '../domain/members.js';
@@ -45,7 +45,7 @@ export async function joinBook(fileId, user = getCurrentUser()) {
 // book lists both people. Returns the people of the book.
 export async function shareBook(fileId, email, user = getCurrentUser()) {
   const errors = validateShareEmail(email, user.email);
-  if (errors.length) throw new ValidationError(errors);
+  assertValid(errors);
   const members = await joinBook(fileId, user);
   await shareFile(fileId, email.trim());
   await disableResharing(fileId);

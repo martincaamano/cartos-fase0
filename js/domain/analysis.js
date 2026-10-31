@@ -6,11 +6,28 @@
 // Months are "YYYY-MM" and days "YYYY-MM-DD", both without time zone.
 
 import { TRANSFER_CATEGORY_ID } from './category.js';
-import { fromCents, toCents } from './money.js';
+import { fromCents, sumCents, toCents } from './money.js';
 import { activeOnly } from './active.js';
-import { shiftMonth } from './stats.js';
+import { dayOf, monthOf, monthsBetween, shiftMonth } from './stats.js';
 
-const monthOf = (date) => date.slice(0, 7);
+// The rules of Análisis, in one place to adjust them.
+// ¿Cómo cambia cada una?: how many categories, and a trend compares the
+// last TREND_RECENT months with the earlier ones; beyond ±TREND_THRESHOLD
+// it goes up or down.
+export const TREND_COUNT = 4;
+export const TREND_RECENT = 3;
+export const TREND_THRESHOLD = 0.15;
+// ¿Cuándo?: the biggest expense of the month stands out when it is at least
+// this share of what the month spent.
+export const PEAK_SHARE = 1 / 4;
+// Gastos fijos: the same payment in at least FIXED_MIN_MONTHS of the last
+// FIXED_WINDOW complete months, the biggest within FIXED_TOLERANCE of the
+// smallest.
+export const FIXED_WINDOW = 4;
+export const FIXED_MIN_MONTHS = 3;
+export const FIXED_TOLERANCE = 0.1;
+// Los más grandes: how many.
+export const LARGEST_COUNT = 3;
 
 // The movements that count: active, not a transfer, not excluded.
 // excluded: category ids (a Set or an array).
@@ -34,9 +51,7 @@ export function periodMonths(period, { today, first, month = monthOf(today) }) {
   if (period === 'month') return [month];
   const yearStart = shiftMonth(last, -11);
   const start = period === 'year' ? (first && first > yearStart ? first : yearStart) : (first ?? last);
-  const months = [];
-  for (let current = start; current <= last; current = shiftMonth(current, 1)) months.push(current);
-  return months;
+  return monthsBetween(start, last);
 }
 
 // The same number of months right before `months` (to compare with).
@@ -58,7 +73,7 @@ export function monthlySeries(movements, months) {
   });
 }
 
-const sumOf = (list, key) => list.reduce((sum, item) => sum + toCents(item[key]), 0);
+const sumOf = (list, key) => sumCents(list, (item) => item[key]);
 
 // Change from `before` to `now` as a whole percentage, or null when there
 // is nothing to compare with.
@@ -82,7 +97,7 @@ export function keyFigures(movements, months, today) {
 
   // This month at this pace, against the average of the 12 months before it.
   const month = monthOf(today);
-  const day = Number(today.slice(8, 10));
+  const day = dayOf(today);
   const spentSoFar = sumOf(monthlySeries(movements.filter((m) => m.date <= today), [month]), 'expense');
   const projection = Math.round((spentSoFar / day) * daysInMonth(month));
   const firstMonth = movements.reduce((min, m) => (monthOf(m.date) < min ? monthOf(m.date) : min), month);
@@ -135,16 +150,16 @@ export function categoryChanges(movements, months, { compare = true } = {}) {
 // Each of the biggest categories month by month over `months`, with where it
 // is heading: the last three months against the ones before, ±15 %.
 // → [{ categoryId, series: [euros], trend: 'up' | 'down' | 'flat' }]
-export function categoryTrends(movements, months, count = 4) {
+export function categoryTrends(movements, months, count = TREND_COUNT) {
   const top = categoryChanges(movements, months, { compare: false }).slice(0, count);
   return top.map(({ categoryId }) => {
     const mine = movements.filter((m) => m.type === 'expense' && m.categoryId === categoryId);
     const series = monthlySeries(mine, months).map((point) => point.expense);
-    const recent = series.slice(-3);
-    const earlier = series.slice(0, -3);
+    const recent = series.slice(-TREND_RECENT);
+    const earlier = series.slice(0, -TREND_RECENT);
     const average = (list) => (list.length ? list.reduce((a, b) => a + b, 0) / list.length : 0);
     const delta = earlier.length && average(earlier) > 0 ? (average(recent) - average(earlier)) / average(earlier) : 0;
-    return { categoryId, series, trend: delta > 0.15 ? 'up' : delta < -0.15 ? 'down' : 'flat' };
+    return { categoryId, series, trend: delta > TREND_THRESHOLD ? 'up' : delta < -TREND_THRESHOLD ? 'down' : 'flat' };
   });
 }
 
@@ -155,13 +170,13 @@ export function categoryTrends(movements, months, count = 4) {
 export function monthPace(movements, today, usualMonthly) {
   const month = monthOf(today);
   const days = daysInMonth(month);
-  const day = Number(today.slice(8, 10));
+  const day = dayOf(today);
   const daily = new Array(days).fill(0);
   let peak = null;
   for (const movement of movements) {
     // Up to today: an expense dated later has not happened yet.
     if (movement.type !== 'expense' || monthOf(movement.date) !== month || movement.date > today) continue;
-    const index = Number(movement.date.slice(8, 10)) - 1;
+    const index = dayOf(movement.date) - 1;
     daily[index] += toCents(movement.amount);
     if (!peak || toCents(movement.amount) > toCents(peak.amount)) peak = movement;
   }
@@ -173,7 +188,7 @@ export function monthPace(movements, today, usualMonthly) {
   }
   const usualCents = toCents(usualMonthly);
   const usual = Array.from({ length: days }, (_, index) => fromCents(Math.round((usualCents * (index + 1)) / days)));
-  const standsOut = peak && running > 0 && toCents(peak.amount) * 4 >= running;
+  const standsOut = peak && running > 0 && toCents(peak.amount) >= running * PEAK_SHARE;
   return { days, spent, usual, peak: standsOut ? peak : null };
 }
 
@@ -211,7 +226,7 @@ const normalize = (note) => note.trim().toLocaleLowerCase('es');
 // other. → [{ note, categoryId, day, amount }] (the latest one), biggest first.
 export function fixedCosts(movements, today) {
   const month = monthOf(today);
-  const window = [1, 2, 3, 4].map((step) => shiftMonth(month, -step));
+  const window = Array.from({ length: FIXED_WINDOW }, (_, i) => shiftMonth(month, -(i + 1)));
   const groups = new Map();
   for (const movement of movements) {
     if (movement.type !== 'expense' || !movement.note?.trim() || !window.includes(monthOf(movement.date))) continue;
@@ -222,18 +237,18 @@ export function fixedCosts(movements, today) {
   const found = [];
   for (const list of groups.values()) {
     const monthsSeen = new Set(list.map((m) => monthOf(m.date)));
-    if (monthsSeen.size < 3) continue;
+    if (monthsSeen.size < FIXED_MIN_MONTHS) continue;
     const amounts = list.map((m) => toCents(m.amount));
-    if (Math.max(...amounts) > Math.min(...amounts) * 1.1) continue;
+    if (Math.max(...amounts) > Math.min(...amounts) * (1 + FIXED_TOLERANCE)) continue;
     const latest = list.reduce((a, b) => (b.date > a.date ? b : a));
-    found.push({ note: latest.note.trim(), categoryId: latest.categoryId, day: Number(latest.date.slice(8, 10)), amount: latest.amount });
+    found.push({ note: latest.note.trim(), categoryId: latest.categoryId, day: dayOf(latest.date), amount: latest.amount });
   }
   return found.sort((a, b) => toCents(b.amount) - toCents(a.amount) || a.note.localeCompare(b.note));
 }
 
 // The biggest expenses of the period, and the average per month without
 // them. → { items: [movement], averageWithout }
-export function largestExpenses(movements, months, count = 3) {
+export function largestExpenses(movements, months, count = LARGEST_COUNT) {
   const inside = new Set(months);
   const expenses = movements.filter((m) => m.type === 'expense' && inside.has(monthOf(m.date)));
   const items = [...expenses].sort((a, b) => toCents(b.amount) - toCents(a.amount) || b.date.localeCompare(a.date)).slice(0, count);

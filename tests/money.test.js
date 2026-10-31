@@ -1,6 +1,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { toCents, fromCents, hasAtMostTwoDecimals, parseAmountInput } from '../js/domain/money.js';
+import {
+  toCents, fromCents, hasAtMostTwoDecimals, incomeExpenseNet, parseAmountInput, sumCents,
+} from '../js/domain/money.js';
 
 test('0,1 + 0,2 is exactly 0,30 when added in cents', () => {
   assert.notEqual(0.1 + 0.2, 0.3);
@@ -42,4 +44,22 @@ test('parseAmountInput: the existing cases are unchanged', () => {
     ['', null], ['   ', null], ['abc', null], ['12a', null], ['1,2,3', null], ['--5', null], [undefined, null],
   ];
   for (const [text, expected] of cases) assert.equal(parseAmountInput(text), expected, String(text));
+});
+
+// --- sumCents and incomeExpenseNet (tarea 22b) ---
+
+test('sumCents adds amounts exactly, with an optional picker', () => {
+  assert.equal(sumCents([{ amount: 0.1 }, { amount: 0.2 }]), 30);
+  assert.equal(sumCents([{ expense: 1.5 }, { expense: 2 }], (item) => item.expense), 350);
+  assert.equal(sumCents([]), 0);
+});
+
+test('incomeExpenseNet splits by type and nets in cents', () => {
+  const movements = [
+    { type: 'income', amount: 0.3 },
+    { type: 'expense', amount: 0.1 },
+    { type: 'expense', amount: 0.2 },
+  ];
+  assert.deepEqual(incomeExpenseNet(movements), { income: 0.3, expense: 0.3, net: 0 });
+  assert.deepEqual(incomeExpenseNet([]), { income: 0, expense: 0, net: 0 });
 });

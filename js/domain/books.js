@@ -4,6 +4,9 @@
 
 const FILE_PREFIX = 'Cartos · ';
 
+// The longest book name.
+export const BOOK_NAME_MAX = 40;
+
 // Name of the file in Drive for a book called `name`.
 export const bookFileName = (name) => `${FILE_PREFIX}${name}`;
 
@@ -53,7 +56,7 @@ const sameName = (a, b) => a.trim().toLocaleLowerCase('es') === b.trim().toLocal
 export function validateBookName(name, books = [], fileId = null) {
   const value = String(name ?? '').trim();
   if (!value) return ['name_required'];
-  if (value.length > 40) return ['name_too_long'];
+  if (value.length > BOOK_NAME_MAX) return ['name_too_long'];
   if (books.some((book) => book.fileId !== fileId && sameName(book.name, value))) return ['name_taken'];
   return [];
 }

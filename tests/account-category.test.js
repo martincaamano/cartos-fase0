@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createAccount, validateAccount } from '../js/domain/account.js';
 import {
-  buildDefaultCategories, validateCategory, DEFAULT_CATEGORIES, TRANSFER_CATEGORY_ID,
+  buildDefaultCategories, rankAllCategories, validateCategory, DEFAULT_CATEGORIES, TRANSFER_CATEGORY_ID,
 } from '../js/domain/category.js';
 import { es } from '../i18n/es.js';
 
@@ -58,4 +58,13 @@ test('validateAccount rejects a repeated name, ignoring case and deleted account
   const existing = [{ id: 'a', name: 'Abanca', deleted: false }, { id: 'b', name: 'Efectivo', deleted: true }];
   assert.deepEqual(validateAccount(createAccount({ name: ' abanca ', initialBalance: 0 }, deps), existing), ['name_taken']);
   assert.deepEqual(validateAccount(createAccount({ name: 'Efectivo', initialBalance: 0 }, deps), existing), []);
+});
+
+// --- rankAllCategories (tarea 22b) ---
+
+test('rankAllCategories: expenses then incomes, most used first, a "both" one once, never Transferencia', () => {
+  const cat = (id, kind) => ({ id, name: id, emoji: '', kind, deleted: false });
+  const categories = [cat('food', 'expense'), cat('rest', 'expense'), cat('pay', 'income'), cat('gift', 'both'), cat('transfer', 'both')];
+  const movements = [{ type: 'expense', categoryId: 'rest', deleted: false }, { type: 'income', categoryId: 'gift', deleted: false }];
+  assert.deepEqual(rankAllCategories(categories, movements).map((c) => c.id), ['rest', 'food', 'gift', 'pay']);
 });

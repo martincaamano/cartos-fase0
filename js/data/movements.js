@@ -3,7 +3,7 @@
 // together. js/data/sync.js uploads the outbox when there is a connection.
 
 import { currentUserSub } from './auth.js';
-import { ValidationError } from './errors.js';
+import { assertValid } from './errors.js';
 import { addPending, addPendingAcross } from '../storage/outbox.js';
 import { createMovement, editMovement, markDeleted, validateMovement } from '../domain/movement.js';
 import {
@@ -25,15 +25,15 @@ export function configureMovements(overrides = {}) {
   }
 }
 
+// The accounts and categories a movement may use: the active ones.
+const idsOf = (book) => ({ accountIds: activeIds(book.accounts), categoryIds: activeIds(book.categories) });
+
 // Validates a new movement against the book and stores it in the outbox at
 // once; syncOutbox() uploads it when there is a connection.
 export async function queueMovement(fileId, fields, book) {
   const movement = createMovement(fields, { userSub: currentUserSub() });
-  const errors = validateMovement(movement, {
-    accountIds: activeIds(book.accounts),
-    categoryIds: activeIds(book.categories),
-  });
-  if (errors.length) throw new ValidationError(errors);
+  const errors = validateMovement(movement, idsOf(book));
+  assertValid(errors);
   await store.add(fileId, [movement], currentUserSub());
   return movement;
 }
@@ -42,13 +42,11 @@ export async function queueMovement(fileId, fields, book) {
 // travel to the Sheet in the same upload.
 export async function queueTransfer(fileId, fields, book) {
   const errors = validateTransfer(fields, { accountIds: activeIds(book.accounts) });
-  if (errors.length) throw new ValidationError(errors);
+  assertValid(errors);
   const halves = buildTransfer(fields, { userSub: currentUserSub() });
   await store.add(fileId, halves, currentUserSub());
   return halves;
 }
-
-const idsOf = (book) => ({ accountIds: activeIds(book.accounts), categoryIds: activeIds(book.categories) });
 
 // A transfer to another book: each half is validated against its own book
 // and goes to that book's outbox. They are independent from then on
@@ -60,7 +58,7 @@ export async function queueCrossBookTransfer(here, there, fields) {
     ...validateMovement(outgoing, idsOf(here.book)),
     ...validateMovement(incoming, idsOf(there.book)),
   ])];
-  if (errors.length) throw new ValidationError(errors);
+  assertValid(errors);
   // Both halves or none, though they go to two books.
   await store.addAcross([{ fileId: here.fileId, movement: outgoing }, { fileId: there.fileId, movement: incoming }], currentUserSub());
   return [outgoing, incoming];
@@ -74,7 +72,7 @@ export async function queueEdit(fileId, original, fields, book) {
     accountIds: [...activeIds(book.accounts), original.accountId],
     categoryIds: [...activeIds(book.categories), original.categoryId],
   });
-  if (errors.length) throw new ValidationError(errors);
+  assertValid(errors);
   await store.add(fileId, [movement], currentUserSub());
   return movement;
 }
@@ -82,7 +80,7 @@ export async function queueEdit(fileId, original, fields, book) {
 // halves: [outgoing, incoming]. Both rows change in the same upload.
 export async function queueTransferEdit(fileId, halves, fields, book) {
   const errors = validateTransfer(fields, { accountIds: activeIds(book.accounts) });
-  if (errors.length) throw new ValidationError(errors);
+  assertValid(errors);
   const edited = editTransfer(halves, fields);
   await store.add(fileId, edited, currentUserSub());
   return edited;

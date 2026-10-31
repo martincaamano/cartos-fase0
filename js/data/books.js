@@ -12,7 +12,7 @@ import { es } from '../../i18n/es.js';
 import { addAccount, appendBookRows, createBook, readBook, writeBookRows } from './book.js';
 import { currentUserSub, TokenExpiredError } from './auth.js';
 import { joinBook } from './members.js';
-import { ValidationError } from './errors.js';
+import { assertValid, ValidationError } from './errors.js';
 import {
   loadBookCache, loadBooksCache, saveBookCache, saveBookList, saveCurrentBook,
 } from '../storage/book-cache.js';
@@ -41,6 +41,12 @@ function remember(fileId, book) {
 
 function open(fileId) {
   saveCurrentBook(deps.storage(), { sub: sub(), fileId });
+}
+
+// Keeps the device copy of a book just read and makes it the one open.
+function keepOpen(fileId, book) {
+  remember(fileId, book);
+  open(fileId);
 }
 
 // Device copy only, no network: lets the app paint at once and offline.
@@ -76,8 +82,7 @@ export async function fetchBooks() {
     chosen = personal;
     book = await readBook(chosen.fileId);
   }
-  remember(chosen.fileId, book);
-  open(chosen.fileId);
+  keepOpen(chosen.fileId, book);
   return { status: statusOf(book), fileId: chosen.fileId, book, books };
 }
 
@@ -103,14 +108,13 @@ export function openBook(fileId) {
 export async function createNewBook({ name, account }, books) {
   // Both checked before anything is created in Drive.
   const errors = [...validateBookName(name, books), ...validateAccount(createAccount(account))];
-  if (errors.length) throw new ValidationError(errors);
+  assertValid(errors);
   const created = await createBook({ name: name.trim(), bookType: 'shared' });
   await addAccount(created.fileId, account);
   const book = await readBook(created.fileId);
   const ordered = addBook(books, { fileId: created.fileId, name: created.name, bookType: 'shared', createdTime: '' });
   saveBookList(deps.storage(), { sub: sub(), books: ordered });
-  remember(created.fileId, book);
-  open(created.fileId);
+  keepOpen(created.fileId, book);
   return { status: 'ready', fileId: created.fileId, book, books: ordered };
 }
 
@@ -125,8 +129,7 @@ export async function openSharedBook(fileId, books) {
   const book = await readBook(fileId);
   const list = addBook(books.filter((item) => item.fileId !== fileId), bookOf(file));
   saveBookList(deps.storage(), { sub: sub(), books: list });
-  remember(fileId, book);
-  open(fileId);
+  keepOpen(fileId, book);
   return { status: statusOf(book), fileId, book, books: list };
 }
 
@@ -134,7 +137,7 @@ export async function openSharedBook(fileId, books) {
 // list of books with the new name.
 export async function renameBook(fileId, name, books) {
   const errors = validateBookName(name, books, fileId);
-  if (errors.length) throw new ValidationError(errors);
+  assertValid(errors);
   const value = name.trim();
   await renameFile(fileId, bookFileName(value), value);
   const renamed = books.map((book) => (book.fileId === fileId ? { ...book, name: value } : book));
@@ -148,8 +151,7 @@ export async function setUpPersonalBook({ fileId = null, account }) {
   const id = fileId ?? (await createBook()).fileId;
   await addAccount(id, account);
   const book = await readBook(id);
-  remember(id, book);
-  open(id);
+  keepOpen(id, book);
   return { status: 'ready', fileId: id, book };
 }
 
@@ -169,8 +171,7 @@ export async function importPersonalBook({ fileId = null, data }) {
   const id = fileId ?? (await createBook({ categories: [] })).fileId;
   await writeBookRows(id, { ...rows, categories: [...rows.categories, ...base.categories] });
   const book = await readBook(id);
-  remember(id, book);
-  open(id);
+  keepOpen(id, book);
   return { status: 'ready', fileId: id, book };
 }
 

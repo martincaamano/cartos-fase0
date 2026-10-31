@@ -7,12 +7,12 @@
 
 import { es } from '../../i18n/es.js';
 import { toIsoDate } from '../domain/movement.js';
-import { monthRange, shiftMonth } from '../domain/stats.js';
+import { dayOf, isMonth, monthRange, shiftMonth } from '../domain/stats.js';
 import {
   categoryChanges, categoryTrends, countable, fixedCosts, keyFigures, largestExpenses, monthlySeries, monthPace,
   periodMonths, previousMonths, weekdayPattern,
 } from '../domain/analysis.js';
-import { rankCategories } from '../domain/category.js';
+import { rankAllCategories } from '../domain/category.js';
 import {
   formatEuros, formatMonth, formatShortDate, formatShortMonth, formatSums, formatWholeEuros, labelOf,
 } from '../ui/format.js';
@@ -78,7 +78,7 @@ export function renderAnalysis(root, { book, fileId = '', params = {}, today = n
   const categoryName = (id) => labelOf(categoryById.get(id)) || id;
   const day = toIsoDate(today);
   const { first, last } = monthRange(book.movements, day);
-  const validMonth = (month) => /^\d{4}-\d{2}$/.test(month ?? '') && month >= first && month <= last;
+  const validMonth = (month) => isMonth(month) && month >= first && month <= last;
 
   const state = {
     period: PERIODS.includes(params.period) ? params.period : 'year',
@@ -123,10 +123,7 @@ export function renderAnalysis(root, { book, fileId = '', params = {}, today = n
 
   const excludeToggle = root.querySelector('.stat-exclude-toggle');
   const excludeChips = root.querySelector('.stat-exclude-chips');
-  const choosable = [
-    ...rankCategories(categories, book.movements, 'expense'),
-    ...rankCategories(categories, book.movements, 'income').filter((c) => c.kind !== 'both'),
-  ];
+  const choosable = rankAllCategories(categories, book.movements);
   // A category removed after it was excluded is not offered any more, so it
   // stops being left out.
   for (const id of [...state.excluded]) if (!choosable.some((c) => c.id === id)) state.excluded.delete(id);
@@ -259,7 +256,7 @@ export function renderAnalysis(root, { book, fileId = '', params = {}, today = n
 
   function paintTrends(movements) {
     const months = periodMonths('year', { today: day });
-    const trends = categoryTrends(movements, months, 4);
+    const trends = categoryTrends(movements, months);
     if (trends.length === 0) return;
     body.appendChild(heading(t.howChanges, t.last12));
     const grid = el('div', 'stat-trends');
@@ -279,7 +276,7 @@ export function renderAnalysis(root, { book, fileId = '', params = {}, today = n
   function paintPace(movements, usual) {
     const pace = monthPace(movements, day, usual ?? 0);
     body.appendChild(heading(t.when, t.cumulative));
-    const peakDay = pace.peak ? Number(pace.peak.date.slice(8, 10)) : null;
+    const peakDay = pace.peak ? dayOf(pace.peak.date) : null;
     const peakLabel = pace.peak ? `${formatShortDate(pace.peak.date)} ${pace.peak.note || categoryName(pace.peak.categoryId)}` : '';
     body.appendChild(el('div', 'stat-chart')).appendChild(paceChart({
       spent: pace.spent,

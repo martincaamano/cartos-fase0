@@ -9,7 +9,7 @@
 import { currentUserSub } from './auth.js';
 
 import { append, batchGet, batchUpdateValues } from './sheets.js';
-import { HEADERS, rowsById, toRow } from './rows.js';
+import { rowRange, rowsById, toRow } from './rows.js';
 import { planSync } from '../storage/outbox-logic.js';
 import { listPending, removePending } from '../storage/outbox.js';
 import { logEvent } from '../storage/logs.js';
@@ -25,8 +25,6 @@ export function configureSync(overrides = {}) {
   running.clear();
 }
 
-const LAST_COLUMN = String.fromCharCode(64 + HEADERS.Movements.length);
-
 async function run(fileId) {
   const pending = (await store.list(currentUserSub())).filter((item) => item.fileId === fileId).map((item) => item.movement);
   if (pending.length === 0) return { appended: 0, updated: 0, pending: 0 };
@@ -35,7 +33,7 @@ async function run(fileId) {
   const { toAppend, toUpdate } = planSync(pending, rowsById(idColumn));
   if (toUpdate.length > 0) {
     await batchUpdateValues(fileId, toUpdate.map(({ movement, row }) => ({
-      range: `Movements!A${row}:${LAST_COLUMN}${row}`,
+      range: rowRange('Movements', row),
       values: [toRow('Movements', movement)],
     })));
   }

@@ -8,7 +8,7 @@ import {
   byCategory,
   transferAmount,
   summarizeHistory,
-  monthOf,
+  entryMonth,
   monthsSpan,
   selectMonth,
 } from '../js/domain/history.js';
@@ -442,13 +442,13 @@ test('activeFilterCount counts each account and category, and the range once', (
   );
 });
 
-// --- monthOf ---
+// --- entryMonth ---
 
-test('monthOf takes YYYY-MM from the entry date', () => {
-  assert.equal(monthOf({ date: '2026-10-31' }), '2026-10');
-  assert.equal(monthOf({ date: '2026-01-01' }), '2026-01');
+test('entryMonth takes YYYY-MM from the entry date', () => {
+  assert.equal(entryMonth({ date: '2026-10-31' }), '2026-10');
+  assert.equal(entryMonth({ date: '2026-01-01' }), '2026-01');
   const [entry] = historyEntries(transferHalves('t-1', { date: '2028-02-29' }));
-  assert.equal(monthOf(entry), '2028-02');
+  assert.equal(entryMonth(entry), '2028-02');
 });
 
 // --- sumEntries ---

@@ -1,8 +1,10 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { HEADERS, toRow, fromRow, rowsToObjects, SheetFormatError, rowsById, findRowById } from '../js/data/rows.js';
+import {
+  HEADERS, toRow, fromRow, rowsToObjects, SheetFormatError, rowsById, findRowById, lastColumn, rowRange,
+} from '../js/data/rows.js';
 import { googleFetch } from '../js/data/http.js';
-import { ApiError } from '../js/data/errors.js';
+import { ApiError, assertValid, ValidationError } from '../js/data/errors.js';
 import { TokenExpiredError, getAuthState } from '../js/data/auth.js';
 import { setupGoogleApi, TOKEN } from './helpers/fake-google.js';
 
@@ -105,4 +107,17 @@ test('rowsById handles a long column (row 10001 for the 10000th id)', () => {
   const column = [['id'], ...Array.from({ length: 10000 }, (_, i) => [`id-${i + 1}`])];
   assert.equal(findRowById(column, 'id-10000'), 10001);
   assert.equal(rowsById(column).size, 10000);
+});
+
+// --- rowRange and assertValid (tarea 22b) ---
+
+test('lastColumn and rowRange cover a whole row of a tab', () => {
+  assert.equal(lastColumn('Movements'), 'M');
+  assert.equal(lastColumn('Accounts'), 'G');
+  assert.equal(rowRange('Movements', 8), 'Movements!A8:M8');
+});
+
+test('assertValid throws a ValidationError with the codes, and nothing without codes', () => {
+  assert.doesNotThrow(() => assertValid([]));
+  assert.throws(() => assertValid(['amount_invalid']), (err) => err instanceof ValidationError && err.errors[0] === 'amount_invalid');
 });
