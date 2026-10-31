@@ -123,9 +123,22 @@ Decidido el 2026-10-29: empezar el libro personal con el histórico real (import
 |---|---|---|---|
 | 16 | Importar y descargar los datos | Hecha (2026-10-29) | Libro personal real importado y cuadrado; plantilla e importar en Ajustes sin probar en iPhone |
 | 17 | Varios libros | Hecha (2026-10-30) | Probada en iPhone: Casa do Medio creado y transferencia desde Personal que aparece en los dos libros |
-| 20 | Experiencia: pantallas más simples | Pendiente | Definida pantalla a pantalla con bocetos; en cuatro partes (20a Añadir, 20b Historial, 20c Libros/Cuentas/Categorías, 20d Ajustes/INICIO, 20e Análisis). Antes de la 18 |
+| 20 | Experiencia: pantallas más simples | Hecha (2026-10-31) | En cinco partes (20a Añadir, 20b Historial, 20c Libros/Cuentas/Categorías, 20d Ajustes/INICIO, 20e Análisis), PR #46–#50. Probada en iPhone |
 | 18 | Libro compartido | Pendiente | Personas por movimiento, compartir con la pareja y abrirlo desde su app (Picker, clave nueva restringida) |
 | 19 | Importar la reforma | Pendiente | El Excel de la reforma a «Casa do medio»; el Excel queda en Drive como copia |
+
+### Decisiones tomadas en la tarea 20
+- Se hizo en cinco partes, no en cuatro: Análisis (20e) se separó de Ajustes/INICIO (20d).
+- INICIO oculta las cifras cada vez que se entra; pulsar INICIO otra vez las muestra.
+  - Se descartó agitar el teléfono: iOS pide permiso de movimiento tras un toque.
+- Datos y Tema tienen pantalla propia en Ajustes. Tema queda preparada para más paletas.
+- Historial: los filtros se limpian al entrar y al salir. Solo se recuerda la vista (Resumen o Lista).
+- Análisis:
+  - Las categorías excluidas se guardan en el dispositivo, por libro. Las transferencias nunca cuentan.
+  - La comparación con el periodo anterior solo se muestra si el libro tiene datos desde el principio de ese periodo.
+  - Los gastos con fecha posterior a hoy no cuentan en la proyección del mes ni en el gasto destacado.
+  - Gráficas SVG hechas a mano con los colores del tema, sin librerías.
+  - El verde y el terracota se distinguen poco para el daltonismo rojo-verde, así que las líneas llevan además su nombre al final, una leyenda, y la del neto es más gruesa.
 
 ### Decisiones tomadas en la tarea 17
 - Partida en 17a (PR #42) y 17b (PR #43); arreglo posterior en el PR #44.
