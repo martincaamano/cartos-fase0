@@ -8,6 +8,99 @@ import { parseAmountInput } from '../domain/money.js';
 import { createAccount, validateAccount } from '../domain/account.js';
 import { formatAmountInput, formatShortDate } from './format.js';
 
+// An element with its class and text: el('span', 'amount-income', '+12').
+export function el(tag, className = '', text = '') {
+  const node = document.createElement(tag);
+  if (className) node.className = className;
+  if (text) node.textContent = text;
+  return node;
+}
+
+// A chip that is on or off (filters, exclusions).
+export function toggleChip(text, on, onTap) {
+  const chip = el('button', 'chip', text);
+  chip.type = 'button';
+  chip.classList.toggle('is-selected', on);
+  chip.setAttribute('aria-pressed', String(on));
+  chip.addEventListener('click', onTap);
+  return chip;
+}
+
+// One of several buttons, the chosen one marked: tabs, periods, views,
+// theme, a category's kind. options: [{ value, label, disabled }]. Each
+// button gets className and data-<dataKey>=value; role 'tab' marks it with
+// aria-selected instead of aria-pressed. A tap marks it and calls
+// onSelect(value).
+export function renderChoices(container, options, { selected, className = 'chip', dataKey = 'value', role = null, onSelect }) {
+  const state = role === 'tab' ? 'aria-selected' : 'aria-pressed';
+  const mark = (value) => {
+    for (const button of container.children) {
+      const on = button.dataset[dataKey] === value;
+      button.classList.toggle('is-selected', on);
+      button.setAttribute(state, String(on));
+    }
+  };
+  container.replaceChildren(...options.map(({ value, label, disabled = false }) => {
+    const button = el('button', className, label);
+    button.type = 'button';
+    button.dataset[dataKey] = value;
+    if (role) button.setAttribute('role', role);
+    button.disabled = disabled;
+    button.addEventListener('click', () => {
+      mark(value);
+      onSelect(value);
+    });
+    return button;
+  }));
+  mark(selected);
+}
+
+// A button busy with something: disabled, with `text`. Returns what puts
+// it back as it was (when the work failed).
+export function setBusy(button, text) {
+  const idle = button.textContent;
+  button.disabled = true;
+  button.textContent = text;
+  return () => {
+    button.disabled = false;
+    button.textContent = idle;
+  };
+}
+
+// A change that goes straight to Drive failed: why, as far as the device
+// knows.
+export const failureText = (failed, offline) => (navigator.onLine ? failed : offline);
+
+// The text for the first error code that has one. map: { code: textKey }.
+export function errorText(codes, map, texts) {
+  const key = codes.map((code) => map[code]).find(Boolean);
+  return key ? texts[key] : '';
+}
+
+// Two taps (Borrar, Quitar): the first one asks with `confirm`, the second
+// one shows `busy` and runs work(), a promise. If it fails the button is
+// back as at first and fails(err) says why. before() may stop a tap
+// (returns false), e.g. when offline.
+export function twoTap(button, { confirm, busy, work, fails = () => {}, before = () => true }) {
+  const idle = button.textContent;
+  let armed = false;
+  button.addEventListener('click', () => {
+    if (!before()) return;
+    if (!armed) {
+      armed = true;
+      button.textContent = confirm;
+      return;
+    }
+    const restore = setBusy(button, busy);
+    work().catch((err) => {
+      fails(err);
+      restore();
+      button.textContent = idle;
+      armed = false;
+    });
+  });
+}
+
 // Fills every [data-text="key"] inside root with texts[key].
 export function fillTexts(root, texts) {
   for (const node of root.querySelectorAll('[data-text]')) node.textContent = texts[node.dataset.text];
@@ -150,13 +243,11 @@ export function renderAccountForm(container, {
     if (needsConnection && !navigator.onLine) { error.textContent = texts.offline; return; }
 
     error.textContent = '';
-    submit.disabled = true;
-    submit.textContent = texts.creating;
+    const restore = setBusy(submit, texts.creating);
     onSubmit(fields).catch((err) => {
       console.warn('Account creation failed', err);
-      error.textContent = needsConnection && !navigator.onLine ? texts.offline : texts.failed;
-      submit.disabled = false;
-      submit.textContent = texts.submit;
+      error.textContent = needsConnection ? failureText(texts.failed, texts.offline) : texts.failed;
+      restore();
     });
   });
   container.appendChild(form);

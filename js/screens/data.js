@@ -7,29 +7,9 @@ import { bookToCsv, templateCsv } from '../domain/import-csv.js';
 import { toIsoDate } from '../domain/movement.js';
 import { SECTION_HASH } from '../ui/router.js';
 import { fillTexts } from '../ui/components.js';
+import { linkRow } from '../ui/receipt.js';
 import { saveFile } from '../ui/download.js';
 import { renderNavbar } from '../ui/navbar.js';
-
-// A row: a link to `hash`, or a button that downloads.
-function dataRow({ label, hash = null, className = '', onClick = null }) {
-  const item = document.createElement('li');
-  item.className = 'receipt-line';
-  const row = document.createElement(hash ? 'a' : 'button');
-  row.className = `receipt-row settings-link ${className}`.trim();
-  if (hash) row.href = hash;
-  else {
-    row.type = 'button';
-    row.addEventListener('click', onClick);
-  }
-  const text = document.createElement('span');
-  text.textContent = label;
-  const arrow = document.createElement('span');
-  arrow.setAttribute('aria-hidden', 'true');
-  arrow.textContent = hash ? '›' : '↓';
-  row.append(text, arrow);
-  item.appendChild(row);
-  return item;
-}
 
 // book: what "Descargar mis datos" saves.
 export function renderData(root, { book }) {
@@ -56,14 +36,18 @@ export function renderData(root, { book }) {
     });
   };
   root.querySelector('.settings-data').append(
-    dataRow({ label: t.importData, hash: SECTION_HASH.import }),
-    dataRow({
+    linkRow({ label: t.importData, hash: SECTION_HASH.import, valueClass: '' }),
+    linkRow({
       label: t.template,
+      end: '↓',
+      valueClass: '',
       className: 'settings-template',
       onClick: download(t.templateFile, () => templateCsv(es.importer.templateRows)),
     }),
-    dataRow({
+    linkRow({
       label: t.exportData,
+      end: '↓',
+      valueClass: '',
       className: 'settings-export',
       onClick: download(t.exportFile.replace('{date}', toIsoDate(new Date())), () => bookToCsv(book)),
     }),

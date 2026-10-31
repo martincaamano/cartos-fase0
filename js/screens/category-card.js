@@ -6,12 +6,17 @@
 import { es } from '../../i18n/es.js';
 import { categoryUses, createCategory, editCategory, validateCategory, validateCategoryEdit } from '../domain/category.js';
 import { addCategory, removeCategory, updateCategory } from '../data/book.js';
-import { fillTexts, setupEmojiPicker } from '../ui/components.js';
+import {
+  errorText, failureText, fillTexts, renderChoices, setBusy, setupEmojiPicker, twoTap,
+} from '../ui/components.js';
 import { labelOf } from '../ui/format.js';
 import { SECTION_HASH } from '../ui/router.js';
 import { renderNavbar } from '../ui/navbar.js';
 
 const SUGGESTED_EMOJIS = ['🛍️', '☕', '🐶', '🎁', '✈️', '🏋️'];
+
+// Validation codes → texts (es.categoryAdmin), first one wins.
+const ERROR_TEXT = { name_required: 'nameRequired', name_taken: 'nameTaken', kind_in_use: 'kindLocked' };
 
 // category: the category to edit, or null for a new one. onDone: after a
 // change.
@@ -52,8 +57,7 @@ export function renderCategoryCard(root, { book, fileId, category = null, onDone
   const { name, emoji } = form.elements;
   const error = root.querySelector('.form-error');
   const submit = root.querySelector('.form-submit');
-  const idle = category ? t.save : t.create;
-  submit.textContent = idle;
+  submit.textContent = category ? t.save : t.create;
   if (category) {
     name.value = category.name;
     emoji.value = category.emoji;
@@ -64,21 +68,12 @@ export function renderCategoryCard(root, { book, fileId, category = null, onDone
   const uses = category ? categoryUses(category, book.movements) : 0;
   const kindLocked = uses > 0;
   let kind = category?.kind ?? 'expense';
-  const kindRow = root.querySelector('.kind-row');
-  for (const [value, text] of [['expense', es.add.expense], ['income', es.add.income]]) {
-    const chip = document.createElement('button');
-    chip.type = 'button';
-    chip.className = 'chip';
-    chip.dataset.kind = value;
-    chip.textContent = text;
-    chip.disabled = kindLocked && value !== kind;
-    chip.addEventListener('click', () => {
-      kind = value;
-      for (const other of kindRow.children) other.classList.toggle('is-selected', other.dataset.kind === kind);
-    });
-    kindRow.appendChild(chip);
-  }
-  for (const chip of kindRow.children) chip.classList.toggle('is-selected', chip.dataset.kind === kind);
+  renderChoices(root.querySelector('.kind-row'), [['expense', es.add.expense], ['income', es.add.income]]
+    .map(([value, label]) => ({ value, label, disabled: kindLocked && value !== kind })), {
+    selected: kind,
+    dataKey: 'kind',
+    onSelect: (value) => { kind = value; },
+  });
   if (category) {
     const note = uses === 0 ? t.usesNone : uses === 1 ? t.usesOne : t.uses.replace('{n}', uses);
     root.querySelector('.card-uses').textContent = kindLocked ? `${note} ${t.kindLocked}` : note;
@@ -86,7 +81,12 @@ export function renderCategoryCard(root, { book, fileId, category = null, onDone
 
   const failed = (err) => {
     console.warn('Category change failed', err);
-    error.textContent = navigator.onLine ? t.failed : t.offline;
+    error.textContent = failureText(t.failed, t.offline);
+  };
+  const offline = () => {
+    if (navigator.onLine) return false;
+    error.textContent = t.offline;
+    return true;
   };
 
   form.addEventListener('submit', (event) => {
@@ -95,20 +95,15 @@ export function renderCategoryCard(root, { book, fileId, category = null, onDone
     const errors = category
       ? validateCategoryEdit(editCategory(category, fields), category, book)
       : validateCategory(createCategory(fields), book.categories);
-    if (errors.includes('name_required')) { error.textContent = t.nameRequired; return; }
-    if (errors.includes('name_taken')) { error.textContent = t.nameTaken; return; }
-    if (errors.includes('kind_in_use')) { error.textContent = t.kindLocked; return; }
-    if (!navigator.onLine) { error.textContent = t.offline; return; }
+    error.textContent = errorText(errors, ERROR_TEXT, t);
+    if (error.textContent || offline()) return;
 
-    error.textContent = '';
-    submit.disabled = true;
-    submit.textContent = category ? t.saving : t.creating;
+    const restore = setBusy(submit, category ? t.saving : t.creating);
     (category ? updateCategory(fileId, category, fields, book) : addCategory(fileId, fields, book.categories))
       .then(onDone)
       .catch((err) => {
         failed(err);
-        submit.disabled = false;
-        submit.textContent = idle;
+        restore();
       });
   });
 
@@ -116,22 +111,12 @@ export function renderCategoryCard(root, { book, fileId, category = null, onDone
     // Two taps: the first one asks, the second one removes.
     const remove = root.querySelector('.card-remove');
     remove.hidden = false;
-    let armed = false;
-    remove.addEventListener('click', () => {
-      if (!navigator.onLine) { error.textContent = t.offline; return; }
-      if (!armed) {
-        armed = true;
-        remove.textContent = t.confirmRemove;
-        return;
-      }
-      remove.disabled = true;
-      remove.textContent = t.removing;
-      removeCategory(fileId, category).then(onDone).catch((err) => {
-        failed(err);
-        remove.disabled = false;
-        armed = false;
-        remove.textContent = t.remove;
-      });
+    twoTap(remove, {
+      confirm: t.confirmRemove,
+      busy: t.removing,
+      before: () => !offline(),
+      work: () => removeCategory(fileId, category).then(onDone),
+      fails: failed,
     });
   }
 

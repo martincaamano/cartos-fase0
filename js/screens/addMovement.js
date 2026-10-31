@@ -15,7 +15,9 @@ import {
 } from '../data/movements.js';
 import { loadTransferCategories, saveTransferCategories } from '../storage/transfer-categories.js';
 import { loadLastAccount, saveLastAccount } from '../storage/last-account.js';
-import { showBookBanner, createAmountInput, fillTexts, renderCategoryPicker, renderDatePicker } from '../ui/components.js';
+import {
+  createAmountInput, errorText, fillTexts, renderCategoryPicker, renderChoices, renderDatePicker, showBookBanner, twoTap,
+} from '../ui/components.js';
 import { formatAmountInput, labelOf } from '../ui/format.js';
 import { SECTION_HASH } from '../ui/router.js';
 import { renderNavbar } from '../ui/navbar.js';
@@ -226,14 +228,8 @@ export function renderAddMovement(root, {
   };
   toSelect.addEventListener('change', paintCross);
 
-  const tabs = root.querySelector('.tabs');
   const applyType = () => {
     const isTransfer = state.type === 'transfer';
-    for (const tab of tabs.children) {
-      const selected = tab.dataset.type === state.type;
-      tab.classList.toggle('is-selected', selected);
-      tab.setAttribute('aria-selected', String(selected));
-    }
     for (const field of root.querySelectorAll('.only-single')) field.hidden = isTransfer;
     for (const field of root.querySelectorAll('.only-transfer')) field.hidden = !isTransfer;
     const cannotTransfer = isTransfer && accounts.length + otherAccounts < 2;
@@ -243,20 +239,19 @@ export function renderAddMovement(root, {
     paintCategories();
     paintCross();
   };
-  for (const type of TYPES) {
-    const tab = document.createElement('button');
-    tab.type = 'button';
-    tab.className = 'tab';
-    tab.setAttribute('role', 'tab');
-    tab.dataset.type = type;
-    tab.textContent = t[type];
-    tab.disabled = Boolean(entry) && type !== state.type;
-    tab.addEventListener('click', () => {
+  // Editing keeps the type: the other tabs are off.
+  renderChoices(root.querySelector('.tabs'), TYPES.map((type) => ({
+    value: type, label: t[type], disabled: Boolean(entry) && type !== state.type,
+  })), {
+    selected: state.type,
+    className: 'tab',
+    dataKey: 'type',
+    role: 'tab',
+    onSelect: (type) => {
       state.type = type;
       applyType();
-    });
-    tabs.appendChild(tab);
-  }
+    },
+  });
   applyType();
 
   const saved = original ?? halves?.[0];
@@ -323,8 +318,7 @@ export function renderAddMovement(root, {
         return onSaved(saved);
       })
       .catch((err) => {
-        const key = err.errors?.map((code) => ERROR_TEXT[code]).find(Boolean);
-        error.textContent = key ? t[key] : t.failed;
+        error.textContent = errorText(err.errors ?? [], ERROR_TEXT, t) || t.failed;
         submit.disabled = false;
         remove.disabled = false;
         submit.textContent = t.save;
@@ -335,25 +329,17 @@ export function renderAddMovement(root, {
     // Two taps: the first one asks, the second one deletes. While it
     // deletes, Guardar cannot bring the movement back.
     remove.textContent = t.delete;
-    let armed = false;
-    remove.addEventListener('click', () => {
-      if (!armed) {
-        armed = true;
-        remove.textContent = t.confirmDelete;
-        return;
-      }
-      remove.disabled = true;
-      submit.disabled = true;
-      remove.textContent = t.deleting;
-      queueDelete(fileId, halves ?? [original])
-        .then(onSaved)
-        .catch(() => {
-          error.textContent = t.failed;
-          remove.disabled = false;
+    twoTap(remove, {
+      confirm: t.confirmDelete,
+      busy: t.deleting,
+      work: () => {
+        submit.disabled = true;
+        return queueDelete(fileId, halves ?? [original]).then(onSaved).catch((err) => {
           submit.disabled = false;
-          armed = false;
-          remove.textContent = t.delete;
+          throw err;
         });
+      },
+      fails: () => { error.textContent = t.failed; },
     });
   }
 

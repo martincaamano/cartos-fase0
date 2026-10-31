@@ -5,6 +5,9 @@
 
 export const THEMES = Object.freeze(['system', 'light', 'dark']);
 
+// Each mode's name in es.settings.
+export const THEME_TEXT = Object.freeze({ system: 'themeSystem', light: 'themeLight', dark: 'themeDark' });
+
 const KEY = 'cartos.theme';
 
 export function parseTheme(raw) {

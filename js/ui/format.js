@@ -1,5 +1,6 @@
 // Display formats. Pure: no DOM access, so it can be imported from the tests.
 
+import { es } from '../../i18n/es.js';
 import { toCents } from '../domain/money.js';
 
 // European style: 1.250,50 €. Built by hand because Intl in es-ES does not
@@ -11,6 +12,9 @@ export function formatEuros(amount) {
   const sign = toCents(amount) < 0 ? '−' : '';
   return `${sign}${units},${decimals} €`;
 }
+
+// A whole number of euros for the big figures: 1.684 €.
+export const formatWholeEuros = (amount) => formatEuros(Math.round(amount)).replace(/,00 €$/, ' €');
 
 // income − spending = net, as History shows it: "+1.601,27 − 3.547,58 =
 // −1.946,31 €". sums: { income, expense, net }.
@@ -54,4 +58,22 @@ export function formatDate(date) {
 export function formatShortDate(date) {
   const [, month, day] = date.split('-');
   return `${day}/${month}`;
+}
+
+// "2026-10" → "OCTUBRE 2026".
+export function formatMonth(month) {
+  const [year, number] = month.split('-');
+  return `${es.months[Number(number) - 1]} ${year}`;
+}
+
+// "2026-10" → "Oct".
+export const formatShortMonth = (month) => es.monthsShort[Number(month.slice(5)) - 1];
+
+// A range of months, the year said once when it is the same:
+// "Oct 2026", "Sep – Oct 2026", "Dic 2025 – Ene 2026".
+export function formatMonthRange({ from, to }) {
+  const year = to.slice(0, 4);
+  if (from === to) return `${formatShortMonth(from)} ${year}`;
+  const fromYear = from.slice(0, 4) === year ? '' : ` ${from.slice(0, 4)}`;
+  return `${formatShortMonth(from)}${fromYear} – ${formatShortMonth(to)} ${year}`;
 }

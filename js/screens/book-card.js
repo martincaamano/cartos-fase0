@@ -10,7 +10,7 @@ import { readMembers, shareBook } from '../data/members.js';
 import { ValidationError } from '../data/errors.js';
 import { memberName } from '../domain/members.js';
 import { receiptLine } from '../ui/receipt.js';
-import { fillTexts, renderAccountForm } from '../ui/components.js';
+import { errorText, failureText, fillTexts, renderAccountForm, setBusy } from '../ui/components.js';
 import { SECTION_HASH } from '../ui/router.js';
 import { renderNavbar } from '../ui/navbar.js';
 
@@ -19,7 +19,7 @@ const EMAIL_ERRORS = { email_required: 'emailRequired', email_invalid: 'emailInv
 const NAME_ERRORS = { name_required: 'bookNameRequired', name_taken: 'bookNameTaken', name_too_long: 'bookNameTooLong' };
 
 // The text for a book name problem, or ''.
-const nameProblem = (errors, t) => (errors.length ? t[NAME_ERRORS[errors[0]]] : '');
+const nameProblem = (errors, t) => errorText(errors, NAME_ERRORS, t);
 
 const skeleton = (body) => `
   <main class="screen screen-form screen-with-navbar screen-card">
@@ -97,13 +97,11 @@ export function renderBookEdit(root, { books, fileId, onRenamed }) {
     if (problem) { error.textContent = problem; return; }
     if (!navigator.onLine) { error.textContent = t.offline; return; }
     error.textContent = '';
-    submit.disabled = true;
-    submit.textContent = t.renaming;
+    const restore = setBusy(submit, t.renaming);
     renameBook(fileId, name.value, books).then(onRenamed).catch((err) => {
       console.warn('Book rename failed', err);
-      error.textContent = navigator.onLine ? t.failed : t.offline;
-      submit.disabled = false;
-      submit.textContent = t.rename;
+      error.textContent = failureText(t.failed, t.offline);
+      restore();
     });
   });
 
@@ -151,18 +149,14 @@ function renderPeople(section, { fileId, canShare, t }) {
     done.textContent = '';
     if (!navigator.onLine) { error.textContent = t.shareOffline; return; }
     const address = email.value.trim();
-    submit.disabled = true;
-    submit.textContent = t.sharing;
+    const restore = setBusy(submit, t.sharing);
     shareBook(fileId, address).then((members) => {
       paint(members);
       done.textContent = t.shared.replace('{email}', address);
       email.value = '';
     }).catch((err) => {
       console.warn('Book share failed', err);
-      error.textContent = err instanceof ValidationError ? t[EMAIL_ERRORS[err.errors[0]]] : (navigator.onLine ? t.shareFailed : t.shareOffline);
-    }).finally(() => {
-      submit.disabled = false;
-      submit.textContent = t.share;
-    });
+      error.textContent = err instanceof ValidationError ? errorText(err.errors, EMAIL_ERRORS, t) : failureText(t.shareFailed, t.shareOffline);
+    }).finally(restore);
   });
 }

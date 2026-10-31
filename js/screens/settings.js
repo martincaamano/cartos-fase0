@@ -7,26 +7,8 @@ import { activeOnly } from '../domain/active.js';
 import { SECTION_HASH } from '../ui/router.js';
 import { fillTexts } from '../ui/components.js';
 import { renderNavbar } from '../ui/navbar.js';
-import { loadTheme } from '../ui/theme.js';
-
-const THEME_TEXT = { system: 'themeSystem', light: 'themeLight', dark: 'themeDark' };
-
-// A row of the receipt list: label, its value in grey and "›".
-function settingsRow({ label, value = '', hash }) {
-  const item = document.createElement('li');
-  item.className = 'receipt-line';
-  const row = document.createElement('a');
-  row.className = 'receipt-row settings-link';
-  row.href = hash;
-  const text = document.createElement('span');
-  text.textContent = label;
-  const end = document.createElement('span');
-  end.className = 'settings-value';
-  end.textContent = value ? `${value} ›` : '›';
-  row.append(text, end);
-  item.appendChild(row);
-  return item;
-}
+import { loadTheme, THEME_TEXT } from '../ui/theme.js';
+import { linkRow } from '../ui/receipt.js';
 
 // user: { email } of the signed-in account. book: the book open; bookName:
 // its name. pendingCount: changes not in the Sheet yet; signing out with
@@ -45,27 +27,19 @@ export function renderSettings(root, { user = null, book, bookName = '', pending
   fillTexts(root, t);
 
   root.querySelector('.settings-list').append(
-    settingsRow({ label: t.books, value: bookName, hash: SECTION_HASH.books }),
-    settingsRow({ label: t.accounts, value: String(activeOnly(book.accounts).length), hash: SECTION_HASH.accounts }),
-    settingsRow({ label: t.categories, value: String(activeOnly(book.categories).length), hash: SECTION_HASH.categories }),
-    settingsRow({ label: t.data, value: t.dataHint, hash: SECTION_HASH.data }),
+    linkRow({ label: t.books, value: bookName, hash: SECTION_HASH.books }),
+    linkRow({ label: t.accounts, value: String(activeOnly(book.accounts).length), hash: SECTION_HASH.accounts }),
+    linkRow({ label: t.categories, value: String(activeOnly(book.categories).length), hash: SECTION_HASH.categories }),
+    linkRow({ label: t.data, value: t.dataHint, hash: SECTION_HASH.data }),
   );
 
-  const signOutItem = document.createElement('li');
-  signOutItem.className = 'receipt-line';
-  const signOut = document.createElement('button');
-  signOut.type = 'button';
-  signOut.className = 'receipt-row settings-link settings-signout';
-  const signOutText = document.createElement('span');
-  signOutText.textContent = t.signOut;
-  const email = document.createElement('span');
-  email.className = 'settings-email';
-  email.textContent = user?.email ?? '';
-  signOut.append(signOutText, email);
-  signOutItem.appendChild(signOut);
+  // Signing out: a button row with the account's email in place of the arrow.
+  const signOutItem = linkRow({ label: t.signOut, value: user?.email ?? '', end: '', className: 'settings-signout', valueClass: 'settings-email' });
+  const signOut = signOutItem.querySelector('button');
+  const signOutText = signOut.firstChild;
   root.querySelector('.settings-app').append(
-    settingsRow({ label: t.theme, value: t[THEME_TEXT[loadTheme()]], hash: SECTION_HASH.theme }),
-    settingsRow({ label: t.diagnostics, hash: SECTION_HASH.diagnostics }),
+    linkRow({ label: t.theme, value: t[THEME_TEXT[loadTheme()]], hash: SECTION_HASH.theme }),
+    linkRow({ label: t.diagnostics, hash: SECTION_HASH.diagnostics }),
     signOutItem,
   );
 
