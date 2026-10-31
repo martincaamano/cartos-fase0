@@ -1,6 +1,6 @@
 # Tarea 17 — Varios libros
 
-Estado: pendiente.
+Estado: hecha (2026-10-30).
 Depende de: 16 (fusionada).
 
 ## Objetivo
@@ -42,12 +42,12 @@ Compartir un libro y las personas por movimiento (tarea 18), importar la reforma
 - 17b: la transferencia a otro libro escribe un gasto en uno y un ingreso en el otro, sin `transferId`, con sus categorías; la siguiente sale con las categorías elegidas; sin una de las dos no se guarda nada.
 
 ## Pruebas manuales en iPhone
-- [ ] Con la app instalada, abrirla la lleva a Añadir, con el nombre del libro arriba.
-- [ ] Ajustes → Libros: crear «Casa do medio» con su primera cuenta; aparece en Drive como «Cartos · Casa do medio».
-- [ ] Cambiar entre Personal y Casa do medio: cada uno con su INICIO, Historial y Análisis; los saldos de Personal no cambian.
-- [ ] Cerrar y volver a abrir la app: sigue en el último libro abierto.
-- [ ] 17b: desde Personal, transferencia de Abanca a la cuenta de Casa do medio con gasto «Casa do medio» e ingreso «Aportación Martín» (crearla antes en Ajustes → Categorías de Casa do medio). Aparece en los dos libros y la siguiente sale ya con las dos categorías.
+- [x] Con la app instalada, abrirla la lleva a Añadir, con el nombre del libro arriba.
+- [x] Ajustes → Libros: crear «Casa do medio» con su primera cuenta; aparece en Drive como «Cartos · Casa do medio».
+- [x] Cambiar entre Personal y Casa do medio: cada uno con su INICIO, Historial y Análisis; los saldos de Personal no cambian.
+- [x] Cerrar y volver a abrir la app: sigue en el último libro abierto.
+- [x] 17b: desde Personal, transferencia de Abanca a la cuenta de Casa do medio con gasto «Casa do medio» e ingreso «Aportación Martín» (crearla antes en Ajustes → Categorías de Casa do medio). Aparece en los dos libros y la siguiente sale ya con las dos categorías.
 
 ## Criterio de cierre
-- [ ] 17a y 17b fusionadas y probadas en el iPhone.
-- [ ] `npm test` y `npm run acceptance` en verde.
+- [x] 17a y 17b fusionadas y probadas en el iPhone.
+- [x] `npm test` y `npm run acceptance` en verde.
