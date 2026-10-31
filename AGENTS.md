@@ -21,7 +21,7 @@ Lee solo las secciones que necesites para la tarea en curso, no todos los docume
 - JavaScript nativo con módulos ES (`<script type="module">`). Sin framework, sin bundler, sin transpilado. Los imports locales llevan siempre la extensión `.js`.
 - Cero dependencias en tiempo de ejecución. Node se usa solo para tests y servidor local. La única dependencia de desarrollo es `@playwright/test`, para las pruebas de aceptación (`acceptance/`). No añadas paquetes npm sin permiso del usuario.
 - DOM vanilla, IndexedDB nativo, Service Worker propio (network-first con fallback a caché).
-- El único script externo permitido es Google Identity Services. Nada de CDNs, analítica ni trackers.
+- Scripts externos permitidos: Google Identity Services y, solo para el Picker, `apis.google.com/js/api.js`, cargado al usarlo (tarea 18). Nada de CDNs, analítica ni trackers.
 - Google se consulta con `fetch` directo a las APIs REST de Drive y Sheets, con `Authorization: Bearer`.
 
 ## Arquitectura en capas (la regla más importante)

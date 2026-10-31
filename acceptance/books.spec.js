@@ -62,10 +62,11 @@ test('a new book has its own accounts and total, and the personal one is untouch
 test('the book list marks the one open and a repeated name is rejected', async ({ page, app, google }) => {
   await createBook(page, app, { name: 'Casa do medio', account: 'Cuenta común', balance: '0' });
   await app.go('#/settings/books');
-  expect(await app.lines('.book-list')).toEqual([['Personal', '›'], ['Casa do medio', '✓ abierto'], ['+ Nuevo libro', '']]);
+  expect(await app.lines('.book-list')).toEqual([['Personal', '›'], ['Casa do medio', '✓ abierto'], ['+ Nuevo libro', ''],
+    ['+ Abrir un libro compartido conmigo', '']]);
 
   const creates = () => google.calls.filter((call) => call.op === 'drive.create').length;
-  await page.click('.add-row');
+  await page.click('.add-row >> text=Nuevo libro');
   await page.fill('input[name=bookName]', 'casa do MEDIO');
   await page.fill(`${NEW_BOOK} input[name=name]`, 'Otra');
   await page.click(`${NEW_BOOK} .form-submit`);

@@ -28,12 +28,13 @@ cartos-fase0/
 │   ├── domain/           (reglas puras, con tests)
 │   │   ├── account.js, category.js, movement.js, transfer.js
 │   │   ├── balance.js, money.js, active.js
-│   │   └── history.js, stats.js, analysis.js, import.js, import-csv.js, csv.js, books.js
+│   │   └── history.js, stats.js, analysis.js, import.js, import-csv.js, csv.js, books.js, members.js
 │   │
 │   ├── data/             (lo único que habla con Google)
 │   │   ├── auth.js, http.js, errors.js
 │   │   ├── drive.js, sheets.js, rows.js
-│   │   ├── book.js, books.js
+│   │   ├── book.js, books.js, members.js (personas y compartir)
+│   │   ├── picker.js         (Picker de Google, para abrir un libro compartido)
 │   │   ├── movements.js      (guarda en la cola: crear, editar, borrar)
 │   │   └── sync.js           (sube la cola al Sheet)
 │   │

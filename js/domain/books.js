@@ -7,7 +7,8 @@ const FILE_PREFIX = 'Cartos · ';
 // Name of the file in Drive for a book called `name`.
 export const bookFileName = (name) => `${FILE_PREFIX}${name}`;
 
-// A Drive file → { fileId, name, bookType, createdTime }.
+// A Drive file → { fileId, name, bookType, createdTime, canShare }.
+// canShare is false for someone the book was shared with (tarea 18).
 export function bookOf(file) {
   const fallback = String(file.name ?? '').replace(FILE_PREFIX, '');
   return {
@@ -15,6 +16,7 @@ export function bookOf(file) {
     name: String(file.appProperties?.name ?? fallback).trim() || fallback,
     bookType: file.appProperties?.bookType === 'personal' ? 'personal' : 'shared',
     createdTime: String(file.createdTime ?? ''),
+    canShare: file.capabilities?.canShare !== false,
   };
 }
 

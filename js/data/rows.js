@@ -9,9 +9,12 @@ export const HEADERS = Object.freeze({
     'id', 'accountId', 'type', 'amount', 'date', 'categoryId', 'note', 'transferId',
     'personId', 'createdBy', 'createdAt', 'updatedAt', 'deleted',
   ],
+  // Only in shared books (tarea 18), added the first time it is needed.
+  Members: ['id', 'email', 'name', 'createdAt'],
 });
 
-export const SHEET_NAMES = Object.freeze(Object.keys(HEADERS));
+// The tabs every book has, read and written together.
+export const SHEET_NAMES = Object.freeze(['Accounts', 'Categories', 'Movements']);
 
 const NUMBER_COLUMNS = new Set(['initialBalance', 'amount']);
 const BOOLEAN_COLUMNS = new Set(['deleted', 'isDefault']);
