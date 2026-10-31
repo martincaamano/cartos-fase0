@@ -168,7 +168,7 @@ Estética minimalista tipo recibo o ticket de compra, con inspiración en el len
 
 ## 12.1. Navegación
 
-Barra de navegación fija inferior (patrón estándar tipo Instagram/Twitter), con cinco secciones: Dashboard (por defecto al abrir), Historial, Añadir (acción central), Análisis, y Ajustes (incluye Categorías, selector de tema y Diagnóstico). No se usa un botón flotante independiente. Categorías no tiene hueco fijo propio porque se gestiona pocas veces, normalmente una sola vez al principio.
+Barra de navegación fija inferior (patrón estándar tipo Instagram/Twitter), con cinco secciones: Inicio, Historial, Añadir (acción central), Análisis, y Ajustes (incluye Libros, Cuentas, Categorías, Datos, Tema y Diagnóstico). Desde la tarea 17 la app abre en Añadir; Inicio oculta las cifras al entrar y las muestra al pulsar Inicio otra vez (tarea 20). No se usa un botón flotante independiente. Categorías no tiene hueco fijo propio porque se gestiona pocas veces, normalmente una sola vez al principio.
 
 ## 12.2. Pantallas del MVP
 
@@ -182,7 +182,7 @@ Barra de navegación fija inferior (patrón estándar tipo Instagram/Twitter), c
   - Campo categoría: rejilla de iconos con las categorías más usadas, con un botón "Ver todas" para el resto vía lista con buscador.
   - Para Transferencia: cuenta origen, cuenta destino, importe y fecha; sin selector de categoría, la asigna la app.
 - **Historial**: listado completo de movimientos, filtrable por cuenta, categoría y rango de fechas; cada movimiento se puede editar o borrar.
-- **Análisis**: categorías ordenadas por gasto (barras horizontales en escala de grises) y evolución mensual de ingresos, gastos y ahorro neto. Transferencia no entra en el ranking de categorías, pero sí en los totales del mes.
+- **Análisis** (tarea 20e): periodo (Mes · 12 meses · Todo) y categorías excluidas, guardadas en el dispositivo por libro. Cifras clave, evolución de ingresos, gastos y neto, gasto por categoría frente al periodo anterior, tendencia de cada categoría, ritmo del mes, gasto por día de la semana, gastos fijos detectados y los gastos más grandes. Las transferencias nunca cuentan.
 - **Ajustes**: incluye Cuentas, gestión de Categorías, selector de tema (sistema / claro / oscuro), la pantalla de Diagnóstico (punto 9) y Cerrar sesión.
 
 ## 12.3. Fuera del MVP (fases posteriores, no bloquean el modelo de datos)

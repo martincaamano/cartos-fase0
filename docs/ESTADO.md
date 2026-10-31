@@ -123,9 +123,36 @@ Decidido el 2026-10-29: empezar el libro personal con el histórico real (import
 |---|---|---|---|
 | 16 | Importar y descargar los datos | Hecha (2026-10-29) | Libro personal real importado y cuadrado; plantilla e importar en Ajustes sin probar en iPhone |
 | 17 | Varios libros | Hecha (2026-10-30) | Probada en iPhone: Casa do Medio creado y transferencia desde Personal que aparece en los dos libros |
-| 20 | Experiencia: pantallas más simples | Pendiente | Definida pantalla a pantalla con bocetos; en cuatro partes (20a Añadir, 20b Historial, 20c Libros/Cuentas/Categorías, 20d Ajustes/INICIO, 20e Análisis). Antes de la 18 |
+| 20 | Experiencia: pantallas más simples | Hecha (2026-10-31) | En cinco partes (20a Añadir, 20b Historial, 20c Libros/Cuentas/Categorías, 20d Ajustes/INICIO, 20e Análisis), PR #46–#50. Probada en iPhone |
 | 18 | Libro compartido | Pendiente | Personas por movimiento, compartir con la pareja y abrirlo desde su app (Picker, clave nueva restringida) |
-| 19 | Importar la reforma | Pendiente | El Excel de la reforma a «Casa do medio»; el Excel queda en Drive como copia |
+| 19 | Importar la reforma | Hecha (2026-10-31) | 87 movimientos importados en Casa do Medio; la descarga del libro coincide fila a fila con lo generado y el saldo cuadra con el banco |
+
+### Decisiones tomadas en la tarea 19
+- Hecha antes que la 18 y sin código: se usó el importador de la tarea 16 (JSON de Cartos desde Ajustes → Datos), que trae los emojis de las categorías nuevas.
+- El JSON se generó y se revisó fuera del repo. Nada de los datos reales entró en GitHub.
+- Categorías:
+  - las del Excel se mantienen (Obra, Fontanería, Baño, Cocina, Electricidad);
+  - «Otros» pasa a «Otros gastos» y los intereses a «Otros ingresos»;
+  - las aportaciones siguen como «Aportación Martín» y «Aportación Ana».
+- El ajuste del Excel para cuadrar con el banco va al saldo inicial de la cuenta, no como ingreso, para que no infle el Análisis.
+- Los pagos hechos directamente por una persona se apuntan como su aportación más el gasto, así el saldo de la cuenta no cambia.
+- Se cruzaron las aportaciones de Martín con su libro Personal y coinciden todas. Se borró en Personal un gasto de 2 € de prueba de la 17b.
+- Quedan fuera las compras ajenas que salieron de la cuenta y sus devoluciones, las filas del Excel sin fecha (pendientes de confirmar) y el presupuesto.
+- El saldo de Cartos supera al del banco en lo que aún falta por devolver de esas compras ajenas.
+- Desde ahora los datos de la reforma se apuntan en Cartos; el Excel queda en Drive solo como copia.
+
+### Decisiones tomadas en la tarea 20
+- Se hizo en cinco partes, no en cuatro: Análisis (20e) se separó de Ajustes/INICIO (20d).
+- INICIO oculta las cifras cada vez que se entra; pulsar INICIO otra vez las muestra.
+  - Se descartó agitar el teléfono: iOS pide permiso de movimiento tras un toque.
+- Datos y Tema tienen pantalla propia en Ajustes. Tema queda preparada para más paletas.
+- Historial: los filtros se limpian al entrar y al salir. Solo se recuerda la vista (Resumen o Lista).
+- Análisis:
+  - Las categorías excluidas se guardan en el dispositivo, por libro. Las transferencias nunca cuentan.
+  - La comparación con el periodo anterior solo se muestra si el libro tiene datos desde el principio de ese periodo.
+  - Los gastos con fecha posterior a hoy no cuentan en la proyección del mes ni en el gasto destacado.
+  - Gráficas SVG hechas a mano con los colores del tema, sin librerías.
+  - El verde y el terracota se distinguen poco para el daltonismo rojo-verde, así que las líneas llevan además su nombre al final, una leyenda, y la del neto es más gruesa.
 
 ### Decisiones tomadas en la tarea 17
 - Partida en 17a (PR #42) y 17b (PR #43); arreglo posterior en el PR #44.

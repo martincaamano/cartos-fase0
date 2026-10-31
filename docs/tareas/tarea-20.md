@@ -1,6 +1,6 @@
 # Tarea 20 — Experiencia: pantallas más simples
 
-Estado: definida (2026-10-30), pendiente de implementar.
+Estado: hecha (2026-10-31).
 Depende de: 17 (fusionada).
 
 ## Objetivo
@@ -89,12 +89,12 @@ Nuevas paletas de color (la pantalla Tema queda lista para ellas), detectar que 
 - Aceptación: cada pantalla cabe sin scroll en el iPhone 15 (Añadir en sus seis estados, Ajustes, Libros), los flujos de cada parte y las fotos de estilos actualizadas a propósito.
 
 ## Pruebas manuales en iPhone
-- [ ] Apuntar un gasto real: importe, categoría y Guardar sin hacer scroll.
-- [ ] Historial: desplegar un mes hasta un movimiento y elegir un rango de meses deslizando.
-- [ ] Editar el saldo inicial de una cuenta desde su ficha.
-- [ ] Análisis: excluir Casa do medio y ver cómo cambian la evolución y las cifras.
-- [ ] INICIO abre con las cifras ocultas y se ven al pulsar INICIO otra vez.
+- [x] Apuntar un gasto real: importe, categoría y Guardar sin hacer scroll.
+- [x] Historial: desplegar un mes hasta un movimiento y elegir un rango de meses deslizando.
+- [x] Editar el saldo inicial de una cuenta desde su ficha.
+- [x] Análisis: excluir Casa do medio y ver cómo cambian la evolución y las cifras.
+- [x] INICIO abre con las cifras ocultas y se ven al pulsar INICIO otra vez.
 
 ## Criterio de cierre
-- [ ] 20a–20e fusionadas y probadas en el iPhone.
-- [ ] `npm test` y `npm run acceptance` en verde.
+- [x] 20a–20e fusionadas y probadas en el iPhone.
+- [x] `npm test` y `npm run acceptance` en verde.
