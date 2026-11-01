@@ -268,12 +268,12 @@ export const test = base.extend({
         await expect(page.locator(ready)).toBeVisible();
         await app.settle();
       },
-      // INICIO arrives with its amounts hidden (tarea 20d): tapping INICIO
-      // again shows them, as the user would.
+      // INICIO with its amounts shown: the eye next to the total, when they
+      // are hidden (tarea 23; the first time they are shown).
       async reveal() {
         await expect(page.locator('.receipt-total-amount')).toBeVisible();
         if (await page.locator('.amounts-hidden').count()) {
-          await page.click('.navbar-item.is-active');
+          await page.click('.amounts-toggle');
           await expect(page.locator('.amounts-hidden')).toHaveCount(0);
         }
       },
@@ -308,7 +308,14 @@ export const test = base.extend({
           await page.fill('input[name=note]', note);
         }
         await page.click('.form-submit');
+        await app.saved();
+      },
+      // After saving a new one: Añadir stays with «✓ … Deshacer» (tarea 23);
+      // then INICIO, as the user would open it to look at the balance.
+      async saved() {
+        await expect(page.locator('.toast')).toContainText('✓');
         await app.settle();
+        await app.go('#/');
       },
       google,
     };

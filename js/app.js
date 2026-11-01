@@ -37,6 +37,21 @@ const root = () => document.getElementById('app');
 let current = { key: null, section: null };
 // The day the screen on view was painted: «Hoy» and this month depend on it.
 let paintedDay = '';
+// The path of the screen on view (settings/books…), to tell how the next
+// one comes in.
+let shownPath = null;
+
+// How a new screen comes in (tarea 23): deeper in the same section from the
+// right, back up from the left, anything else (another section of the bar,
+// a route like login) rising a little.
+function enterFrom(previous, next) {
+  if (previous === null) return '';
+  const [from, to] = [previous, next].map((path) => (path ? path.split('/') : []));
+  if (from[0] !== to[0]) return 'tab';
+  if (to.length > from.length) return 'forward';
+  if (to.length < from.length) return 'back';
+  return 'tab';
+}
 
 // repaint: the same screen again with fresh data (not a new visit).
 function showSection({ section, params }, offline, repaint) {
@@ -51,6 +66,11 @@ function showSection({ section, params }, offline, repaint) {
     saved: (hash) => (movements) => {
       state.saved(movements);
       location.hash = hash;
+    },
+    // Saved, and the same screen again, clean (Añadir, tarea 23).
+    savedHere: (movements) => {
+      state.saved(movements);
+      show({ force: true });
     },
     signOut: () => {
       signOut();
@@ -94,6 +114,14 @@ function show({ force = false } = {}) {
     default:
       showSection(section, offline, repaint);
   }
+  // A new screen (not fresh data on the same one) comes in with a motion.
+  const path = section ? location.hash.replace(/^#\/?/, '').split('?')[0] : route;
+  if (!repaint) {
+    const main = root().querySelector('main.screen');
+    const enter = enterFrom(shownPath, path);
+    if (main && enter) main.dataset.enter = enter;
+  }
+  shownPath = path;
 }
 
 // Fresh data repaints only the screens that can take it without losing

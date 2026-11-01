@@ -50,16 +50,25 @@ test('Ajustes links lead to each screen and back, and say where they stand', asy
   }
 });
 
-test('INICIO arrives with its amounts hidden; tapping INICIO again shows them', async ({ page, app }) => {
+test('the eye next to TOTAL hides and shows the amounts, and the choice is kept', async ({ page, app }) => {
   await app.open();
+  // The first time they show.
+  await expect(page.locator('.receipt-total-amount')).toHaveText('2.474,51 €');
+  await page.click('.amounts-toggle');
   await expect(page.locator('.receipt-total-amount')).toHaveText('••••• €');
   expect(await app.lines('.receipt-accounts')).toEqual([['🏦 Abanca', '••••• €'], ['💶 Efectivo', '••••• €']]);
-  await page.click('.navbar-item.is-active');
-  await expect(page.locator('.receipt-total-amount')).toHaveText('2.474,51 €');
-  // Leaving and coming back hides them again.
+  await expect(page.locator('.amounts-toggle')).toHaveAttribute('aria-label', 'Mostrar las cifras');
+  // Leaving, coming back and reopening the app keep them hidden.
   await app.go('#/history');
   await app.go('#/');
   await expect(page.locator('.receipt-total-amount')).toHaveText('••••• €');
+  await page.reload();
+  await expect(page.locator('.receipt-total-amount')).toHaveText('••••• €');
+  await page.click('.amounts-toggle');
+  await expect(page.locator('.receipt-total-amount')).toHaveText('2.474,51 €');
+  // Tapping INICIO again does nothing.
+  await page.click('.navbar-item.is-active');
+  await expect(page.locator('.receipt-total-amount')).toHaveText('2.474,51 €');
 });
 
 test('an account on INICIO opens History filtered by it; «Ver todo» opens it whole', async ({ page, app }) => {

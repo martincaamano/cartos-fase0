@@ -19,7 +19,7 @@ import { loadLastAccount, saveLastAccount } from '../storage/last-account.js';
 import {
   createAmountInput, errorText, fillTexts, renderCategoryPicker, renderChoices, renderDatePicker, showBookBanner, twoTap,
 } from '../ui/components.js';
-import { formatAmountInput, labelOf } from '../ui/format.js';
+import { formatAmountInput, formatEuros, labelOf } from '../ui/format.js';
 import { SECTION_HASH } from '../ui/router.js';
 import { renderNavbar } from '../ui/navbar.js';
 
@@ -58,7 +58,9 @@ function fillOtherBooks(select, otherBooks) {
 }
 
 // entry: a History entry to edit (historyEntries / findEntry), or null to
-// add a new movement. onSaved gets what went to this book's outbox.
+// add a new movement. onSaved gets what went to this book's outbox and, for
+// a new one, { summary, undo }: the text of what was saved and a function
+// that takes it back (a promise of what it queued).
 // bookName: shown on top when there is more than one book.
 // otherBooks: [{ fileId, name, book }] the other books with a copy on the
 // device, offered as transfer destinations (not when editing).
@@ -280,6 +282,16 @@ export function renderAddMovement(root, {
     texts: { today: t.today, yesterday: t.yesterday, dayBefore: t.dayBefore, other: t.otherDate },
   });
 
+  // «12,50 € · 🛒 Supermercado» or «50,00 € · 🏦 Abanca → 💶 Efectivo».
+  const allAccounts = [...accounts, ...destinations.flatMap((other) => other.book.accounts)];
+  const accountLabel = (id) => labelOf(allAccounts.find((account) => account.id === id));
+  const summaryOf = (amountValue, transfer, single) => {
+    const what = state.type === 'transfer'
+      ? `${accountLabel(transfer.fromAccountId)} → ${accountLabel(transfer.toAccountId)}`
+      : labelOf(book.categories.find((category) => category.id === single.categoryId));
+    return `${formatEuros(amountValue)} · ${what}`;
+  };
+
   const remove = root.querySelector('.form-delete');
   form.addEventListener('submit', (event) => {
     event.preventDefault();
@@ -297,13 +309,16 @@ export function renderAddMovement(root, {
     const single = { ...common, accountId: accountSelect.value, type: state.type, categoryId: state.categoryId };
     const other = state.type === 'transfer' ? otherBookOf(toSelect.value) : null;
     let saving;
+    let undo = null;
     if (other) {
       const categories = { expenseCategoryId: expenseCategory.value, incomeCategoryId: incomeCategory.value };
       // Only the half of this book is counted here; the other one waits in
       // its own book's outbox and is uploaded with it.
       saving = queueCrossBookTransfer({ fileId, book }, other, { ...transfer, ...categories })
-        .then(([outgoing]) => {
+        .then(([outgoing, incoming]) => {
           saveTransferCategories(storage, transfer.toAccountId, categories);
+          // Undoing takes back both halves, each in its book.
+          undo = () => queueDelete(other.fileId, [incoming]).then(() => queueDelete(fileId, [outgoing]));
           return outgoing;
         });
     } else if (halves) saving = queueTransferEdit(fileId, halves, transfer, book);
@@ -312,8 +327,13 @@ export function renderAddMovement(root, {
     else saving = queueMovement(fileId, single, book);
     saving
       .then((saved) => {
-        if (!entry) saveLastAccount(storage, fileId, state.type === 'transfer' ? transfer.fromAccountId : single.accountId);
-        return onSaved(saved);
+        if (entry) return onSaved(saved);
+        saveLastAccount(storage, fileId, state.type === 'transfer' ? transfer.fromAccountId : single.accountId);
+        // A new one: what was saved, and how to take it back.
+        return onSaved(saved, {
+          summary: summaryOf(common.amount, transfer, single),
+          undo: undo ?? (() => queueDelete(fileId, [saved].flat())),
+        });
       })
       .catch((err) => {
         error.textContent = errorText(err.errors ?? [], ERROR_TEXT, t) || t.failed;

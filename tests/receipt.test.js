@@ -6,7 +6,7 @@ import { historyEntries } from '../js/domain/history.js';
 
 // Importing the module must not touch the DOM: if it did, this static import
 // would already throw in Node (there is no `document` here).
-import { movementLineModel, movementLine, lookupsOf } from '../js/ui/receipt.js';
+import { isPendingEntry, movementLineModel, movementLine, lookupsOf } from '../js/ui/receipt.js';
 
 // Deterministic deps for the domain builders.
 let counter = 0;
@@ -254,4 +254,15 @@ test('movementLine with withNote shows a transfer note', () => {
     assert.equal(noteOf(line).textContent, ' ahorro');
   });
   assert.equal(typeof globalThis.document, 'undefined');
+});
+
+// --- isPendingEntry (tarea 23) ---
+
+test('isPendingEntry: a movement by its id, a transfer when either half is pending', () => {
+  const movement = { kind: 'movement', movement: { id: 'm1' } };
+  const transfer = { kind: 'transfer', halves: [{ id: 'out' }, { id: 'in' }] };
+  assert.equal(isPendingEntry(movement, new Set(['m1'])), true);
+  assert.equal(isPendingEntry(movement, new Set(['m2'])), false);
+  assert.equal(isPendingEntry(transfer, new Set(['in'])), true);
+  assert.equal(isPendingEntry(transfer, new Set()), false);
 });

@@ -38,10 +38,20 @@ function svgElement(tag, attributes = {}) {
   return node;
 }
 
-function svgRoot(width, height, label) {
+// animate: lines draw themselves and bars grow (the first time a chart is
+// seen, tarea 23; the CSS does it).
+function svgRoot(width, height, label, animate = false) {
   const svg = svgElement('svg', { viewBox: `0 0 ${width} ${height}`, width: '100%', role: 'img', 'aria-label': label });
   svg.classList.add('chart');
+  if (animate) svg.classList.add('chart-animate');
   return svg;
+}
+
+// A solid line that can draw itself: its length counts as 1.
+function solidLine(attributes) {
+  const line = svgElement('polyline', { ...attributes, pathLength: 1 });
+  line.classList.add('chart-line');
+  return line;
 }
 
 const text = (svg, x, y, content, attributes = {}) => {
@@ -83,10 +93,10 @@ function drawGrid(svg, steps, frame, y) {
 // end. series: [{ values, color (CSS), width, name }]; labels: one per point.
 // selected: the index highlighted (a vertical rule and dots); onPick(index)
 // when a column is tapped.
-export function lineChart({ labels, series, selected = null, onPick = null, label }) {
+export function lineChart({ labels, series, selected = null, onPick = null, label, animate = false }) {
   const frame = FRAMES.line;
   const { left: L, right: R, top: T, bottom: B, height: H } = frame;
-  const svg = svgRoot(CHART_WIDTH, H, label);
+  const svg = svgRoot(CHART_WIDTH, H, label, animate);
   const values = series.flatMap((s) => s.values);
   const min = Math.min(0, ...values);
   const max = Math.max(0, ...values);
@@ -103,7 +113,7 @@ export function lineChart({ labels, series, selected = null, onPick = null, labe
     if (i % every === 0 || i === count - 1) text(svg, x(i), H - 6, name, { 'text-anchor': 'middle' });
   });
   for (const line of series) {
-    svg.appendChild(svgElement('polyline', {
+    svg.appendChild(solidLine({
       points: points(line.values, x, y),
       fill: 'none', stroke: line.color, 'stroke-width': line.width ?? LINE_WIDTH,
       'stroke-linejoin': 'round', 'stroke-linecap': 'round',
@@ -138,14 +148,14 @@ export function lineChart({ labels, series, selected = null, onPick = null, labe
 }
 
 // A tiny line with its last point marked.
-export function sparkline(values, label) {
+export function sparkline(values, label, { animate = false } = {}) {
   const { width: W, height: H, pad } = SPARK;
-  const svg = svgRoot(W, H, label);
+  const svg = svgRoot(W, H, label, animate);
   const min = Math.min(...values);
   const max = Math.max(...values);
   const x = (i) => pad + (i * (W - 2 * pad)) / Math.max(1, values.length - 1);
   const y = (v) => H - pad - ((v - min) * (H - 10)) / (max - min || 1);
-  svg.appendChild(svgElement('polyline', {
+  svg.appendChild(solidLine({
     points: points(values, x, y),
     fill: 'none', stroke: 'var(--color-bar)', 'stroke-width': LINE_WIDTH, 'stroke-linejoin': 'round',
   }));
@@ -154,9 +164,9 @@ export function sparkline(values, label) {
 }
 
 // Bars from a baseline, the highest one in ink and the two highest labelled.
-export function barChart(values, labels, label) {
+export function barChart(values, labels, label, { animate = false } = {}) {
   const { height, base, tallest, labels: labelsAt, side, fill } = BARS;
-  const svg = svgRoot(CHART_WIDTH, height, label);
+  const svg = svgRoot(CHART_WIDTH, height, label, animate);
   const max = Math.max(...values, 1);
   const slot = (CHART_WIDTH - 2 * side) / values.length;
   const gap = (1 - fill) / 2;
@@ -165,10 +175,12 @@ export function barChart(values, labels, label) {
     const barHeight = (value / max) * tallest;
     const bx = side + i * slot + slot * gap;
     const middle = bx + (slot * fill) / 2;
-    svg.appendChild(svgElement('rect', {
+    const bar = svgElement('rect', {
       x: bx, y: base - barHeight, width: slot * fill, height: Math.max(barHeight, 1), rx: 3,
       fill: i === top[0] ? 'var(--color-ink)' : 'var(--color-bar)',
-    }));
+    });
+    bar.classList.add('chart-bar');
+    svg.appendChild(bar);
     text(svg, middle, labelsAt, labels[i], { 'text-anchor': 'middle' });
     if (top.includes(i) && value > 0) {
       text(svg, middle, base - barHeight - 4, `${Math.round(value)} €`, { 'text-anchor': 'middle', fill: 'var(--color-ink)' });
@@ -180,10 +192,10 @@ export function barChart(values, labels, label) {
 // The month day by day: spending so far (solid) against the usual month
 // (dashed), with the day of a big expense marked. spent: one value per day
 // up to today; usual: one per day of the month.
-export function paceChart({ spent, usual, peakDay = null, peakLabel = '', usualLabel, label }) {
+export function paceChart({ spent, usual, peakDay = null, peakLabel = '', usualLabel, label, animate = false }) {
   const frame = FRAMES.pace;
   const { left: L, right: R, top: T, bottom: B, height: H } = frame;
-  const svg = svgRoot(CHART_WIDTH, H, label);
+  const svg = svgRoot(CHART_WIDTH, H, label, animate);
   const days = usual.length;
   const max = Math.max(...spent, ...usual, 1);
   const steps = ticks(0, max);
@@ -196,7 +208,7 @@ export function paceChart({ spent, usual, peakDay = null, peakLabel = '', usualL
     points: points(usual, x, y),
     fill: 'none', stroke: 'var(--color-bar)', 'stroke-width': LINE_WIDTH, 'stroke-dasharray': '4 3',
   }));
-  svg.appendChild(svgElement('polyline', {
+  svg.appendChild(solidLine({
     points: points(spent, x, y),
     fill: 'none', stroke: 'var(--color-expense)', 'stroke-width': LINE_WIDTH, 'stroke-linejoin': 'round',
   }));

@@ -18,7 +18,7 @@ import {
 } from '../ui/format.js';
 import { appendFolded, receiptLine } from '../ui/receipt.js';
 import { SECTION_HASH } from '../ui/router.js';
-import { el, fillTexts, renderChoices, toggleChip } from '../ui/components.js';
+import { el, fillTexts, foldAway, renderChoices, toggleChip } from '../ui/components.js';
 import { renderNavbar } from '../ui/navbar.js';
 import { barChart, lineChart, paceChart, sparkline } from '../ui/charts.js';
 import { loadExcluded, saveExcluded } from '../storage/analysis-exclude.js';
@@ -51,7 +51,9 @@ function heading(title, hint = '') {
 // book: movements already include the pending ones (mergePending).
 // fileId: the book open, for the categories left out. params: { period,
 // month } kept in the URL so a repaint after a sync keeps them.
-export function renderAnalysis(root, { book, fileId = '', params = {}, today = new Date(), storage = globalThis.localStorage }) {
+export function renderAnalysis(root, {
+  book, fileId = '', params = {}, today = new Date(), storage = globalThis.localStorage, animate = true,
+}) {
   const t = es.analysis;
   root.innerHTML = `
     <main class="screen screen-form screen-with-navbar screen-analysis">
@@ -63,7 +65,7 @@ export function renderAnalysis(root, { book, fileId = '', params = {}, today = n
       </div>
       <div class="stat-exclude">
         <button type="button" class="link-button stat-exclude-toggle" aria-expanded="false"></button>
-        <div class="chip-strip stat-exclude-chips" hidden></div>
+        <div class="chip-strip stat-exclude-chips unfolds" hidden></div>
       </div>
       <div class="stat-body"></div>
     </main>
@@ -139,8 +141,15 @@ export function renderAnalysis(root, { book, fileId = '', params = {}, today = n
     })));
   };
   excludeToggle.addEventListener('click', () => {
-    excludeChips.hidden = !excludeChips.hidden;
-    paintExclude();
+    if (excludeChips.hidden) {
+      excludeChips.hidden = false;
+      paintExclude();
+      return;
+    }
+    foldAway(excludeChips).then(() => {
+      excludeChips.hidden = true;
+      paintExclude();
+    });
   });
 
   // --- Sections
@@ -179,6 +188,7 @@ export function renderAnalysis(root, { book, fileId = '', params = {}, today = n
     const wrap = el('div', 'stat-chart');
     const draw = () => {
       wrap.replaceChildren(lineChart({
+        animate: drawing,
         label: t.evolution,
         labels: chartMonths.map((m) => formatShortMonth(m)[0]),
         series: [
@@ -265,7 +275,7 @@ export function renderAnalysis(root, { book, fileId = '', params = {}, today = n
       const arrow = { up: '▲', down: '▼', flat: '=' }[trend.trend];
       head.append(el('span', '', categoryName(trend.categoryId)),
         el('span', trend.trend === 'up' ? 'amount-expense' : trend.trend === 'down' ? 'amount-income' : 'text-muted', arrow));
-      box.append(head, sparkline(trend.series, categoryName(trend.categoryId)));
+      box.append(head, sparkline(trend.series, categoryName(trend.categoryId), { animate: drawing }));
       grid.appendChild(box);
     }
     body.appendChild(grid);
@@ -278,6 +288,7 @@ export function renderAnalysis(root, { book, fileId = '', params = {}, today = n
     const peakDay = pace.peak ? dayOf(pace.peak.date) : null;
     const peakLabel = pace.peak ? `${formatShortDate(pace.peak.date)} ${pace.peak.note || categoryName(pace.peak.categoryId)}` : '';
     body.appendChild(el('div', 'stat-chart')).appendChild(paceChart({
+      animate: drawing,
       spent: pace.spent,
       usual: pace.usual,
       peakDay,
@@ -289,7 +300,7 @@ export function renderAnalysis(root, { book, fileId = '', params = {}, today = n
 
   function paintWeekdays(movements, months) {
     body.appendChild(heading(t.whichDays, t.perWeekday));
-    body.appendChild(el('div', 'stat-chart')).appendChild(barChart(weekdayPattern(movements, months, day), t.weekdays, t.whichDays));
+    body.appendChild(el('div', 'stat-chart')).appendChild(barChart(weekdayPattern(movements, months, day), t.weekdays, t.whichDays, { animate: drawing }));
   }
 
   function paintFixed(movements, average) {
@@ -319,6 +330,10 @@ export function renderAnalysis(root, { book, fileId = '', params = {}, today = n
     if (months.length > 1) body.appendChild(el('p', 'text-muted form-note', t.without.replace('{n}', items.length).replace('{amount}', formatWholeEuros(averageWithout))));
   }
 
+  // The charts draw themselves only when the screen is opened (animate), not
+  // when a month is tapped, the period changes or fresh data repaints it.
+  let drawing = animate;
+
   function paint() {
     paintPeriods();
     paintExclude();
@@ -336,5 +351,6 @@ export function renderAnalysis(root, { book, fileId = '', params = {}, today = n
   }
 
   paint();
+  drawing = false;
   renderNavbar(root, { active: 'analysis' });
 }

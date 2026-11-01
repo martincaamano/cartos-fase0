@@ -109,9 +109,12 @@ export const es = {
     // What a hidden amount shows (tarea 20d).
     hidden: '••••• €',
     seeAll: 'Ver todo ›',
-    revealHint: 'Pulsa INICIO otra vez para ver las cifras.',
+    pendingDot: 'Pendiente de subir',
+    hideAmounts: 'Ocultar las cifras',
+    showAmounts: 'Mostrar las cifras',
   },
   add: {
+    undo: 'Deshacer',
     expense: 'Gasto',
     income: 'Ingreso',
     transfer: 'Transferencia',

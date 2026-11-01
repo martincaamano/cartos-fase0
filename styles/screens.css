@@ -19,8 +19,21 @@
 }
 
 .receipt-total-label {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
   font-size: var(--text-sm);
   letter-spacing: var(--tracking-wider);
+}
+
+/* The eye that hides or shows the amounts (tarea 23) */
+.amounts-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: var(--touch);
+  min-height: var(--touch);
+  color: var(--color-ink-muted);
 }
 
 .receipt-total-amount {

@@ -13,11 +13,20 @@ const SECTIONS = [
   { id: 'settings', label: es.navbar.settings },
 ];
 
-// onReselect: what tapping the section already on view does (INICIO shows
-// its hidden amounts); nothing by default.
-export function renderNavbar(container, { active = 'home', onReselect = null } = {}) {
+// The section marked last time: the mark slides from there (tarea 23).
+let markedBefore = null;
+
+// active: the section on view; tapping it again does nothing.
+export function renderNavbar(container, { active = 'home' } = {}) {
   const nav = document.createElement('nav');
   nav.className = 'navbar';
+  // The mark under the active section, one fifth of the bar per section.
+  const mark = document.createElement('span');
+  mark.className = 'navbar-mark';
+  mark.setAttribute('aria-hidden', 'true');
+  const place = (id) => { mark.style.setProperty('--at', String(SECTIONS.findIndex((section) => section.id === id))); };
+  place(markedBefore ?? active);
+  nav.appendChild(mark);
   for (const section of SECTIONS) {
     const button = document.createElement('button');
     button.type = 'button';
@@ -30,10 +39,13 @@ export function renderNavbar(container, { active = 'home', onReselect = null } =
     }
     button.disabled = !(section.id in SECTION_HASH);
     button.addEventListener('click', () => {
-      if (section.id === active && onReselect) onReselect();
-      else location.hash = SECTION_HASH[section.id];
+      if (section.id !== active) location.hash = SECTION_HASH[section.id];
     });
     nav.appendChild(button);
   }
   container.appendChild(nav);
+  // From where it was to the section on view, once it is on screen.
+  if (markedBefore !== null && markedBefore !== active) requestAnimationFrame(() => requestAnimationFrame(() => place(active)));
+  else place(active);
+  markedBefore = active;
 }

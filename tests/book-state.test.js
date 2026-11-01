@@ -98,6 +98,8 @@ test('book merges the pending movements of the open book only; pendingCount coun
   }).state;
   await offline.refresh();
   assert.equal(offline.pendingCount, 2);
+  // Their ids, to mark them with «·» (tarea 23): only the open book's.
+  assert.deepEqual([...offline.pendingIds].sort(), [edited.id, m2.id].sort());
   assert.deepEqual(offline.book.movements, [edited, m2]);
   assert.deepEqual(offline.book.accounts, [{ id: 'acc-f1' }]);
   // savedBook is the Sheet as read, without pending changes.

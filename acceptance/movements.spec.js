@@ -5,7 +5,6 @@ test('an expense is saved to the Sheet with RAW and the balance drops', async ({
   await app.open();
   await app.addMovement({ amount: '12,34', category: 'Supermercado', note: '=1+1' });
 
-  await expect(page).toHaveURL(/#\/$/);
   await app.reveal();
   await expect(page.locator('.receipt-total-amount')).toHaveText('2.462,17 €');
   const [append] = google.writes();
