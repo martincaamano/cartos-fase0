@@ -77,26 +77,79 @@ export function errorText(codes, map, texts) {
   return key ? texts[key] : '';
 }
 
+// Folding (tarea 23). Showing: an element with the class "unfolds" slides
+// down into place each time it appears (CSS). Hiding: foldAway() slides it
+// up and resolves when it has gone, so the caller hides or removes it then.
+const FOLD_MS = 120;
+const stillMotion = () => globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
+
+export function foldAway(node) {
+  if (!node?.animate || stillMotion()) return Promise.resolve();
+  return node.animate([{ opacity: 1, transform: 'none' }, { opacity: 0, transform: 'translateY(-4px)' }], {
+    duration: FOLD_MS, easing: 'ease-in',
+  }).finished.catch(() => {});
+}
+
+// How long a toast stays (tarea 23).
+export const TOAST_MS = 5000;
+
+// A short notice on top of the screen («✓ 12,50 € · 🛒 Supermercado»), with
+// an optional action (Deshacer). It lives outside the screen, so a repaint
+// keeps it; a new one replaces it. onAction runs once and closes it.
+export function showToast({ text, action = '', onAction = null, duration = TOAST_MS }) {
+  document.querySelector('.toast')?.remove();
+  const toast = el('div', 'toast');
+  toast.setAttribute('role', 'status');
+  toast.appendChild(el('span', 'toast-text', text));
+  const close = () => {
+    clearTimeout(timer);
+    toast.classList.add('is-leaving');
+    setTimeout(() => toast.remove(), 200);
+  };
+  if (action && onAction) {
+    const button = el('button', 'link-button toast-action', action);
+    button.type = 'button';
+    button.addEventListener('click', () => {
+      close();
+      onAction();
+    });
+    toast.appendChild(button);
+  }
+  const timer = setTimeout(close, duration);
+  document.body.appendChild(toast);
+  return close;
+}
+
+// How long «¿Seguro?» waits for the second tap (tarea 23).
+export const CONFIRM_MS = 5000;
+
 // Two taps (Borrar, Quitar): the first one asks with `confirm`, the second
-// one shows `busy` and runs work(), a promise. If it fails the button is
+// one shows `busy` and runs work(), a promise. Without a second tap within
+// CONFIRM_MS the button goes back as at first. If work fails the button is
 // back as at first and fails(err) says why. before() may stop a tap
 // (returns false), e.g. when offline.
 export function twoTap(button, { confirm, busy, work, fails = () => {}, before = () => true }) {
   const idle = button.textContent;
   let armed = false;
+  let timer = null;
+  const disarm = () => {
+    armed = false;
+    button.textContent = idle;
+  };
   button.addEventListener('click', () => {
     if (!before()) return;
     if (!armed) {
       armed = true;
       button.textContent = confirm;
+      timer = setTimeout(disarm, CONFIRM_MS);
       return;
     }
+    clearTimeout(timer);
     const restore = setBusy(button, busy);
     work().catch((err) => {
       fails(err);
       restore();
-      button.textContent = idle;
-      armed = false;
+      disarm();
     });
   });
 }

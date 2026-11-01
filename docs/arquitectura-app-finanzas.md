@@ -167,7 +167,7 @@ Estética minimalista tipo recibo o ticket de compra, con inspiración en el len
 
 ## 12.1. Navegación
 
-Barra de navegación fija inferior (patrón estándar tipo Instagram/Twitter), con cinco secciones: Inicio, Historial, Añadir (acción central), Análisis, y Ajustes (incluye Libros, Cuentas, Categorías, Datos, Tema y Diagnóstico). Desde la tarea 17 la app abre en Añadir; Inicio oculta las cifras al entrar y las muestra al pulsar Inicio otra vez (tarea 20). No se usa un botón flotante independiente. Categorías no tiene hueco fijo propio porque se gestiona pocas veces, normalmente una sola vez al principio.
+Barra de navegación fija inferior (patrón estándar tipo Instagram/Twitter), con cinco secciones: Inicio, Historial, Añadir (acción central), Análisis, y Ajustes (incluye Libros, Cuentas, Categorías, Datos, Tema y Diagnóstico). Desde la tarea 17 la app abre en Añadir; al guardar se queda en Añadir con «Deshacer» (tarea 23). Un ojo junto al total de Inicio oculta o muestra las cifras y se recuerda en el dispositivo (tarea 23). No se usa un botón flotante independiente. Categorías no tiene hueco fijo propio porque se gestiona pocas veces, normalmente una sola vez al principio.
 
 ## 12.2. Pantallas del MVP
 

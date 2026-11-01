@@ -78,3 +78,70 @@ select {
 [hidden] {
   display: none !important;
 }
+
+/* Motion (tarea 23): every screen comes in instead of appearing at once.
+   app.js sets data-enter on a new screen: "tab" (another section of the
+   bar), "forward" (deeper: Ajustes → Cuentas → ficha) or "back". */
+main.screen[data-enter="tab"] {
+  animation: enter-up var(--motion) var(--ease);
+}
+
+main.screen[data-enter="forward"] {
+  animation: enter-from-right var(--motion) var(--ease);
+}
+
+main.screen[data-enter="back"] {
+  animation: enter-from-left var(--motion) var(--ease);
+}
+
+@keyframes enter-up {
+  from { opacity: 0; transform: translateY(var(--enter-shift)); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes enter-from-right {
+  from { opacity: 0; transform: translateX(var(--slide-shift)); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes enter-from-left {
+  from { opacity: 0; transform: translateX(calc(-1 * var(--slide-shift))); }
+  to { opacity: 1; transform: none; }
+}
+
+.unfolds {
+  animation: unfold var(--motion) var(--ease);
+}
+
+@keyframes unfold {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* A tap sinks buttons, chips and rows a little */
+button,
+a.receipt-row,
+.chip {
+  transition: transform var(--motion-fast) var(--ease), opacity var(--motion-fast) var(--ease);
+}
+
+button:active:not(:disabled),
+a.receipt-row:active,
+.chip:active {
+  transform: scale(0.97);
+}
+
+/* «Reducir movimiento» in iOS: nothing moves. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}

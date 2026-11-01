@@ -25,6 +25,9 @@ export default defineConfig({
     locale: 'es-ES',
     timezoneId: 'Europe/Madrid',
     trace: 'retain-on-failure',
+    // Without animations (tarea 23): screens and style snapshots never
+    // depend on the instant a motion is at. The app honours it as iOS does.
+    reducedMotion: 'reduce',
   },
   projects: [
     { name: 'webkit', use: { ...devices['iPhone 15'], serviceWorkers: 'block' } },

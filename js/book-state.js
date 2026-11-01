@@ -153,6 +153,8 @@ export function createBookState(deps) {
       return { ...current.book, movements: mergePending(current.book.movements, pending) };
     },
     get pendingCount() { return pending.length; },
+    // Their ids, to mark them on screen.
+    get pendingIds() { return new Set(pending.map((movement) => movement.id)); },
     // Movements that cannot be uploaded: their book refuses them (403/404).
     get blockedCount() { return blockedCount; },
     refresh,

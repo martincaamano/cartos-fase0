@@ -124,7 +124,9 @@ async function transferToCasa(page, app, { amount, expense, income, note }) {
     await page.fill('input[name=note]', note);
   }
   await page.click('.form-submit');
-  await app.settle();
+  // Without both categories nothing is saved and the form stays.
+  if (expense && income) await app.saved();
+  else await app.settle();
 }
 
 test('a transfer to another book is an expense here and an income there', async ({ page, app, google }) => {
@@ -175,4 +177,24 @@ test('a transfer to another book needs both categories', async ({ page, app, goo
   await transferToCasa(page, app, { amount: '20', expense: '🍽️ Restaurantes' });
   await expect(page.locator('.form-error')).toHaveText('Elige una categoría.');
   expect(google.writes()).toHaveLength(writes);
+});
+
+test('Deshacer a transfer to another book takes back both halves, each in its book', async ({ page, app, google }) => {
+  await createBook(page, app, { name: 'Casa do medio', account: 'Cuenta común', balance: '0' });
+  const casa = google.calls.find((call) => call.op === 'drive.create').fileId;
+  await openBook(page, app, 'Personal');
+  await app.go('#/add?type=transfer');
+  await page.selectOption('select[name=from]', { label: '🏦 Abanca' });
+  await page.selectOption('select[name=to]', { label: '🏦 Cuenta común · Casa do medio' });
+  await page.fill('.amount-input', '40');
+  await page.selectOption('select[name=expenseCategory]', { label: '🍽️ Restaurantes' });
+  await page.selectOption('select[name=incomeCategory]', { label: '💰 Otros ingresos' });
+  await page.click('.form-submit');
+  await expect(page.locator('.toast')).toContainText('✓ 40,00 € · 🏦 Abanca → 🏦 Cuenta común');
+  await app.settle();
+  await page.click('.toast-action');
+  await app.settle();
+  const [here] = google.movements().filter((m) => m.amount === 40);
+  const [there] = google.movements(casa).filter((m) => m.amount === 40);
+  expect([here.deleted, there.deleted]).toEqual([true, true]);
 });

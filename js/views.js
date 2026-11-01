@@ -8,7 +8,10 @@
 import { SECTIONS, SECTION_HASH } from './ui/router.js';
 import { findEntry } from './domain/history.js';
 import { getCurrentUser } from './data/auth.js';
+import { es } from '../i18n/es.js';
 import { cachedBook } from './data/books.js';
+import { loadAmountsHidden, saveAmountsHidden } from './storage/amounts-visibility.js';
+import { showToast } from './ui/components.js';
 import { renderDashboard } from './screens/dashboard.js';
 import { renderAddMovement } from './screens/addMovement.js';
 import { renderHistory } from './screens/history.js';
@@ -29,9 +32,6 @@ import { renderCategoryCard } from './screens/category-card.js';
 // is more than one book.
 const bookName = (state) => (state.books.length > 1 ? state.bookInfo?.name ?? '' : '');
 
-// INICIO shows its amounts once INICIO is tapped again (tarea 20d).
-let amountsRevealed = false;
-
 // After a card saved to the Sheet: back to its list, which repaints once
 // the book is read again.
 const savedTo = (state, redirect, hash) => () => {
@@ -46,24 +46,24 @@ const otherBooks = (state) => state.books
   .filter((other) => other.book);
 
 export const VIEWS = Object.freeze({
-  [SECTIONS.HOME]: function home({ root, state, offline, repaint }) {
-    // Amounts arrive hidden on every visit; fresh data keeps what was chosen.
-    if (!repaint) amountsRevealed = false;
+  [SECTIONS.HOME]: function home({ root, state, offline, swapped = false }) {
     renderDashboard(root, {
       book: state.book,
       bookName: bookName(state),
       offline,
       pendingCount: state.pendingCount,
+      pendingIds: state.pendingIds,
       blockedCount: state.blockedCount,
-      revealed: amountsRevealed,
-      onReveal: () => {
-        amountsRevealed = true;
-        home({ root, state, offline, repaint: true });
+      hidden: loadAmountsHidden(localStorage),
+      swapped,
+      onToggleHidden: () => {
+        saveAmountsHidden(localStorage, !loadAmountsHidden(localStorage));
+        home({ root, state, offline, repaint: true, swapped: true });
       },
     });
   },
 
-  [SECTIONS.HISTORY]: ({ root, state, params }) => renderHistory(root, { book: state.book, params }),
+  [SECTIONS.HISTORY]: ({ root, state, params }) => renderHistory(root, { book: state.book, params, pendingIds: state.pendingIds }),
 
   [SECTIONS.EDIT]: ({ root, state, params, redirect, saved }) => {
     const book = state.book;
@@ -75,17 +75,22 @@ export const VIEWS = Object.freeze({
     });
   },
 
-  [SECTIONS.ADD]: ({ root, state, params, saved }) =>
+  // After saving it stays, clean for the next one, with «✓ … Deshacer».
+  [SECTIONS.ADD]: ({ root, state, params, savedHere }) =>
     renderAddMovement(root, {
       book: state.book,
       bookName: bookName(state),
       otherBooks: otherBooks(state),
       fileId: state.fileId,
       params,
-      onSaved: saved(SECTION_HASH.home),
+      onSaved: (movements, { summary, undo }) => {
+        savedHere(movements);
+        showToast({ text: `✓ ${summary}`, action: es.add.undo, onAction: () => undo().then(savedHere) });
+      },
     }),
 
-  [SECTIONS.ANALYSIS]: ({ root, state, params }) => renderAnalysis(root, { book: state.book, fileId: state.fileId, params }),
+  [SECTIONS.ANALYSIS]: ({ root, state, params, repaint }) =>
+    renderAnalysis(root, { book: state.book, fileId: state.fileId, params, animate: !repaint }),
 
   [SECTIONS.SETTINGS]: ({ root, state, signOut }) => renderSettings(root, {
     user: getCurrentUser(),

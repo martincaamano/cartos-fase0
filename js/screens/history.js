@@ -15,9 +15,9 @@ import { rankAllCategories, TRANSFER_CATEGORY_ID } from '../domain/category.js';
 import { toIsoDate } from '../domain/movement.js';
 import { isMonth } from '../domain/stats.js';
 import { formatEuros, formatMonth, formatMonthRange, formatShortMonth, formatSums, labelOf } from '../ui/format.js';
-import { lookupsOf, movementLine, sumLine } from '../ui/receipt.js';
+import { isPendingEntry, lookupsOf, movementLine, sumLine } from '../ui/receipt.js';
 import { SECTION_HASH } from '../ui/router.js';
-import { el, fillTexts, renderChoices, toggleChip } from '../ui/components.js';
+import { el, fillTexts, foldAway, renderChoices, toggleChip } from '../ui/components.js';
 import { renderNavbar } from '../ui/navbar.js';
 import { HISTORY_VIEWS, loadHistoryView, saveHistoryView } from '../storage/history-view.js';
 
@@ -28,7 +28,10 @@ const PAGE_SIZE = 200;
 // params: { account } opens it filtered by that account (from INICIO);
 // { month } by that month (from Análisis).
 // storage: where the view chosen last is remembered.
-export function renderHistory(root, { book, params = {}, today = new Date(), storage = globalThis.localStorage }) {
+// pendingIds: movements not in the Sheet yet, marked with «·».
+export function renderHistory(root, {
+  book, params = {}, today = new Date(), storage = globalThis.localStorage, pendingIds = new Set(),
+}) {
   const t = es.history;
   root.innerHTML = `
     <main class="screen screen-form screen-with-navbar screen-history">
@@ -37,7 +40,7 @@ export function renderHistory(root, { book, params = {}, today = new Date(), sto
         <button type="button" class="link-button history-clear" data-text="clear" hidden></button>
         <div class="history-views" role="group"></div>
       </div>
-      <div class="history-filters" hidden>
+      <div class="history-filters unfolds" hidden>
         <p class="history-filter-head"><span data-text="months"></span><span class="history-range"></span></p>
         <div class="chip-strip history-months"></div>
         <p class="history-filter-head"><span data-text="accounts"></span><span class="history-count-accounts"></span></p>
@@ -80,6 +83,7 @@ export function renderHistory(root, { book, params = {}, today = new Date(), sto
   let shown = 0;
 
   const movementItem = (entry) => movementLine(entry, lookups, {
+    pending: isPendingEntry(entry, pendingIds),
     withNote: true,
     href: `${SECTION_HASH.edit}?id=${encodeURIComponent(entry.id)}`,
     className: 'history-line',
@@ -118,14 +122,23 @@ export function renderHistory(root, { book, params = {}, today = new Date(), sto
       el('span', tone ? `tree-value amount-${tone}` : 'tree-value', value),
     );
     head.addEventListener('click', () => {
-      if (state.open.has(key)) state.open.delete(key);
-      else state.open.add(key);
-      paint();
+      if (!state.open.has(key)) {
+        state.open.add(key);
+        state.justOpened = key;
+        paint();
+        state.justOpened = null;
+        return;
+      }
+      // Folds up, then goes.
+      foldAway(wrap.querySelector('.tree-body')).then(() => {
+        state.open.delete(key);
+        paint();
+      });
     });
     wrap.appendChild(head);
     if (sums) wrap.appendChild(sumLine(sums, { withNet: false }));
     if (isOpen) {
-      const body = el('div', 'tree-body');
+      const body = el('div', key === state.justOpened ? 'tree-body unfolds' : 'tree-body');
       body.append(...children());
       wrap.appendChild(body);
     }
@@ -259,14 +272,18 @@ export function renderHistory(root, { book, params = {}, today = new Date(), sto
   }
 
   toggle.addEventListener('click', () => {
-    const opening = panel.hidden;
-    panel.hidden = !opening;
+    if (!panel.hidden) {
+      foldAway(panel).then(() => {
+        panel.hidden = true;
+        paintFilters();
+      });
+      return;
+    }
+    panel.hidden = false;
     paintFilters();
     // The current month is on the right; start there.
-    if (opening) {
-      const months = root.querySelector('.history-months');
-      months.scrollLeft = months.scrollWidth;
-    }
+    const months = root.querySelector('.history-months');
+    months.scrollLeft = months.scrollWidth;
   });
   clear.addEventListener('click', () => {
     state.range = null;

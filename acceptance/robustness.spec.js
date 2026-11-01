@@ -13,7 +13,7 @@ test('two expenses saved one right after the other both reach the Sheet without 
     await page.fill('.amount-input', amount);
     await page.locator('.category-option', { hasText: 'Supermercado' }).first().click();
     await page.click('.form-submit');
-    await expect(page).toHaveURL(/#\/$/);
+    await expect(page.locator('.toast')).toContainText(`${amount},00 €`);
   }
   await expect.poll(() => google.movements().map((m) => m.amount).filter((a) => a === 11 || a === 22).sort(), { timeout: 15_000 })
     .toEqual([11, 22]);

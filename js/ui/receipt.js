@@ -2,6 +2,7 @@
 // dashed rule below. Every list in the app is built from these, so the look
 // of a line changes in one place. Touches the DOM only when called.
 
+import { es } from '../../i18n/es.js';
 import { formatEuros, formatShortDate, formatSums, labelOf } from './format.js';
 
 // What a movement line says, without the DOM. entry: from groupEntries or
@@ -61,10 +62,30 @@ export function receiptLine(label, right, { tone = '', href = null, className = 
   return item;
 }
 
-// withNote adds the note in grey after the label (History).
-export function movementLine(entry, lookups, { withAccount = false, withNote = false, ...options } = {}) {
+// Whether an entry (a movement or both halves of a transfer) is still only
+// on the device. pendingIds: ids of the movements in the outbox.
+export function isPendingEntry(entry, pendingIds) {
+  const ids = entry.kind === 'transfer' ? entry.halves.map((half) => half.id) : [entry.movement.id];
+  return ids.some((id) => pendingIds.has(id));
+}
+
+// withNote adds the note in grey after the label (History). pending marks
+// the amount with a grey «·»: not in the Sheet yet (tarea 23). amountText
+// replaces the amount (INICIO with its amounts hidden).
+export function movementLine(entry, lookups, {
+  withAccount = false, withNote = false, pending = false, amountText = null, ...options
+} = {}) {
   const { label, amount, tone, note } = movementLineModel(entry, lookups, { withAccount });
-  return receiptLine(label, formatEuros(amount), { tone, note: withNote ? note : '', ...options });
+  const line = receiptLine(label, amountText ?? formatEuros(amount), { tone: amountText ? '' : tone, note: withNote ? note : '', ...options });
+  if (pending) {
+    const dot = document.createElement('span');
+    dot.className = 'pending-dot';
+    dot.textContent = '·';
+    dot.title = es.dashboard.pendingDot;
+    dot.setAttribute('aria-label', es.dashboard.pendingDot);
+    line.querySelector('.receipt-amount').prepend(dot);
+  }
+  return line;
 }
 
 // Maps for the lookups above, built once per screen.
@@ -128,6 +149,10 @@ export function appendFolded(list, items, { shown, line, moreText, className = '
   more.className = className;
   more.textContent = moreText.replace('{n}', rest.length);
   const item = receiptLine('', more, { className: rowClass });
-  more.addEventListener('click', () => item.replaceWith(...rest.map(line)));
+  more.addEventListener('click', () => {
+    const rows = rest.map(line);
+    for (const row of rows) row.classList.add('unfolds');
+    item.replaceWith(...rows);
+  });
   list.appendChild(item);
 }
