@@ -67,11 +67,12 @@
   /* Motion (tarea 23): short, no bounce. With «Reducir movimiento» there is
      none (base.css). */
   --motion-fast: 120ms;
-  --motion: 180ms;
-  --motion-slow: 400ms;
-  --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
-  --enter-shift: 6px;
-  --slide-shift: 24px;
+  --motion: 260ms;
+  --motion-slide: 280ms;
+  --motion-slow: 600ms;
+  --ease: cubic-bezier(0.4, 0, 0.2, 1);
+  --enter-shift: 16px;
+  --slide-shift: 48px;
   --navbar-room: 72px; /* space left at the bottom for the fixed navbar */
   --radius: 2px;
   --opacity-disabled: 0.5;
