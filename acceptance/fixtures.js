@@ -71,7 +71,9 @@ function fakeGoogle(book) {
   const json = (route, body) =>
     route.fulfill({ status: 200, contentType: 'application/json', headers: CORS, body: JSON.stringify(body) });
   const preflight = (route) => route.request().method() === 'OPTIONS' && route.fulfill({ status: 204, headers: CORS });
-  const fake = { picked: null };
+  // picked: the file the fake Picker picks. delay: ms Sheets waits before
+  // answering, to have one upload still running when the next one starts.
+  const fake = { picked: null, delay: 0 };
   const metadata = (id, { name, appProperties, createdTime, canShare = true }) =>
     ({ id, name, createdTime, appProperties, capabilities: { canShare } });
 
@@ -144,8 +146,9 @@ function fakeGoogle(book) {
       });
     });
 
-    await context.route('https://sheets.googleapis.com/**', (route) => {
+    await context.route('https://sheets.googleapis.com/**', async (route) => {
       if (preflight(route)) return undefined;
+      if (fake.delay) await new Promise((resolve) => { setTimeout(resolve, fake.delay); });
       const request = route.request();
       const url = new URL(request.url());
       const fileId = decodeURIComponent(url.pathname.match(/spreadsheets\/([^/:]+)/)[1]);
@@ -216,6 +219,8 @@ function fakeGoogle(book) {
     install,
     // The file the fake Picker picks (null: the user closes it).
     pick: (fileId) => { fake.picked = fileId; },
+    // Sheets answers `ms` later from now on.
+    slow: (ms) => { fake.delay = ms; },
     // Movements of a book as objects, header left out.
     movements: (fileId = null) => (fileId ? files.get(fileId).rows : rows).Movements.slice(1).map((row) =>
       Object.fromEntries(HEADERS.Movements.map((name, i) => [name, row[i]]))),

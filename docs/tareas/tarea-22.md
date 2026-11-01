@@ -1,6 +1,6 @@
 # Tarea 22 — Mantenibilidad
 
-Estado: en curso (2026-10-31).
+Estado: hecha (2026-11-01).
 Depende de: 21 (fusionada).
 
 ## Objetivo
@@ -16,5 +16,5 @@ Sale de una revisión de mantenibilidad (2026-10-31). Se hace en cuatro partes, 
 Cambios de comportamiento o de diseño. Renombrar los callbacks de todas las pantallas o mover el tema a `storage/`: cambian nombres sin ganar claridad.
 
 ## Criterio de cierre
-- [ ] 22a–22d fusionadas; la app se comporta igual en el iPhone (prueba rápida: añadir, editar, historial, análisis, ajustes).
-- [ ] `npm test` y `npm run acceptance` en verde, sin cambiar lo que comprueban (solo dónde viven los ayudantes).
+- [x] 22a–22d fusionadas (PR #59–#62); la app se comporta igual: las pruebas de aceptación de Añadir, editar, Historial, Análisis y Ajustes pasan sin cambios y ninguna foto de estilos cambió (sustituye a la prueba en el iPhone, a petición del usuario).
+- [x] `npm test` y `npm run acceptance` en verde, sin cambiar lo que comprueban (solo dónde viven los ayudantes).

@@ -1,6 +1,6 @@
 # Tarea 21 — Robustez
 
-Estado: en curso (2026-10-31).
+Estado: hecha (2026-11-01).
 Depende de: 18a (fusionada).
 
 ## Objetivo
@@ -38,10 +38,11 @@ Mejoras de experiencia propuestas en la revisión (quedarse en Añadir tras guar
 Un test por cada fallo de A y B (dominio, datos con `fetch` simulado, estado del libro con dependencias falsas) y aceptación donde toque la pantalla.
 
 ## Pruebas manuales en iPhone
-- [ ] Guardar dos gastos seguidos rápido: los dos llegan al Sheet sin cerrar la app.
-- [ ] Dejar la app abierta en Añadir de un día para otro: «Hoy» es el día nuevo.
-- [ ] Una cuenta con saldo inicial negativo con decimales se edita sin error.
+Sustituidas por pruebas de aceptación (`acceptance/robustness.spec.js`), a petición del usuario: no quiere probar en la app con datos reales. Cada una falla si se quita su arreglo.
+- [x] Guardar dos gastos seguidos rápido: los dos llegan al Sheet sin cerrar la app (Google simulado lento, para que se solapen).
+- [x] Dejar la app abierta en Añadir de un día para otro: «Hoy» es el día nuevo.
+- [x] Una cuenta con saldo inicial negativo con decimales se edita sin error.
 
 ## Criterio de cierre
-- [ ] Fusionada y probada en el iPhone.
-- [ ] `npm test` y `npm run acceptance` en verde.
+- [x] Fusionada (PR #58) y probada con las pruebas de aceptación de arriba.
+- [x] `npm test` y `npm run acceptance` en verde.
