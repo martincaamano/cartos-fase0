@@ -17,7 +17,7 @@ import { isMonth } from '../domain/stats.js';
 import { formatEuros, formatMonth, formatMonthRange, formatShortMonth, formatSums, labelOf } from '../ui/format.js';
 import { isPendingEntry, lookupsOf, movementLine, sumLine } from '../ui/receipt.js';
 import { SECTION_HASH } from '../ui/router.js';
-import { el, fillTexts, foldAway, renderChoices, toggleChip } from '../ui/components.js';
+import { el, fillTexts, foldAway, renderChoices, toggleChip, unfold } from '../ui/components.js';
 import { renderNavbar } from '../ui/navbar.js';
 import { HISTORY_VIEWS, loadHistoryView, saveHistoryView } from '../storage/history-view.js';
 
@@ -40,7 +40,7 @@ export function renderHistory(root, {
         <button type="button" class="link-button history-clear" data-text="clear" hidden></button>
         <div class="history-views" role="group"></div>
       </div>
-      <div class="history-filters unfolds" hidden>
+      <div class="history-filters" hidden>
         <p class="history-filter-head"><span data-text="months"></span><span class="history-range"></span></p>
         <div class="chip-strip history-months"></div>
         <p class="history-filter-head"><span data-text="accounts"></span><span class="history-count-accounts"></span></p>
@@ -127,6 +127,8 @@ export function renderHistory(root, {
         state.justOpened = key;
         paint();
         state.justOpened = null;
+        unfold(state.unfolding);
+        state.unfolding = null;
         return;
       }
       // Folds up, then goes.
@@ -138,7 +140,8 @@ export function renderHistory(root, {
     wrap.appendChild(head);
     if (sums) wrap.appendChild(sumLine(sums, { withNet: false }));
     if (isOpen) {
-      const body = el('div', key === state.justOpened ? 'tree-body unfolds' : 'tree-body');
+      const body = el('div', 'tree-body');
+      if (key === state.justOpened) state.unfolding = body;
       body.append(...children());
       wrap.appendChild(body);
     }
@@ -281,6 +284,7 @@ export function renderHistory(root, {
     }
     panel.hidden = false;
     paintFilters();
+    unfold(panel);
     // The current month is on the right; start there.
     const months = root.querySelector('.history-months');
     months.scrollLeft = months.scrollWidth;

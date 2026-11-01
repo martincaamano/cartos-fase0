@@ -18,7 +18,7 @@ import {
 } from '../ui/format.js';
 import { appendFolded, receiptLine } from '../ui/receipt.js';
 import { SECTION_HASH } from '../ui/router.js';
-import { el, fillTexts, foldAway, renderChoices, toggleChip } from '../ui/components.js';
+import { el, fillTexts, foldAway, renderChoices, toggleChip, unfold } from '../ui/components.js';
 import { renderNavbar } from '../ui/navbar.js';
 import { barChart, lineChart, paceChart, sparkline } from '../ui/charts.js';
 import { loadExcluded, saveExcluded } from '../storage/analysis-exclude.js';
@@ -65,7 +65,7 @@ export function renderAnalysis(root, {
       </div>
       <div class="stat-exclude">
         <button type="button" class="link-button stat-exclude-toggle" aria-expanded="false"></button>
-        <div class="chip-strip stat-exclude-chips unfolds" hidden></div>
+        <div class="chip-strip stat-exclude-chips" hidden></div>
       </div>
       <div class="stat-body"></div>
     </main>
@@ -144,6 +144,7 @@ export function renderAnalysis(root, {
     if (excludeChips.hidden) {
       excludeChips.hidden = false;
       paintExclude();
+      unfold(excludeChips);
       return;
     }
     foldAway(excludeChips).then(() => {

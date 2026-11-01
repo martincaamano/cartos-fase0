@@ -87,11 +87,11 @@ main.screen[data-enter="tab"] {
 }
 
 main.screen[data-enter="forward"] {
-  animation: enter-from-right var(--motion) var(--ease);
+  animation: enter-from-right var(--motion-slide) var(--ease);
 }
 
 main.screen[data-enter="back"] {
-  animation: enter-from-left var(--motion) var(--ease);
+  animation: enter-from-left var(--motion-slide) var(--ease);
 }
 
 @keyframes enter-up {
@@ -106,15 +106,6 @@ main.screen[data-enter="back"] {
 
 @keyframes enter-from-left {
   from { opacity: 0; transform: translateX(calc(-1 * var(--slide-shift))); }
-  to { opacity: 1; transform: none; }
-}
-
-.unfolds {
-  animation: unfold var(--motion) var(--ease);
-}
-
-@keyframes unfold {
-  from { opacity: 0; transform: translateY(-4px); }
   to { opacity: 1; transform: none; }
 }
 

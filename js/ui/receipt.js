@@ -3,6 +3,7 @@
 // of a line changes in one place. Touches the DOM only when called.
 
 import { es } from '../../i18n/es.js';
+import { unfold } from './components.js';
 import { formatEuros, formatShortDate, formatSums, labelOf } from './format.js';
 
 // What a movement line says, without the DOM. entry: from groupEntries or
@@ -151,8 +152,8 @@ export function appendFolded(list, items, { shown, line, moreText, className = '
   const item = receiptLine('', more, { className: rowClass });
   more.addEventListener('click', () => {
     const rows = rest.map(line);
-    for (const row of rows) row.classList.add('unfolds');
     item.replaceWith(...rows);
+    for (const row of rows) unfold(row);
   });
   list.appendChild(item);
 }

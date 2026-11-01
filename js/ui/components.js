@@ -77,17 +77,37 @@ export function errorText(codes, map, texts) {
   return key ? texts[key] : '';
 }
 
-// Folding (tarea 23). Showing: an element with the class "unfolds" slides
-// down into place each time it appears (CSS). Hiding: foldAway() slides it
-// up and resolves when it has gone, so the caller hides or removes it then.
-const FOLD_MS = 120;
+// Folding (tarea 23): a block grows from nothing to its height when it
+// opens, and shrinks back when it closes. Durations and easing come from
+// the tokens (--motion, --ease), so CSS and JS move alike. With reduced
+// motion nothing moves.
 const stillMotion = () => globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
 
+function motionToken(name, fallback) {
+  const value = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  return value || fallback;
+}
+
+function resize(node, from, to) {
+  node.style.overflow = 'hidden';
+  const run = node.animate([from, to], {
+    duration: parseFloat(motionToken('--motion', '260ms')),
+    easing: motionToken('--ease', 'ease-out'),
+  });
+  return run.finished.catch(() => {}).then(() => { node.style.overflow = ''; });
+}
+
+// A block just shown (or just inserted, once it is on screen) unfolds.
+export function unfold(node) {
+  if (!node?.animate || stillMotion()) return;
+  resize(node, { height: '0px', opacity: 0 }, { height: `${node.scrollHeight}px`, opacity: 1 });
+}
+
+// A block about to be hidden or removed folds up; resolves when it has, so
+// the caller hides or removes it then.
 export function foldAway(node) {
   if (!node?.animate || stillMotion()) return Promise.resolve();
-  return node.animate([{ opacity: 1, transform: 'none' }, { opacity: 0, transform: 'translateY(-4px)' }], {
-    duration: FOLD_MS, easing: 'ease-in',
-  }).finished.catch(() => {});
+  return resize(node, { height: `${node.offsetHeight}px`, opacity: 1 }, { height: '0px', opacity: 0 });
 }
 
 // How long a toast stays (tarea 23).
