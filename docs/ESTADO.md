@@ -126,6 +126,8 @@ Decidido el 2026-10-29: empezar el libro personal con el histórico real (import
 | 20 | Experiencia: pantallas más simples | Hecha (2026-10-31) | En cinco partes (20a Añadir, 20b Historial, 20c Libros/Cuentas/Categorías, 20d Ajustes/INICIO, 20e Análisis), PR #46–#50. Probada en iPhone |
 | 18 | Libro compartido | En curso | 18a (compartir y abrir con el Picker) fusionada; falta la clave de API. 18b (persona en los gastos) descartada |
 | 19 | Importar la reforma | Hecha (2026-10-31) | 87 movimientos importados en Casa do Medio; la descarga del libro coincide fila a fila con lo generado y el saldo cuadra con el banco |
+| 21 | Robustez | Hecha (2026-11-01) | Fallos de una revisión completa (PR #58). Comprobada con pruebas de aceptación, no en el iPhone |
+| 22 | Mantenibilidad | Hecha (2026-11-01) | Sin duplicados, en cuatro partes (PR #59–#62). Sin cambios para el usuario |
 
 ### Decisiones tomadas en la tarea 19
 - Hecha antes que la 18 y sin código: se usó el importador de la tarea 16 (JSON de Cartos desde Ajustes → Datos), que trae los emojis de las categorías nuevas.
@@ -140,6 +142,15 @@ Decidido el 2026-10-29: empezar el libro personal con el histórico real (import
 - Quedan fuera las compras ajenas que salieron de la cuenta y sus devoluciones, las filas del Excel sin fecha (pendientes de confirmar) y el presupuesto.
 - El saldo de Cartos supera al del banco en lo que aún falta por devolver de esas compras ajenas.
 - Desde ahora los datos de la reforma se apuntan en Cartos; el Excel queda en Drive solo como copia.
+
+### Decisiones tomadas en las tareas 21 y 22
+- Salen de dos revisiones completas del código (fallos y mantenibilidad), el 2026-10-31.
+- Pruebas: el usuario ya usa la app con datos reales y no quiere probar en ella. Lo que pedía prueba en el iPhone se comprueba con pruebas de aceptación (Google simulado, datos inventados), y cada una se verificó quitando su arreglo: falla sin él.
+  - `acceptance/robustness.spec.js`: dos gastos seguidos con Google lento, «Hoy» tras cambiar de día, saldo inicial negativo con decimales.
+  - El Google simulado de aceptación puede responder lento (`google.slow(ms)`).
+- Lo que solo se ve en el iPhone real (inicio de sesión con Google, la app instalada, el aspecto) sigue siendo prueba manual cuando haga falta.
+- 22: la app se comporta igual; ninguna foto de estilos cambió en las cuatro partes. Los gráficos salen idénticos, comparados carácter a carácter.
+- Mejoras de experiencia propuestas en la revisión (quedarse en Añadir con «Deshacer», desarmar los botones de dos toques, marcar lo pendiente de subir): sin decidir.
 
 ### Decisiones tomadas en la tarea 20
 - Se hizo en cinco partes, no en cuatro: Análisis (20e) se separó de Ajustes/INICIO (20d).
