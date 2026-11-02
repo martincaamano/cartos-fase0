@@ -47,3 +47,13 @@ export function hasAtMostTwoDecimals(amount) {
   // Tolerance absorbs float noise (0.29 * 100 = 28.999999999999996).
   return Math.abs(scaled - Math.round(scaled)) < 1e-6;
 }
+
+// A counter going from one amount to another (tarea 23): the amount at
+// `progress` (0 → 1), easing out so it slows down at the end. In cents, so
+// it ends exactly on `to`.
+export function countAmount(from, to, progress) {
+  const p = Math.min(1, Math.max(0, progress));
+  const eased = 1 - (1 - p) ** 3;
+  const start = toCents(from);
+  return fromCents(Math.round(start + (toCents(to) - start) * eased));
+}

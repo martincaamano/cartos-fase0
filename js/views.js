@@ -45,6 +45,14 @@ const otherBooks = (state) => state.books
   .map((info) => ({ fileId: info.fileId, name: info.name, book: cachedBook(info.fileId) }))
   .filter((other) => other.book);
 
+// The amounts INICIO showed last, per book, while the app is open: one that
+// changed counts to its new value (tarea 23).
+const seenAmounts = new Map();
+const seenIn = (fileId) => {
+  if (!seenAmounts.has(fileId)) seenAmounts.set(fileId, new Map());
+  return seenAmounts.get(fileId);
+};
+
 export const VIEWS = Object.freeze({
   [SECTIONS.HOME]: function home({ root, state, offline, swapped = false }) {
     renderDashboard(root, {
@@ -55,6 +63,7 @@ export const VIEWS = Object.freeze({
       pendingIds: state.pendingIds,
       blockedCount: state.blockedCount,
       hidden: loadAmountsHidden(localStorage),
+      seen: seenIn(state.fileId),
       swapped,
       onToggleHidden: () => {
         saveAmountsHidden(localStorage, !loadAmountsHidden(localStorage));

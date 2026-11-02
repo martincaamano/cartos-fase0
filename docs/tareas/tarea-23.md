@@ -18,7 +18,9 @@ Que usar Cartos se sienta natural: guardar seguido sin saltar de pantalla, ver q
   - botones y chips se hunden un poco al pulsarlos;
   - el aviso de guardado baja desde arriba y se va con un fundido;
   - el ojo funde las cifras al cambiar;
-  - los gráficos de Análisis se dibujan la primera vez que se ven (unos 400 ms).
+  - los gráficos de Análisis se dibujan la primera vez que se ven (unos 400 ms);
+  - un importe que cambió cuenta desde el valor anterior hasta el nuevo (0,6 s, en céntimos exactos): TOTAL y saldos de INICIO cuando cambian desde la última vez que se vieron, y el total de Historial al filtrar. La primera vez, con las cifras ocultas o con «Reducir movimiento», sale directo.
+  - Tras probarlas en el iPhone se hicieron más visibles (16 px y 48 px, 260–280 ms, curva más repartida; los desplegables crecen en altura): las primeras no se notaban.
   - Duraciones en `styles/tokens.css` (`--motion-*`). Con «Reducir movimiento» de iOS no hay animaciones.
 
 ## Pruebas automáticas

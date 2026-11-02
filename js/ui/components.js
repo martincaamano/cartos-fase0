@@ -4,9 +4,9 @@
 
 import { es } from '../../i18n/es.js';
 import { quickDates } from '../domain/movement.js';
-import { parseAmountInput } from '../domain/money.js';
+import { countAmount, parseAmountInput } from '../domain/money.js';
 import { createAccount, validateAccount } from '../domain/account.js';
-import { formatAmountInput, formatShortDate } from './format.js';
+import { formatAmountInput, formatEuros, formatShortDate } from './format.js';
 
 // An element with its class and text: el('span', 'amount-income', '+12').
 export function el(tag, className = '', text = '') {
@@ -108,6 +108,40 @@ export function unfold(node) {
 export function foldAway(node) {
   if (!node?.animate || stillMotion()) return Promise.resolve();
   return resize(node, { height: `${node.offsetHeight}px`, opacity: 1 }, { height: '0px', opacity: 0 });
+}
+
+// An amount that changed counts from the old one to the new one (tarea 23),
+// so the change is seen. from: what was shown before, or null (shown at
+// once, as when there was none or nothing moves). format: euros → text.
+const COUNT_MS = 600;
+
+// startedAt: when the count began (a repaint in the middle carries on).
+export function showAmount(node, value, { from = null, format = formatEuros, startedAt = null } = {}) {
+  if (from === null || from === value || stillMotion() || !globalThis.requestAnimationFrame) {
+    node.textContent = format(value);
+    return;
+  }
+  const start = startedAt ?? performance.now();
+  const step = (now) => {
+    const progress = (now - start) / COUNT_MS;
+    node.textContent = format(countAmount(from, value, progress));
+    if (progress < 1 && node.isConnected) requestAnimationFrame(step);
+  };
+  node.textContent = format(countAmount(from, value, (performance.now() - start) / COUNT_MS));
+  requestAnimationFrame(step);
+}
+
+// An amount kept in `seen` (key → { value, from, start }) across paints:
+// it counts when it changed since last shown, and a repaint while it counts
+// (fresh data after a sync) carries on instead of jumping to the end.
+export function showSeenAmount(node, seen, key, value, options = {}) {
+  const now = performance.now();
+  const last = seen.get(key);
+  if (last && last.value !== value) seen.set(key, { value, from: last.value, start: now });
+  else if (!last) seen.set(key, { value, from: null, start: now });
+  const { from, start } = seen.get(key);
+  const counting = from !== null && now - start < COUNT_MS;
+  showAmount(node, value, { ...options, from: counting ? from : null, startedAt: start });
 }
 
 // How long a toast stays (tarea 23).
