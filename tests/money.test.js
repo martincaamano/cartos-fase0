@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  toCents, fromCents, hasAtMostTwoDecimals, incomeExpenseNet, parseAmountInput, sumCents,
+  countAmount, toCents, fromCents, hasAtMostTwoDecimals, incomeExpenseNet, parseAmountInput, sumCents,
 } from '../js/domain/money.js';
 
 test('0,1 + 0,2 is exactly 0,30 when added in cents', () => {
@@ -62,4 +62,25 @@ test('incomeExpenseNet splits by type and nets in cents', () => {
   ];
   assert.deepEqual(incomeExpenseNet(movements), { income: 0.3, expense: 0.3, net: 0 });
   assert.deepEqual(incomeExpenseNet([]), { income: 0, expense: 0, net: 0 });
+});
+
+// --- countAmount (tarea 23) ---
+
+test('countAmount goes from one amount to the other, ending exactly on it', () => {
+  assert.equal(countAmount(35159.92, 35147.42, 0), 35159.92);
+  assert.equal(countAmount(35159.92, 35147.42, 1), 35147.42);
+  assert.equal(countAmount(0.1, 0.3, 1), 0.3);
+  // It eases out: past the middle well before half the time.
+  assert.ok(countAmount(0, 100, 0.5) > 50);
+  // Out of range progress is clamped.
+  assert.equal(countAmount(10, 20, -1), 10);
+  assert.equal(countAmount(10, 20, 2), 20);
+});
+
+test('countAmount moves in whole cents, also across zero', () => {
+  for (const p of [0.1, 0.33, 0.5, 0.77, 0.9]) {
+    const value = countAmount(-5.5, 7.25, p);
+    assert.ok(hasAtMostTwoDecimals(value), `${value} has more than two decimals`);
+    assert.ok(value >= -5.5 && value <= 7.25);
+  }
 });

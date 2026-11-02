@@ -17,7 +17,7 @@ import { isMonth } from '../domain/stats.js';
 import { formatEuros, formatMonth, formatMonthRange, formatShortMonth, formatSums, labelOf } from '../ui/format.js';
 import { isPendingEntry, lookupsOf, movementLine, sumLine } from '../ui/receipt.js';
 import { SECTION_HASH } from '../ui/router.js';
-import { el, fillTexts, foldAway, renderChoices, toggleChip, unfold } from '../ui/components.js';
+import { el, fillTexts, foldAway, renderChoices, showAmount, toggleChip, unfold } from '../ui/components.js';
 import { renderNavbar } from '../ui/navbar.js';
 import { HISTORY_VIEWS, loadHistoryView, saveHistoryView } from '../storage/history-view.js';
 
@@ -173,6 +173,11 @@ export function renderHistory(root, {
     return parts.length ? parts.join(' · ') : t.total;
   };
 
+  // The net of the total shown last: a filter that changes it counts to the
+  // new one (tarea 23).
+  let shownNet = null;
+  const netText = (net) => formatSums({ income: 0, expense: 0, net }).net;
+
   const paintSummary = () => {
     const { total, months } = summary;
     list.append(node({
@@ -183,6 +188,8 @@ export function renderHistory(root, {
       sums: total,
       children: () => categoryNodes('total', total.categories),
     }));
+    showAmount(list.querySelector('.tree-total .tree-value'), total.net, { from: shownNet, format: netText });
+    shownNet = total.net;
     for (const month of months) {
       list.appendChild(node({
         key: month.month,

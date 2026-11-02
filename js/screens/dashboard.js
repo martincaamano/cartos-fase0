@@ -7,7 +7,7 @@ import { latestEntries } from '../domain/transfer.js';
 import { activeOnly } from '../domain/active.js';
 import { formatEuros, labelOf } from '../ui/format.js';
 import { isPendingEntry, lookupsOf, movementLine, receiptLine } from '../ui/receipt.js';
-import { showBookBanner, fillTexts } from '../ui/components.js';
+import { fillTexts, showBookBanner, showSeenAmount } from '../ui/components.js';
 import { renderNavbar } from '../ui/navbar.js';
 import { SECTION_HASH } from '../ui/router.js';
 
@@ -26,9 +26,11 @@ const EYE_CLOSED = svgIcon(`${EYE}<path d="M3 17L17 3"/>`);
 // their ids, marked with «·».
 // hidden: the amounts show as «••••• €»; the eye next to the total calls
 // onToggleHidden. swapped: they just changed, so they fade in.
+// seen: the amounts shown last time, kept by the caller (showSeenAmount);
+// one that changed counts from the old value to the new one (tarea 23).
 export function renderDashboard(root, {
   book, bookName = '', offline, pendingCount = 0, pendingIds = new Set(), blockedCount = 0, hidden = false, swapped = false,
-  onToggleHidden = () => {},
+  onToggleHidden = () => {}, seen = new Map(),
 }) {
   const t = es.dashboard;
   root.innerHTML = `
@@ -72,17 +74,24 @@ export function renderDashboard(root, {
 
   const { accounts, movements } = book;
   const active = activeOnly(accounts);
-  root.querySelector('.receipt-total-amount').textContent = euros(totalBalance(active, movements));
+  // An amount shown: counting when it changed since last seen.
+  const show = (node, key, value) => {
+    if (revealed) showSeenAmount(node, seen, key, value);
+    else node.textContent = t.hidden;
+  };
+  show(root.querySelector('.receipt-total-amount'), 'total', totalBalance(active, movements));
 
   const accountList = root.querySelector('.receipt-accounts');
   for (const account of active) {
     const balance = accountBalance(account, movements);
-    accountList.appendChild(receiptLine(labelOf(account), euros(balance), {
+    const line = receiptLine(labelOf(account), euros(balance), {
       // Hidden amounts hide their sign too.
       tone: revealed && balance < 0 ? 'expense' : '',
       href: `${SECTION_HASH.history}?account=${encodeURIComponent(account.id)}`,
       className: 'dashboard-account',
-    }));
+    });
+    show(line.querySelector('.receipt-amount'), account.id, balance);
+    accountList.appendChild(line);
   }
 
   const movementList = root.querySelector('.receipt-movements');
