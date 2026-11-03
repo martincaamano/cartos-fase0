@@ -59,9 +59,13 @@ export async function pickSpreadsheet() {
   }
   const { picker } = deps.window().google;
   return new Promise((resolve) => {
-    const view = new picker.DocsView(picker.ViewId.SPREADSHEETS).setMode(picker.DocsViewMode.LIST);
+    // First the spreadsheets shared with the user (where a shared book is),
+    // then all of them.
+    const shared = new picker.DocsView(picker.ViewId.SPREADSHEETS).setOwnedByMe(false).setMode(picker.DocsViewMode.LIST);
+    const all = new picker.DocsView(picker.ViewId.SPREADSHEETS).setMode(picker.DocsViewMode.LIST);
     new picker.PickerBuilder()
-      .addView(view)
+      .addView(shared)
+      .addView(all)
       .setOAuthToken(token)
       .setDeveloperKey(apiKey)
       // Without the project number the file is picked but not granted.

@@ -4,11 +4,12 @@ import { test, expect, MEMBERS_HEADER } from './fixtures.js';
 
 const AT = '2026-09-01T10:00:00.000Z';
 
-// The Picker needs an API key; the real config.js has none yet.
-async function withPickerKey(context) {
+// The API key the app runs with: a test one, or none ('') to check what
+// happens without it.
+async function withPickerKey(context, key = 'test-key') {
   await context.route('**/js/config.js', async (route) => {
     const response = await route.fetch();
-    const body = (await response.text()).replace("GOOGLE_API_KEY = ''", "GOOGLE_API_KEY = 'test-key'");
+    const body = (await response.text()).replace(/GOOGLE_API_KEY = '[^']*'/, `GOOGLE_API_KEY = '${key}'`);
     await route.fulfill({ response, body });
   });
 }
@@ -108,13 +109,14 @@ test('a book shared with me opens from the Picker, and I join it', async ({ page
 });
 
 test('the Picker only opens shared Cartos books, and says when it is not set up', async ({ page, context, app, google }) => {
-  // No API key yet: nothing is loaded.
+  // Without an API key nothing is loaded.
+  await withPickerKey(context, '');
   await app.open('#/settings/books', '.book-list');
   await page.click('.book-open-shared');
   await expect(page.locator('.books-error')).toHaveText('Esta versión de Cartos aún no puede abrir libros compartidos.');
   expect(google.calls.filter((call) => call.op === 'picker')).toEqual([]);
 
-  // With a key, picking a personal book is refused.
+  // With a key (the route added last wins), picking a personal book is refused.
   await withPickerKey(context);
   google.pick('book-1');
   await page.reload();

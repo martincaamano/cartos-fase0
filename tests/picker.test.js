@@ -6,6 +6,7 @@ import assert from 'node:assert/strict';
 import { configurePicker, pickSpreadsheet, PickerError } from '../js/data/picker.js';
 import { configureAuth, TokenExpiredError } from '../js/data/auth.js';
 import { setupGoogleApi, TOKEN } from './helpers/fake-google.js';
+import { GOOGLE_API_KEY, GOOGLE_PROJECT_NUMBER } from '../js/config.js';
 
 const API_KEY = 'fake-api-key';
 
@@ -16,6 +17,7 @@ function fakePickerWindow(answer) {
   class DocsView {
     constructor(viewId) { this.viewId = viewId; }
     setMode(mode) { this.mode = mode; return this; }
+    setOwnedByMe(owned) { this.ownedByMe = owned; return this; }
   }
   class PickerBuilder {
     addView(view) { built.views.push(view); return this; }
@@ -57,9 +59,17 @@ test('pickSpreadsheet without an API key rejects with not_configured and never t
   assert.equal(calls.length, 0);
 });
 
-test('pickSpreadsheet with the default config (empty key in config.js) is not_configured', async () => {
-  configurePicker();
-  await assert.rejects(pickSpreadsheet(), (err) => err instanceof PickerError && err.code === 'not_configured');
+test('the app is set up with a Picker key and the project number', () => {
+  assert.match(GOOGLE_API_KEY, /^AIza[\w-]{35}$/);
+  assert.equal(GOOGLE_PROJECT_NUMBER, '354443018222');
+});
+
+test('pickSpreadsheet offers the spreadsheets shared with the user first, then all', async () => {
+  const { win, built } = fakePickerWindow((p) => ({ action: p.Action.CANCEL }));
+  configurePicker({ apiKey: () => API_KEY, window: () => win });
+  await pickSpreadsheet();
+  assert.deepEqual(built.views.map((view) => view.ownedByMe), [false, undefined]);
+  assert.ok(built.views.every((view) => view.viewId === 'spreadsheets' && view.mode === 'list'));
 });
 
 test('pickSpreadsheet resolves with the id of the file picked', async () => {
@@ -78,9 +88,8 @@ test('pickSpreadsheet passes the token, the developer key and the project number
   assert.equal(built.appId, '354443018222');
   assert.equal(built.builds, 1);
   assert.equal(built.visible, true);
-  assert.equal(built.views.length, 1);
-  assert.equal(built.views[0].viewId, 'spreadsheets');
-  assert.equal(built.views[0].mode, 'list');
+  // «Compartidos conmigo» and all spreadsheets (see the next test).
+  assert.equal(built.views.length, 2);
 });
 
 test('pickSpreadsheet with several docs picked takes the first', async () => {
