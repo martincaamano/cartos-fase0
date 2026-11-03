@@ -89,7 +89,7 @@ function fakeGoogle(book) {
         window.gapi = { load: (name, options) => setTimeout(options.callback) };
         window.google = window.google || {};
         const picked = ${JSON.stringify(fake.picked)};
-        class DocsView { setMode() { return this; } }
+        class DocsView { setMode() { return this; } setOwnedByMe() { return this; } }
         class PickerBuilder {
           addView() { return this; } setOAuthToken() { return this; } setDeveloperKey() { return this; }
           setAppId() { return this; } setCallback(cb) { this.cb = cb; return this; } build() { return this; }
