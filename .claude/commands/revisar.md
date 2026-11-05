@@ -16,5 +16,5 @@ Diff de los archivos que ya existían:
 Pasos:
 
 1. Ejecuta `npm test` y `npm run acceptance` tú mismo y quédate con los resultados.
-2. Lanza el subagente `reviewer` con: los criterios de `docs/tareas/tarea-$0.md`, la lista de archivos y el diff de arriba, y el resultado de los tests. Los archivos nuevos (marcados con `??`) no salen en el diff: dile que los lea.
+2. Lanza el subagente `reviewer` con: el alcance y el criterio de cierre de la issue «Tarea $0 · …» (o de `docs/tareas/tarea-$0.md` hasta la 23), la lista de archivos y el diff de arriba, y el resultado de los tests. Los archivos nuevos (marcados con `??`) no salen en el diff: dile que los lea.
 3. Devuélveme sus hallazgos tal cual, ordenados por gravedad. No corrijas nada sin que yo te lo pida.

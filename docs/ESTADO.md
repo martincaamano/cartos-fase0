@@ -1,6 +1,6 @@
 # Estado de Cartos
 
-Fuente de verdad del progreso. Los agentes lo leen al empezar una tarea y lo actualizan con `/cerrar`.
+Historial de las tareas 01–23 y del entorno. Desde la tarea 24, cada tarea es una issue de GitHub («Tarea NN · …», con sub-issues por parte): las abiertas son el trabajo pendiente y su estado se sigue allí, no aquí (decidido el 2026-11-05).
 
 ## Entorno
 
@@ -129,8 +129,8 @@ Decidido el 2026-10-29: empezar el libro personal con el histórico real (import
 | 21 | Robustez | Hecha (2026-11-01) | Fallos de una revisión completa (PR #58). Comprobada con pruebas de aceptación, no en el iPhone |
 | 22 | Mantenibilidad | Hecha (2026-11-01) | Sin duplicados, en cuatro partes (PR #59–#62). Sin cambios para el usuario |
 | 23 | Experiencia: fluidez | En curso | Quedarse en Añadir con Deshacer, «·» de pendientes, ojo de INICIO, animaciones y contadores (PR #64–#66). Falta probarla en el iPhone |
-| 24 | Análisis de desviaciones | Definida (2026-11-05) | 24a dominio, 24b bloque del mes, 24c vista anual |
-| 25 | Metas de ahorro | Definida (2026-11-05) | 25a cola por pestaña + dominio y datos, 25b Inicio, 25c crear y aportar, 25d cumplir, 25e compartidos |
+| 24 | Análisis de desviaciones | En GitHub: #70 | Sub-issues #71–#73 |
+| 25 | Metas de ahorro | En GitHub: #74 | Sub-issues #75–#79 |
 
 ### Decisiones tomadas en la tarea 19
 - Hecha antes que la 18 y sin código: se usó el importador de la tarea 16 (JSON de Cartos desde Ajustes → Datos), que trae los emojis de las categorías nuevas.

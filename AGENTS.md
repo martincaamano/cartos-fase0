@@ -6,8 +6,8 @@ Habla con el usuario en español. Código, comentarios, nombres de archivo y men
 
 ## Dónde mirar antes de actuar
 
-- Estado y siguiente tarea: `docs/ESTADO.md`
-- Tarea concreta (objetivo, alcance, pruebas, criterio de cierre): `docs/tareas/tarea-NN.md`
+- Tareas (desde la 24): issues de GitHub titulados «Tarea NN · …», con una sub-issue por parte («Tarea NNa · …»). Ahí están objetivo, decisiones, alcance, pruebas y criterio de cierre. Las issues abiertas son el trabajo pendiente.
+- Historial y tareas hasta la 23: `docs/ESTADO.md` y `docs/tareas/tarea-NN.md`
 - Datos, autenticación, sincronización, transferencias: `docs/arquitectura-app-finanzas.md`
 - Pantallas y estética: `docs/diseno-flujo-pantallas-cartos.md`
 - Árbol de carpetas: `docs/estructura-repositorio-cartos.md`
@@ -58,14 +58,15 @@ Lee solo las secciones que necesites para la tarea en curso, no todos los docume
 
 ## Flujo de trabajo por tarea
 
-1. Lee `docs/ESTADO.md` y el archivo de la tarea. Si algo es ambiguo o contradice la arquitectura, pregunta; no inventes.
+1. Lee la issue de la tarea con sus comentarios (herramientas de GitHub, o `gh issue view NN --comments`). Si algo es ambiguo o contradice la arquitectura, pregunta; no inventes.
 2. Trabaja en pasos pequeños. Después de cada paso ejecuta `npm test`; antes de dar la tarea por terminada, también `npm run acceptance`.
 3. Toda lógica nueva de negocio lleva su test en `tests/` (con `node:test`). Para probar `data/` se simula `fetch`; nunca se llama a Google de verdad desde los tests.
 4. No des una tarea por cerrada. Las pruebas en iPhone las hace el usuario: déjale la lista de comprobaciones lista, solo con lo que las pruebas de aceptación no cubren (inicio de sesión real con Google, la app instalada en la pantalla de inicio, cómo se ve en el iPhone).
 5. Al terminar, resume en pocas líneas qué cambió y qué debe probar a mano.
 6. Una rama por tarea. Da comandos exactos, listos para pegar, sin huecos que rellenar.
 7. Sé económico con el contexto (el plan del usuario tiene un límite compartido): lee solo lo necesario y usa `/planificar` antes de `/tarea`.
-8. `.claude/` es la configuración principal. `.opencode/` y `opencode.json` son un espejo para OpenCode: no los mantengas salvo que el usuario lo pida.
+8. Issues: las tareas nuevas se crean como issue (y sub-issues por parte) sin PR. Las decisiones que tome el usuario se anotan en la issue (cuerpo y, si hace falta, un comentario). Cada PR de código lleva `Closes #N` de su sub-issue; la issue de la tarea la cierra `/cerrar` cuando el usuario ha probado en el iPhone. No hacen falta PRs solo de documentación para definir o cerrar tareas.
+9. `.claude/` es la configuración principal. `.opencode/` y `opencode.json` son un espejo para OpenCode: no los mantengas salvo que el usuario lo pida.
 
 ## Prohibido sin permiso explícito
 
