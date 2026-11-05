@@ -50,7 +50,7 @@ test('queueMovement validates against the book and stores a valid movement', asy
   };
   const movement = await queueMovement('f1', { accountId: 'acc-1', type: 'expense', amount: 12.5, date: '2026-10-25', categoryId: 'c' }, book);
   assert.equal(movement.createdBy, 'user-1');
-  assert.deepEqual([...items.values()], [{ fileId: 'f1', movement }]);
+  assert.deepEqual([...items.values()], [{ fileId: 'f1', sheet: 'Movements', record: movement }]);
 
   await assert.rejects(
     queueMovement('f1', { accountId: 'acc-1', type: 'expense', amount: 0, date: '2026-10-25', categoryId: 'gone' }, book),
@@ -100,7 +100,7 @@ test('queueEdit keeps the id and stores the new version', async () => {
   assert.equal(edited.amount, 0.01);
   assert.notEqual(edited.updatedAt, OLD);
   assert.deepEqual([...items.keys()], ['a']);
-  assert.equal(items.get('a').movement, edited);
+  assert.equal(items.get('a').record, edited);
 });
 
 test('queueEdit validates the fields and queues nothing when invalid', async () => {
@@ -166,7 +166,7 @@ test('queueDelete marks one movement deleted and queues it', async () => {
   assert.equal(deleted.id, 'a');
   assert.equal(deleted.deleted, true);
   assert.notEqual(deleted.updatedAt, OLD);
-  assert.equal(items.get('a').movement.deleted, true);
+  assert.equal(items.get('a').record.deleted, true);
 });
 
 test('queueDelete of a transfer deletes both halves', async () => {
@@ -174,7 +174,7 @@ test('queueDelete of a transfer deletes both halves', async () => {
   assert.deepEqual(deleted.map((h) => [h.id, h.deleted]), [['t-1-out', true], ['t-1-in', true]]);
   assert.equal(deleted[0].updatedAt, deleted[1].updatedAt);
   assert.equal(items.size, 2);
-  for (const { movement } of items.values()) assert.equal(movement.deleted, true);
+  for (const { record } of items.values()) assert.equal(record.deleted, true);
 });
 
 test('saving to the outbox makes no call to Google', async () => {
@@ -321,8 +321,8 @@ test('queueCrossBookTransfer calls addAcross once with both halves and the sub',
   assert.equal(adds.length, 0, 'add is not used');
   assert.equal(across.length, 1);
   assert.deepEqual(across[0].items, [
-    { fileId: 'file-mine', movement: out },
-    { fileId: 'file-house', movement: inc },
+    { fileId: 'file-mine', record: out },
+    { fileId: 'file-house', record: inc },
   ]);
   assert.equal(across[0].sub, 'user-1');
 });

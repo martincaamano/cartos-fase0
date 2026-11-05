@@ -1,20 +1,24 @@
-// An in-memory outbox keyed by movement id, like the IndexedDB store, shared
-// by js/data/movements.js (saves) and js/data/sync.js (uploads): what one
-// test queues is what the next sync reads.
+// An in-memory outbox keyed by record id, like the IndexedDB store, shared
+// by js/data/movements.js and js/data/goals.js (saves) and js/data/sync.js
+// (uploads): what one test queues is what the next sync reads. Entries are
+// { fileId, sheet, record }.
+import { configureGoals } from '../../js/data/goals.js';
 import { configureMovements } from '../../js/data/movements.js';
 import { configureSync } from '../../js/data/sync.js';
 
 export function memoryOutbox() {
   const items = new Map();
-  configureMovements({
-    add: async (fileId, movements) => { for (const movement of movements) items.set(movement.id, { fileId, movement }); },
-  });
+  const add = async (fileId, records, sub, sheet = 'Movements') => {
+    for (const record of records) items.set(record.id, { fileId, sheet, record });
+  };
+  configureMovements({ add });
+  configureGoals({ add });
   configureSync({
     list: async () => [...items.values()],
     // Same rule as IndexedDB: only the version that was uploaded is removed.
-    remove: async (movements) => {
-      for (const movement of movements) {
-        if (items.get(movement.id)?.movement.updatedAt === movement.updatedAt) items.delete(movement.id);
+    remove: async (records) => {
+      for (const record of records) {
+        if (items.get(record.id)?.record.updatedAt === record.updatedAt) items.delete(record.id);
       }
     },
   });

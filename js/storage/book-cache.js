@@ -13,7 +13,10 @@ const OLD_KEY = 'cartos.book';
 const isSnapshot = (snapshot) => Boolean(snapshot)
   && ['accounts', 'categories', 'movements'].every((list) => Array.isArray(snapshot[list]));
 
-const pick = ({ accounts, categories, movements }) => ({ accounts, categories, movements });
+// Copies saved before tarea 25 have no goals: they read as none.
+const pick = ({ accounts, categories, movements, goals = [], contributions = [] }) => ({
+  accounts, categories, movements, goals, contributions,
+});
 
 const empty = (sub) => ({ sub, current: null, books: [], snapshots: {} });
 

@@ -20,7 +20,7 @@ export function configureMovements(overrides = {}) {
   store = { ...defaults, ...overrides };
   if (overrides.add && !overrides.addAcross) {
     store.addAcross = async (items, sub) => {
-      for (const { fileId, movement } of items) await overrides.add(fileId, [movement], sub);
+      for (const { fileId, record } of items) await overrides.add(fileId, [record], sub);
     };
   }
 }
@@ -60,7 +60,7 @@ export async function queueCrossBookTransfer(here, there, fields) {
   ])];
   assertValid(errors);
   // Both halves or none, though they go to two books.
-  await store.addAcross([{ fileId: here.fileId, movement: outgoing }, { fileId: there.fileId, movement: incoming }], currentUserSub());
+  await store.addAcross([{ fileId: here.fileId, record: outgoing }, { fileId: there.fileId, record: incoming }], currentUserSub());
   return [outgoing, incoming];
 }
 

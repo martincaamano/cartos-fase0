@@ -3,9 +3,13 @@
 // movements.test.js; here js/data/movements.js only fills the shared queue.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { enqueue, planSync, mergePending, ownPending } from '../js/storage/outbox-logic.js';
+import {
+  enqueue, planSync, mergePending, ownPending, upgradeEntry, recordsOf, OUTBOX_SHEETS,
+} from '../js/storage/outbox-logic.js';
 import { configureSync, syncOutbox } from '../js/data/sync.js';
 import { queueMovement, queueTransfer, queueEdit } from '../js/data/movements.js';
+import { queueGoal, queueContribution } from '../js/data/goals.js';
+import { configureLogs } from '../js/storage/logs.js';
 import { HEADERS, toRow, rowsById } from '../js/data/rows.js';
 import { setupGoogleApi, TOKEN } from './helpers/fake-google.js';
 import { memoryOutbox as keyedOutbox } from './helpers/memory-outbox.js';
@@ -34,15 +38,17 @@ const isBatchUpdate = (call) => call.url.pathname.endsWith('values:batchUpdate')
 
 // --- enqueue ---
 
+const e = (record, sheet = 'Movements') => ({ sheet, record });
+
 test('a pending movement is not queued twice when saved again', () => {
-  const queue = enqueue(enqueue([], m('a')), m('a'));
-  assert.deepEqual(queue.map((x) => x.id), ['a']);
+  const queue = enqueue(enqueue([], e(m('a'))), e(m('a')));
+  assert.deepEqual(queue.map((x) => x.record.id), ['a']);
 });
 
 test('enqueue replaces the older version of the same id with the new one', () => {
-  const queue = enqueue(enqueue(enqueue([], m('a', { amount: 1 })), m('b')), m('a', { amount: 2 }));
+  const queue = enqueue(enqueue(enqueue([], e(m('a', { amount: 1 }))), e(m('b'))), e(m('a', { amount: 2 })));
   assert.equal(queue.length, 2);
-  assert.equal(queue.find((x) => x.id === 'a').amount, 2);
+  assert.equal(queue.find((x) => x.record.id === 'a').record.amount, 2);
 });
 
 // --- planSync ---
@@ -54,7 +60,7 @@ test('planSync appends new ids and rewrites the row of ids already in the Sheet'
   // ids[i] lives in row i + 2 (row 1 is the header).
   const { toAppend, toUpdate } = planSync([m('a'), m('b'), m('c')], sheetIds('x', 'b', 'y', 'c'));
   assert.deepEqual(toAppend.map((x) => x.id), ['a']);
-  assert.deepEqual(toUpdate.map(({ movement, row }) => [movement.id, row]), [['b', 3], ['c', 5]]);
+  assert.deepEqual(toUpdate.map(({ record, row }) => [record.id, row]), [['b', 3], ['c', 5]]);
 });
 
 test('planSync: the first data row is row 2', () => {
@@ -65,7 +71,7 @@ test('planSync: the first data row is row 2', () => {
 
 test('planSync uses the row number given in the map as is', () => {
   const { toUpdate } = planSync([m('a')], new Map([['a', 1000]]));
-  assert.deepEqual(toUpdate.map(({ movement, row }) => [movement.id, row]), [['a', 1000]]);
+  assert.deepEqual(toUpdate.map(({ record, row }) => [record.id, row]), [['a', 1000]]);
 });
 
 test('planSync keeps the last version when an id repeats in the queue', () => {
@@ -74,7 +80,7 @@ test('planSync keeps the last version when an id repeats in the queue', () => {
   const fresh = planSync([v1, v2], new Map());
   assert.deepEqual(fresh.toAppend, [v2]);
   const existing = planSync([v1, v2], sheetIds('a'));
-  assert.deepEqual(existing.toUpdate, [{ movement: v2, row: 2 }]);
+  assert.deepEqual(existing.toUpdate, [{ record: v2, row: 2 }]);
   assert.deepEqual(existing.toAppend, []);
 });
 
@@ -132,7 +138,7 @@ function memoryOutbox(items) {
     list: async () => state.items,
     remove: async (movements) => {
       state.items = state.items.filter(
-        (i) => !movements.some((done) => done.id === i.movement.id && done.updatedAt === i.movement.updatedAt),
+        (i) => !movements.some((done) => done.id === i.record.id && done.updatedAt === i.record.updatedAt),
       );
     },
   });
@@ -153,7 +159,7 @@ function sheetWith(ids, { failAppend = false, onRead = () => {} } = {}) {
 // --- syncOutbox ---
 
 test('sync appends what is missing in one call and empties the queue', async () => {
-  const state = memoryOutbox([{ fileId: 'f1', movement: m('a') }, { fileId: 'f1', movement: m('c') }]);
+  const state = memoryOutbox([{ fileId: 'f1', sheet: 'Movements', record: m('a') }, { fileId: 'f1', sheet: 'Movements', record: m('c') }]);
   const calls = sheetWith(['b']);
   assert.deepEqual(await syncOutbox('f1'), { appended: 2, updated: 0, pending: 0 });
 
@@ -169,7 +175,7 @@ test('sync appends what is missing in one call and empties the queue', async () 
 
 test('sync rewrites existing rows with batchUpdate and appends the new ones', async () => {
   const edited = m('b', { amount: 7.5, updatedAt: '2026-10-25T10:00:00.000Z' });
-  const state = memoryOutbox([{ fileId: 'f1', movement: m('a') }, { fileId: 'f1', movement: edited }]);
+  const state = memoryOutbox([{ fileId: 'f1', sheet: 'Movements', record: m('a') }, { fileId: 'f1', sheet: 'Movements', record: edited }]);
   const calls = sheetWith(['x', 'b']);
   assert.deepEqual(await syncOutbox('f1'), { appended: 1, updated: 1, pending: 0 });
 
@@ -188,7 +194,7 @@ test('sync rewrites existing rows with batchUpdate and appends the new ones', as
 
 test('retrying after a lost answer does not duplicate the row', async () => {
   const pending = m('a');
-  const state = memoryOutbox([{ fileId: 'f1', movement: pending }]);
+  const state = memoryOutbox([{ fileId: 'f1', sheet: 'Movements', record: pending }]);
   const calls = sheetWith(['a']);
   assert.deepEqual(await syncOutbox('f1'), { appended: 0, updated: 1, pending: 0 });
   assert.equal(calls.some(isAppend), false);
@@ -199,21 +205,21 @@ test('retrying after a lost answer does not duplicate the row', async () => {
 });
 
 test('a failed upload leaves the queue untouched', async () => {
-  const state = memoryOutbox([{ fileId: 'f1', movement: m('a') }]);
+  const state = memoryOutbox([{ fileId: 'f1', sheet: 'Movements', record: m('a') }]);
   sheetWith([], { failAppend: true });
   await assert.rejects(syncOutbox('f1'));
   assert.equal(state.items.length, 1);
 });
 
 test('other books and an empty queue make no calls', async () => {
-  memoryOutbox([{ fileId: 'other', movement: m('a') }]);
+  memoryOutbox([{ fileId: 'other', sheet: 'Movements', record: m('a') }]);
   const calls = sheetWith([]);
   assert.deepEqual(await syncOutbox('f1'), { appended: 0, updated: 0, pending: 0 });
   assert.equal(calls.length, 0);
 });
 
 test('two syncs at once upload a movement once: the extra run finds nothing left', async () => {
-  const state = memoryOutbox([{ fileId: 'f1', movement: m('a') }]);
+  const state = memoryOutbox([{ fileId: 'f1', sheet: 'Movements', record: m('a') }]);
   const calls = sheetWith([]);
   const results = await Promise.all([syncOutbox('f1'), syncOutbox('f1')]);
   assert.equal(calls.filter(isAppend).length, 1);
@@ -225,7 +231,7 @@ test('two syncs at once upload a movement once: the extra run finds nothing left
 });
 
 test('two syncs of the same book at once get the very same promise', async () => {
-  memoryOutbox([{ fileId: 'f1', movement: m('a') }]);
+  memoryOutbox([{ fileId: 'f1', sheet: 'Movements', record: m('a') }]);
   sheetWith([]);
   const first = syncOutbox('f1');
   const second = syncOutbox('f1');
@@ -242,7 +248,7 @@ function recordingOutbox(items) {
     list: async (sub) => { state.lists.push(sub); return state.items; },
     remove: async (movements) => {
       state.items = state.items.filter(
-        (i) => !movements.some((done) => done.id === i.movement.id && done.updatedAt === i.movement.updatedAt),
+        (i) => !movements.some((done) => done.id === i.record.id && done.updatedAt === i.record.updatedAt),
       );
     },
   });
@@ -250,7 +256,7 @@ function recordingOutbox(items) {
 }
 
 test('the outbox is listed with the signed-in sub', async () => {
-  const state = recordingOutbox([{ fileId: 'f1', movement: m('a') }]);
+  const state = recordingOutbox([{ fileId: 'f1', sheet: 'Movements', record: m('a') }]);
   sheetWith([]);
   await syncOutbox('f1');
   // helpers/fake-google.js signs in user-1.
@@ -258,7 +264,7 @@ test('the outbox is listed with the signed-in sub', async () => {
 });
 
 test('a movement added during a run is uploaded by one more run; the result sums both', async () => {
-  const state = recordingOutbox([{ fileId: 'f1', movement: m('a') }]);
+  const state = recordingOutbox([{ fileId: 'f1', sheet: 'Movements', record: m('a') }]);
   let reads = 0;
   let during;
   const calls = setupGoogleApi((call) => {
@@ -266,7 +272,7 @@ test('a movement added during a run is uploaded by one more run; the result sums
       reads += 1;
       if (reads === 1) {
         // Saved while the first run is uploading; the app asks for a sync.
-        state.items.push({ fileId: 'f1', movement: m('b', { amount: 0.01 }) });
+        state.items.push({ fileId: 'f1', sheet: 'Movements', record: m('b', { amount: 0.01 }) });
         during = syncOutbox('f1');
         return { body: { valueRanges: [{ values: [['id']] }] } };
       }
@@ -285,13 +291,13 @@ test('a movement added during a run is uploaded by one more run; the result sums
 });
 
 test('several calls during a run coalesce into exactly one more run', async () => {
-  const state = recordingOutbox([{ fileId: 'f1', movement: m('a') }]);
+  const state = recordingOutbox([{ fileId: 'f1', sheet: 'Movements', record: m('a') }]);
   let reads = 0;
   setupGoogleApi((call) => {
     if (call.url.pathname.endsWith('values:batchGet')) {
       reads += 1;
       if (reads === 1) {
-        state.items.push({ fileId: 'f1', movement: m('b') });
+        state.items.push({ fileId: 'f1', sheet: 'Movements', record: m('b') });
         syncOutbox('f1');
         syncOutbox('f1');
         syncOutbox('f1');
@@ -310,14 +316,14 @@ test('several calls during a run coalesce into exactly one more run', async () =
 
 test('the extra run sums an update too', async () => {
   const edited = m('a', { amount: 999999.99, updatedAt: '2026-10-31T23:59:00.000Z' });
-  const state = recordingOutbox([{ fileId: 'f1', movement: m('a') }]);
+  const state = recordingOutbox([{ fileId: 'f1', sheet: 'Movements', record: m('a') }]);
   let reads = 0;
   setupGoogleApi((call) => {
     if (call.url.pathname.endsWith('values:batchGet')) {
       reads += 1;
       if (reads === 1) {
         // A newer version of 'a' replaces the queued one, like IndexedDB.
-        state.items = [{ fileId: 'f1', movement: edited }];
+        state.items = [{ fileId: 'f1', sheet: 'Movements', record: edited }];
         syncOutbox('f1');
         return { body: { valueRanges: [{ values: [['id']] }] } };
       }
@@ -330,7 +336,7 @@ test('the extra run sums an update too', async () => {
 });
 
 test('without a call during the run there is no second run', async () => {
-  const state = recordingOutbox([{ fileId: 'f1', movement: m('a') }]);
+  const state = recordingOutbox([{ fileId: 'f1', sheet: 'Movements', record: m('a') }]);
   const calls = sheetWith([]);
   await syncOutbox('f1');
   assert.equal(state.lists.length, 1);
@@ -338,7 +344,7 @@ test('without a call during the run there is no second run', async () => {
 });
 
 test('an error in the first run rejects and does not start the extra run', async () => {
-  const state = recordingOutbox([{ fileId: 'f1', movement: m('a') }]);
+  const state = recordingOutbox([{ fileId: 'f1', sheet: 'Movements', record: m('a') }]);
   let reads = 0;
   let during;
   const calls = setupGoogleApi((call) => {
@@ -362,13 +368,13 @@ test('an error in the first run rejects and does not start the extra run', async
 });
 
 test('an error in the extra run rejects the whole sync', async () => {
-  const state = recordingOutbox([{ fileId: 'f1', movement: m('a') }]);
+  const state = recordingOutbox([{ fileId: 'f1', sheet: 'Movements', record: m('a') }]);
   let reads = 0;
   setupGoogleApi((call) => {
     if (call.url.pathname.endsWith('values:batchGet')) {
       reads += 1;
       if (reads === 1) {
-        state.items.push({ fileId: 'f1', movement: m('b') });
+        state.items.push({ fileId: 'f1', sheet: 'Movements', record: m('b') });
         syncOutbox('f1').catch(() => {});
         return { body: { valueRanges: [{ values: [['id']] }] } };
       }
@@ -378,11 +384,11 @@ test('an error in the extra run rejects the whole sync', async () => {
   });
   await assert.rejects(syncOutbox('f1'), (err) => err.status === 503);
   assert.equal(reads, 2);
-  assert.deepEqual(state.items.map((i) => i.movement.id), ['b'], 'a was uploaded, b stays queued');
+  assert.deepEqual(state.items.map((i) => i.record.id), ['b'], 'a was uploaded, b stays queued');
 });
 
 test('a sync of another book while one runs runs on its own', async () => {
-  const state = memoryOutbox([{ fileId: 'f1', movement: m('a') }, { fileId: 'f2', movement: m('b') }]);
+  const state = memoryOutbox([{ fileId: 'f1', sheet: 'Movements', record: m('a') }, { fileId: 'f2', sheet: 'Movements', record: m('b') }]);
   const calls = sheetWith([]);
   const one = syncOutbox('f1');
   const two = syncOutbox('f2');
@@ -397,11 +403,11 @@ test('a sync of another book while one runs runs on its own', async () => {
 });
 
 test('once a run ends, the next sync of that book starts a new one', async () => {
-  const state = memoryOutbox([{ fileId: 'f1', movement: m('a') }]);
+  const state = memoryOutbox([{ fileId: 'f1', sheet: 'Movements', record: m('a') }]);
   sheetWith([]);
   const first = syncOutbox('f1');
   await first;
-  state.items.push({ fileId: 'f1', movement: m('c') });
+  state.items.push({ fileId: 'f1', sheet: 'Movements', record: m('c') });
   const calls = sheetWith([]);
   const second = syncOutbox('f1');
   assert.notEqual(first, second);
@@ -410,7 +416,7 @@ test('once a run ends, the next sync of that book starts a new one', async () =>
 });
 
 test('a failed run of one book frees its lock and does not touch the other book', async () => {
-  const state = memoryOutbox([{ fileId: 'f1', movement: m('a') }, { fileId: 'f2', movement: m('b') }]);
+  const state = memoryOutbox([{ fileId: 'f1', sheet: 'Movements', record: m('a') }, { fileId: 'f2', sheet: 'Movements', record: m('b') }]);
   setupGoogleApi((call) => {
     if (call.url.pathname.endsWith('values:batchGet')) return { body: { valueRanges: [{ values: [['id']] }] } };
     if (isAppend(call) && call.url.pathname.includes('/f1/')) return { status: 500 };
@@ -427,7 +433,7 @@ test('a failed run of one book frees its lock and does not touch the other book'
 test('an edit saved while a sync is running is not lost', async () => {
   const items = keyedOutbox();
   const original = m('a', { categoryId: 'c' });
-  items.set('a', { fileId: 'f1', movement: original });
+  items.set('a', { fileId: 'f1', sheet: 'Movements', record: original });
   const book = { accounts: [{ id: 'acc-1', deleted: false }], categories: [{ id: 'c', deleted: false }] };
 
   let editing;
@@ -442,8 +448,8 @@ test('an edit saved while a sync is running is not lost', async () => {
 
   assert.deepEqual(calls.filter(isAppend)[0].body.values.map((row) => row[3]), [1], 'the old version was uploaded');
   assert.equal(items.size, 1, 'the newer version stays queued');
-  assert.equal(items.get('a').movement, edited);
-  assert.equal(items.get('a').movement.amount, 99);
+  assert.equal(items.get('a').record, edited);
+  assert.equal(items.get('a').record.amount, 99);
 
   // The next sync rewrites the row it just appended.
   const next = sheetWith(['a']);
@@ -491,7 +497,7 @@ test('retrying the same transfer does not create four rows', async () => {
 });
 
 async function saveAgain(items, halves) {
-  for (const half of halves) items.set(half.id, { fileId: 'f1', movement: half });
+  for (const half of halves) items.set(half.id, { fileId: 'f1', sheet: 'Movements', record: half });
 }
 
 // --- end to end ---
@@ -512,4 +518,237 @@ test('editing a movement that was never uploaded ends in a single append of the 
   assert.equal(appends[0].body.values[0][0], created.id);
   assert.equal(calls.some(isBatchUpdate), false);
   assert.equal(items.size, 0);
+});
+
+// --- upgradeEntry / recordsOf / OUTBOX_SHEETS (tarea 25) ---
+
+test('OUTBOX_SHEETS uploads Movements, then Goals, then Contributions', () => {
+  assert.deepEqual(OUTBOX_SHEETS, ['Movements', 'Goals', 'Contributions']);
+});
+
+test('upgradeEntry turns an entry from before tarea 25 into a Movements entry', () => {
+  const movement = m('a');
+  assert.deepEqual(upgradeEntry({ fileId: 'f1', movement, sub: 'user-1' }), {
+    fileId: 'f1', sub: 'user-1', sheet: 'Movements', record: movement,
+  });
+  // Entries from before tarea 21 have no sub either.
+  assert.deepEqual(upgradeEntry({ fileId: 'f1', movement }), { fileId: 'f1', sheet: 'Movements', record: movement });
+});
+
+test('upgradeEntry leaves an entry of today\'s shape as it is', () => {
+  const entry = { fileId: 'f1', sub: 'user-1', sheet: 'Goals', record: { id: 'g-1' } };
+  assert.equal(upgradeEntry(entry), entry);
+  assert.deepEqual(upgradeEntry(entry), { fileId: 'f1', sub: 'user-1', sheet: 'Goals', record: { id: 'g-1' } });
+});
+
+test('recordsOf picks the records of one tab, in order', () => {
+  const entries = [
+    { sheet: 'Movements', record: { id: 'm1' } },
+    { sheet: 'Goals', record: { id: 'g1' } },
+    { sheet: 'Contributions', record: { id: 'c1' } },
+    { sheet: 'Goals', record: { id: 'g2' } },
+  ];
+  assert.deepEqual(recordsOf(entries, 'Goals'), [{ id: 'g1' }, { id: 'g2' }]);
+  assert.deepEqual(recordsOf(entries, 'Movements'), [{ id: 'm1' }]);
+  assert.deepEqual(recordsOf(entries, 'Members'), []);
+  assert.deepEqual(recordsOf([], 'Goals'), []);
+});
+
+// --- syncOutbox over several tabs (tarea 25) ---
+
+const g = (id, extra = {}) => ({
+  id, name: 'Tele', categoryId: 'c', targetAmount: 1000, targetDate: '2027-03-01', status: 'active',
+  completedAt: '', movementId: '', createdBy: 'user-1', createdAt: OLD, updatedAt: OLD, deleted: false, ...extra,
+});
+const ct = (id, goalId, extra = {}) => ({
+  id, goalId, amount: 250, date: '2026-11-05', createdBy: 'user-1', createdAt: OLD, updatedAt: OLD, deleted: false, ...extra,
+});
+
+const isBatchGet = (call) => call.url.pathname.endsWith('values:batchGet');
+const isAddSheet = (call) => call.url.pathname.endsWith(':batchUpdate') && !call.url.pathname.endsWith('values:batchUpdate');
+const appendedTab = (call) => decodeURIComponent(call.url.pathname.split('/values/')[1]).replace(':append', '');
+
+// A Sheet with some tabs: tabs[name] is its list of ids, or missing when the
+// tab does not exist (Sheets answers 400 to a read of it). Adding a tab
+// creates it empty; writing its header row (A1) gives it its header.
+function tabbedSheet(tabs) {
+  const state = { ...tabs };
+  const calls = setupGoogleApi((call) => {
+    if (isBatchGet(call)) {
+      const sheets = call.url.searchParams.getAll('ranges').map((r) => r.split('!')[0]);
+      if (sheets.some((sheet) => !state[sheet])) return { status: 400 };
+      return { body: { valueRanges: sheets.map((sheet) => ({ values: state[sheet].map((id) => [id]) })) } };
+    }
+    if (isAddSheet(call)) {
+      for (const r of call.body.requests) {
+        const title = r.addSheet.properties.title;
+        if (state[title]) return { status: 400 };
+        state[title] = [];
+      }
+      return {};
+    }
+    if (isBatchUpdate(call)) {
+      for (const { range, values } of call.body.data) {
+        if (range.endsWith('!A1')) state[range.split('!')[0]] = [values[0][0]];
+      }
+    }
+    return {};
+  });
+  return { calls, state };
+}
+
+test('a movement, a goal and a contribution: one read, one rewrite, appends in tab order', async () => {
+  const editedMovement = m('m-edit', { amount: 3, updatedAt: '2026-11-05T10:00:00.000Z' });
+  const editedGoal = g('g-edit', { name: 'Sofá', updatedAt: '2026-11-05T10:00:00.000Z' });
+  const editedContribution = ct('c-edit', 'g-edit', { amount: -20, updatedAt: '2026-11-05T10:00:00.000Z' });
+  const state = memoryOutbox([
+    // Saved in a mixed order: the upload order comes from the tabs.
+    { fileId: 'f1', sheet: 'Contributions', record: ct('c-new', 'g-new') },
+    { fileId: 'f1', sheet: 'Goals', record: g('g-new') },
+    { fileId: 'f1', sheet: 'Movements', record: m('m-new') },
+    { fileId: 'f1', sheet: 'Contributions', record: editedContribution },
+    { fileId: 'f1', sheet: 'Goals', record: editedGoal },
+    { fileId: 'f1', sheet: 'Movements', record: editedMovement },
+    { fileId: 'other', sheet: 'Goals', record: g('g-other') },
+  ]);
+  const { calls } = tabbedSheet({
+    Movements: ['id', 'm-old', 'm-edit'],
+    Goals: ['id', 'g-x', 'g-edit'],
+    Contributions: ['id', 'c-edit'],
+  });
+  assert.deepEqual(await syncOutbox('f1'), { appended: 3, updated: 3, pending: 0 });
+
+  const reads = calls.filter(isBatchGet);
+  assert.equal(reads.length, 1, 'one read for every tab');
+  assert.deepEqual(reads[0].url.searchParams.getAll('ranges'), ['Movements!A:A', 'Goals!A:A', 'Contributions!A:A']);
+
+  const updates = calls.filter(isBatchUpdate);
+  assert.equal(updates.length, 1, 'the edits of every tab in one request');
+  assert.equal(updates[0].body.valueInputOption, 'RAW');
+  assert.deepEqual(updates[0].body.data, [
+    { range: 'Movements!A3:M3', values: [toRow('Movements', editedMovement)] },
+    { range: 'Goals!A3:L3', values: [toRow('Goals', editedGoal)] },
+    { range: 'Contributions!A2:H2', values: [toRow('Contributions', editedContribution)] },
+  ]);
+  assert.equal(updates[0].body.data[1].values[0].length, HEADERS.Goals.length);
+  assert.equal(updates[0].body.data[2].values[0].length, HEADERS.Contributions.length);
+
+  const appends = calls.filter(isAppend);
+  assert.deepEqual(appends.map(appendedTab), ['Movements', 'Goals', 'Contributions']);
+  assert.deepEqual(appends.map((a) => a.body.values.map((row) => row[0])), [['m-new'], ['g-new'], ['c-new']]);
+  for (const a of appends) assert.equal(a.url.searchParams.get('valueInputOption'), 'RAW');
+  assert.deepEqual(appends[1].body.values, [toRow('Goals', g('g-new'))]);
+  assert.deepEqual(appends[2].body.values, [toRow('Contributions', ct('c-new', 'g-new'))]);
+  for (const call of calls) assert.equal(call.headers.Authorization, `Bearer ${TOKEN}`);
+  assert.equal(calls.some((call) => call.url.pathname.includes('/other')), false, 'the other book is not touched');
+  assert.deepEqual(state.items.map((i) => i.record.id), ['g-other']);
+});
+
+test('only the tabs with something pending are read', async () => {
+  memoryOutbox([{ fileId: 'f1', sheet: 'Goals', record: g('g-1') }]);
+  const { calls } = tabbedSheet({ Movements: ['id'], Goals: ['id'], Contributions: ['id'] });
+  assert.deepEqual(await syncOutbox('f1'), { appended: 1, updated: 0, pending: 0 });
+  assert.deepEqual(calls.filter(isBatchGet)[0].url.searchParams.getAll('ranges'), ['Goals!A:A']);
+  assert.deepEqual(calls.filter(isAppend).map(appendedTab), ['Goals']);
+  assert.equal(calls.some(isBatchUpdate), false);
+});
+
+test('retrying goals and contributions after a lost answer rewrites their rows, never appends', async () => {
+  const goalRecord = g('g-1');
+  const contribution = ct('c-1', 'g-1');
+  const state = memoryOutbox([
+    { fileId: 'f1', sheet: 'Goals', record: goalRecord },
+    { fileId: 'f1', sheet: 'Contributions', record: contribution },
+  ]);
+  // The first upload reached the Sheet but its answer was lost.
+  const { calls } = tabbedSheet({ Movements: ['id'], Goals: ['id', 'g-1'], Contributions: ['id', 'x', 'c-1'] });
+  assert.deepEqual(await syncOutbox('f1'), { appended: 0, updated: 2, pending: 0 });
+  assert.equal(calls.some(isAppend), false);
+  const updates = calls.filter(isBatchUpdate);
+  assert.equal(updates.length, 1);
+  assert.deepEqual(updates[0].body.data.map((d) => d.range), ['Goals!A2:L2', 'Contributions!A3:H3']);
+  assert.deepEqual(state.items, []);
+});
+
+test('a book without the goal tabs (400) gets them added, then the ids are read again and uploaded', async () => {
+  const state = memoryOutbox([
+    { fileId: 'f1', sheet: 'Movements', record: m('m-1') },
+    { fileId: 'f1', sheet: 'Goals', record: g('g-1') },
+    { fileId: 'f1', sheet: 'Contributions', record: ct('c-1', 'g-1') },
+  ]);
+  const { calls, state: sheet } = tabbedSheet({ Movements: ['id'] });
+  assert.deepEqual(await syncOutbox('f1'), { appended: 3, updated: 0, pending: 0 });
+
+  const reads = calls.filter(isBatchGet);
+  assert.equal(reads.length, 2, 'read, add the tabs, read again');
+  assert.deepEqual(reads[1].url.searchParams.getAll('ranges'), ['Movements!A:A', 'Goals!A:A', 'Contributions!A:A']);
+
+  const added = calls.filter(isAddSheet).flatMap((call) => call.body.requests.map((r) => r.addSheet.properties.title));
+  assert.deepEqual(added, ['Goals', 'Contributions']);
+
+  const headerWrites = calls.filter(isBatchUpdate);
+  assert.equal(headerWrites.length, 1);
+  assert.equal(headerWrites[0].body.valueInputOption, 'RAW');
+  assert.deepEqual(headerWrites[0].body.data, [
+    { range: 'Goals!A1', values: [HEADERS.Goals] },
+    { range: 'Contributions!A1', values: [HEADERS.Contributions] },
+  ]);
+
+  // Order of the whole conversation: read, add, headers, read, upload.
+  const firstAdd = calls.findIndex(isAddSheet);
+  assert.ok(calls.indexOf(reads[0]) < firstAdd);
+  assert.ok(calls.indexOf(headerWrites[0]) < calls.indexOf(reads[1]));
+  assert.deepEqual(calls.filter(isAppend).map(appendedTab), ['Movements', 'Goals', 'Contributions']);
+  assert.ok(calls.indexOf(reads[1]) < calls.findIndex(isAppend));
+  assert.deepEqual(sheet.Goals, ['id']);
+  assert.deepEqual(state.items, []);
+});
+
+test('a 400 reading Movements alone is not swallowed: no tab is added and the queue stays', async () => {
+  const state = memoryOutbox([{ fileId: 'f1', sheet: 'Movements', record: m('m-1') }]);
+  const { calls } = tabbedSheet({});
+  await assert.rejects(syncOutbox('f1'), (err) => err.status === 400);
+  assert.equal(calls.length, 1, 'only the read');
+  assert.equal(calls.some(isAddSheet), false);
+  assert.equal(state.items.length, 1);
+});
+
+test('a 400 that persists after adding the goal tabs is rethrown and the queue stays', async () => {
+  const state = memoryOutbox([{ fileId: 'f1', sheet: 'Goals', record: g('g-1') }]);
+  setupGoogleApi((call) => (isBatchGet(call) ? { status: 400 } : {}));
+  await assert.rejects(syncOutbox('f1'), (err) => err.status === 400);
+  assert.equal(state.items.length, 1);
+});
+
+test('syncing a goal and a contribution logs no amounts, names or notes', async () => {
+  const entries = [];
+  configureLogs({ write: async (entry) => { entries.push(entry); } });
+  try {
+    const calls = tabbedSheet({ Movements: ['id'] }).calls;
+    keyedOutbox();
+    const book = {
+      categories: [{ id: 'cat-x', name: 'CATEGORIA-SECRETA', kind: 'expense', deleted: false }],
+      movements: [],
+      goals: [],
+    };
+    const created = await queueGoal('f1', {
+      name: 'META-SECRETA', categoryId: 'cat-x', targetAmount: 1234.56, targetDate: '2027-03-01',
+    }, book);
+    await queueContribution('f1', { goalId: created.id, amount: 987.65, date: '2026-11-05' }, { ...book, goals: [created] });
+    assert.deepEqual(await syncOutbox('f1'), { appended: 2, updated: 0, pending: 0 });
+
+    const upload = JSON.stringify(calls.map((call) => call.body));
+    assert.ok(upload.includes('1234.56') && upload.includes('987.65') && upload.includes('META-SECRETA'));
+
+    const sync = entries.filter((entry) => entry.type === 'sync');
+    assert.equal(sync.length, 1);
+    for (const entry of entries) {
+      const serialized = JSON.stringify(entry);
+      for (const leaked of ['1234.56', '1234,56', '987.65', '987,65', 'META-SECRETA', 'CATEGORIA-SECRETA', 'cat-x']) {
+        assert.ok(!serialized.includes(leaked), `entry ${serialized} leaks "${leaked}"`);
+      }
+    }
+  } finally {
+    configureLogs();
+  }
 });

@@ -5,8 +5,9 @@
 import { getCurrentUser } from './auth.js';
 import { disableResharing, shareFile } from './drive.js';
 import { ApiError, assertValid } from './errors.js';
-import { append, batchGet, batchUpdate, batchUpdateValues } from './sheets.js';
-import { HEADERS, rowsToObjects, toRow } from './rows.js';
+import { append, batchGet } from './sheets.js';
+import { rowsToObjects, toRow } from './rows.js';
+import { addTabs, writeHeaders } from './tabs.js';
 import { createMember, isMember, validateShareEmail } from '../domain/members.js';
 
 // The tab Members: { tab: 'missing' } when the book has none yet (Sheets
@@ -32,8 +33,8 @@ export async function readMembers(fileId) {
 // their row written when not there. Returns the people of the book.
 export async function joinBook(fileId, user = getCurrentUser()) {
   const read = await readMembersTab(fileId);
-  if (read.tab === 'missing') await batchUpdate(fileId, [{ addSheet: { properties: { title: 'Members' } } }]);
-  if (read.tab !== 'ok') await batchUpdateValues(fileId, [{ range: 'Members!A1', values: [HEADERS.Members] }]);
+  if (read.tab === 'missing') await addTabs(fileId, ['Members']);
+  if (read.tab === 'empty') await writeHeaders(fileId, ['Members']);
   const members = read.members ?? [];
   if (isMember(members, user.email)) return members;
   const member = createMember(user);

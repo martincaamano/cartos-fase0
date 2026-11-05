@@ -1,19 +1,33 @@
-// Outbox in IndexedDB: a movement is stored here the moment it is saved
-// (js/data/movements.js) and leaves once it is in the Sheet
-// (js/data/sync.js). Its own database, so its schema never collides with
-// the logs. Keyed by movement id: saving the same
-// movement twice keeps a single entry. Not tested in Node (no IndexedDB);
-// the rules live in outbox-logic.js.
+// Outbox in IndexedDB: a change is stored here the moment it is saved
+// (js/data/movements.js, js/data/goals.js) and leaves once it is in the
+// Sheet (js/data/sync.js). Its own database, so its schema never collides
+// with the logs. Each entry is { fileId, sheet, record, sub }, keyed by the
+// record's id: saving the same record twice keeps a single entry. Not
+// tested in Node (no IndexedDB); the rules live in outbox-logic.js.
 
-import { ownPending } from './outbox-logic.js';
+import { ownPending, upgradeEntry } from './outbox-logic.js';
 import { openDb, txDone } from './idb.js';
 
 const DB_NAME = 'cartos-outbox';
-const DB_VERSION = 1;
-const STORE = 'pending';
+// 1: movements only, in the store `pending` keyed by movement.id. 2 (tarea
+// 25): any tab, in the store `entries`; what version 1 held is moved there
+// when the database is first opened as version 2.
+const DB_VERSION = 2;
+const STORE = 'entries';
+const OLD_STORE = 'pending';
+
+function upgrade(db, tx) {
+  const entries = db.objectStoreNames.contains(STORE) ? tx.objectStore(STORE) : db.createObjectStore(STORE, { keyPath: 'record.id' });
+  if (!db.objectStoreNames.contains(OLD_STORE)) return;
+  const request = tx.objectStore(OLD_STORE).getAll();
+  request.onsuccess = () => {
+    for (const entry of request.result) entries.put(upgradeEntry(entry));
+    db.deleteObjectStore(OLD_STORE);
+  };
+}
 
 async function withStore(mode, work) {
-  const db = await openDb(DB_NAME, DB_VERSION, (created) => created.createObjectStore(STORE, { keyPath: 'movement.id' }));
+  const db = await openDb(DB_NAME, DB_VERSION, upgrade);
   try {
     const tx = db.transaction(STORE, mode);
     const result = work(tx.objectStore(STORE));
@@ -24,22 +38,23 @@ async function withStore(mode, work) {
   }
 }
 
-// fileId: the book the movements belong to. Several movements (both halves
-// of a transfer) are stored in one transaction: all or none. sub: who saved
+// records: of the tab `sheet` of the book `fileId`; several (both halves of
+// a transfer) are stored in one transaction: all or none. sub: who saved
 // them, so another account signed in on the same device never uploads them.
-export function addPending(fileId, movements, sub = '') {
-  return addPendingAcross(movements.map((movement) => ({ fileId, movement })), sub);
+export function addPending(fileId, records, sub = '', sheet = 'Movements') {
+  return addPendingAcross(records.map((record) => ({ fileId, sheet, record })), sub);
 }
 
-// items: [{ fileId, movement }] in several books (the halves of a transfer
-// to another book), in one transaction.
+// items: [{ fileId, sheet, record }], maybe in several books or tabs (the
+// halves of a transfer to another book; a purchase and the goal it
+// completes), in one transaction.
 export function addPendingAcross(items, sub = '') {
   return withStore('readwrite', (store) => {
-    for (const { fileId, movement } of items) store.put({ fileId, movement, sub });
+    for (const { fileId, sheet = 'Movements', record } of items) store.put({ fileId, sheet, record, sub });
   });
 }
 
-// Returns [{ fileId, movement, sub }] of the user `sub` (entries saved
+// Returns [{ fileId, sheet, record, sub }] of the user `sub` (entries saved
 // before tarea 21 have no sub and count for anyone). Empty where IndexedDB
 // does not exist.
 export async function listPending(sub = null) {
@@ -52,15 +67,15 @@ export async function listPending(sub = null) {
   return ownPending(holder.items ?? [], sub);
 }
 
-// movements: the versions just uploaded. One that was edited again in the
+// records: the versions just uploaded. One that was edited again in the
 // meantime (another updatedAt) stays queued for the next sync.
-export function removePending(movements) {
-  if (movements.length === 0) return Promise.resolve();
+export function removePending(records) {
+  if (records.length === 0) return Promise.resolve();
   return withStore('readwrite', (store) => {
-    for (const movement of movements) {
-      const request = store.get(movement.id);
+    for (const record of records) {
+      const request = store.get(record.id);
       request.onsuccess = () => {
-        if (request.result?.movement.updatedAt === movement.updatedAt) store.delete(movement.id);
+        if (request.result?.record.updatedAt === record.updatedAt) store.delete(record.id);
       };
     }
   });

@@ -6,8 +6,8 @@ import {
 } from '../js/storage/book-cache.js';
 import { fakeStorage } from './helpers/fake-storage.js';
 
-const snapshot = { accounts: [{ id: 'a' }], categories: [], movements: [] };
-const other = { accounts: [{ id: 'b' }], categories: [{ id: 'c' }], movements: [{ id: 'm' }] };
+const snapshot = { accounts: [{ id: 'a' }], categories: [], movements: [], goals: [], contributions: [] };
+const other = { accounts: [{ id: 'b' }], categories: [{ id: 'c' }], movements: [{ id: 'm' }], goals: [], contributions: [] };
 const t1 = new Date('2026-10-25T10:00:00Z');
 const books = [
   { fileId: 'file-1', name: 'Personal', bookType: 'personal', isPersonal: true },
@@ -48,10 +48,17 @@ test('the open book without a copy gives null', () => {
   assert.equal(loadBooksCache(storage, 'user-1').current, 'file-2');
 });
 
-test('only accounts, categories and movements are stored', () => {
+test('only accounts, categories, movements, goals and contributions are stored', () => {
   const storage = fakeStorage();
   saveBookCache(storage, { sub: 'user-1', fileId: 'file-1', snapshot: { ...snapshot, extra: 'x' } }, t1);
-  assert.deepEqual(Object.keys(loadBookCache(storage, 'user-1', 'file-1').snapshot), ['accounts', 'categories', 'movements']);
+  assert.deepEqual(Object.keys(loadBookCache(storage, 'user-1', 'file-1').snapshot), ['accounts', 'categories', 'movements', 'goals', 'contributions']);
+});
+
+test('a copy saved before tarea 25 reads with no goals nor contributions', () => {
+  const storage = fakeStorage();
+  const { goals: _g, contributions: _c, ...old } = snapshot;
+  saveBookCache(storage, { sub: 'user-1', fileId: 'file-1', snapshot: old }, t1);
+  assert.deepEqual(loadBookCache(storage, 'user-1', 'file-1').snapshot, snapshot);
 });
 
 test('saveBookList stores the list and drops copies of books no longer listed', () => {
