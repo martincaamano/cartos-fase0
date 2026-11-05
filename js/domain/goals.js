@@ -122,6 +122,19 @@ export function totalSaved(goals, contributions) {
   return fromCents(activeGoals(goals).reduce((sum, goal) => sum + savedCentsOf(goal.id, contributions), 0));
 }
 
+// Who put how much into a goal (tarea 25e, shared books): [{ createdBy,
+// amount }] in euros, the biggest first; withdrawals count against whoever
+// made them.
+export function savedByPerson(goalId, contributions) {
+  const cents = new Map();
+  for (const c of contributions) {
+    if (c.deleted || c.goalId !== goalId) continue;
+    cents.set(c.createdBy, (cents.get(c.createdBy) ?? 0) + toCents(c.amount));
+  }
+  return [...cents].map(([createdBy, total]) => ({ createdBy, amount: fromCents(total) }))
+    .sort((a, b) => b.amount - a.amount || a.createdBy.localeCompare(b.createdBy));
+}
+
 // The TOTAL of the book minus what the goals put aside: what is left to
 // spend if the goals are kept. Never shown as a balance.
 export const available = (total, saved) => fromCents(toCents(total) - toCents(saved));

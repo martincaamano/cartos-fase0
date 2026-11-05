@@ -275,6 +275,7 @@ export const es = {
     confirm: '¿Seguro? Toca otra vez',
     removing: 'Quitando…',
     you: 'Tú',
+    someoneElse: 'Otra persona',
   },
   emoji: { other: 'Otro…' },
   monthsShort: ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'],

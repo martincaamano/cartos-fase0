@@ -6,7 +6,7 @@
 // so it works offline.
 
 import { es } from '../../i18n/es.js';
-import { goalProgress } from '../domain/goals.js';
+import { goalProgress, savedByPerson } from '../domain/goals.js';
 import { parseAmountInput } from '../domain/money.js';
 import { toIsoDate } from '../domain/movement.js';
 import {
@@ -24,9 +24,10 @@ const DIRECTIONS = ['in', 'out'];
 
 // goal: the goal shown. onSaved(records, sheet, { text, undo }): a change
 // was queued; undo() takes it back. onRemoved(goal): the goal was removed.
-// nameOf(contribution): who made it, in a shared book ('' otherwise).
+// nameOf(createdBy): who made a contribution, in a shared book (tarea
+// 25e); null in a personal one, where nobody is named.
 export function renderGoal(root, {
-  book, fileId, goal, today = new Date(), onSaved, onRemoved, nameOf = () => '',
+  book, fileId, goal, today = new Date(), onSaved, onRemoved, nameOf = null,
 }) {
   const t = es.goals;
   root.innerHTML = `
@@ -78,6 +79,12 @@ export function renderGoal(root, {
       progress.status === 'onTrack' ? t.remaining.replace('{amount}', formatEuros(progress.remaining)) : t[progress.status],
     ].join(' · ')),
   );
+  // In a shared book: how much each person put in.
+  const people = nameOf ? savedByPerson(goal.id, book.contributions) : [];
+  if (people.length > 0) {
+    box.appendChild(el('p', 'text-muted goal-people', people
+      .map(({ createdBy, amount: total }) => `${nameOf(createdBy)} ${formatEuros(total)}`).join(' · ')));
+  }
   if (progress.status === 'onTrack') {
     const months = progress.monthsLeft === 1 ? t.suggestedOne : t.suggested.replace('{n}', progress.monthsLeft);
     box.appendChild(el('p', 'text-muted goal-suggested', months.replace('{amount}', formatEuros(progress.suggestedMonthly))));
@@ -165,7 +172,7 @@ export function renderGoal(root, {
   const list = root.querySelector('.goal-contributions');
   if (contributions.length === 0) list.appendChild(el('li', 'receipt-empty text-muted', t.noContributions));
   for (const contribution of contributions) {
-    const who = nameOf(contribution);
+    const who = nameOf ? nameOf(contribution.createdBy) : '';
     const label = `${formatShortDate(contribution.date)}${who ? `  ${who}` : ''}`;
     const button = el('button', 'receipt-row goal-contribution');
     button.type = 'button';

@@ -209,3 +209,55 @@ test('a purchase saved offline goes up together with its goal', async ({ page, c
   expect(google.records('Goals')[0].status).toBe('completed');
   expect(google.movements().some((m) => m.note === 'Televisión' && m.amount === 1000)).toBe(true);
 });
+
+// --- Tarea 25e: goals in a shared book ---
+
+test('in a shared book a goal says who put how much: «Tú» and the other person', async ({ page, app, google }) => {
+  const HEAD = (tab) => google.rows[tab][0];
+  google.files.set('book-casa', {
+    name: 'Cartos · Casa compartida',
+    appProperties: { app: 'cartos', bookType: 'shared', name: 'Casa compartida' },
+    createdTime: AT,
+    rows: {
+      Accounts: [HEAD('Accounts'), ['acc-common', 'Común', '🏠', 300, AT, AT, false]],
+      Categories: [HEAD('Categories'), ['transfer', 'Transferencia', '🔁', 'both', true, AT, false], ['cat-home', 'Hogar', '🏠', 'expense', false, AT, false]],
+      Movements: [HEAD('Movements')],
+      Members: [['id', 'email', 'name', 'createdAt'], ['m-ana', 'ana@example.com', 'Ana Pérez', AT], ['m-me', 'prueba@example.com', 'Prueba', AT]],
+      Goals: [HEAD('Goals'), goalRow('g-sofa', 'Sofá', 800, '2027-02-01', { categoryId: 'cat-home' })],
+      Contributions: [
+        HEAD('Contributions'),
+        contributionRow('c-me', 'g-sofa', 150, '2026-10-01'),
+        ['c-ana', 'g-sofa', 250, '2026-10-05', 'user-ana', AT, AT, false],
+      ],
+    },
+  });
+  // The personal book keeps a goal of its own: books never mix.
+  withGoals(google);
+
+  await app.open('#/settings/books', '.book-list');
+  await page.locator('.book-other', { hasText: 'Casa compartida' }).click();
+  await expect(page.locator('.book-banner')).toHaveText('LIBRO · Casa compartida');
+  await app.reveal();
+  await expect(page.locator('.dashboard-goals-sums')).toHaveText('Apartado 400,00 € · Disponible −100,00 €');
+  await expect(page.locator('.dashboard-goal .receipt-label')).toHaveText('Sofá');
+
+  await page.locator('.dashboard-goal').click();
+  await app.settle();
+  await expect(page.locator('.goal-people')).toHaveText('Ana 250,00 € · Tú 150,00 €');
+  expect(await app.lines('.goal-contributions')).toEqual([['05/10  Ana', '+250,00 €'], ['01/10  Tú', '+150,00 €']]);
+
+  // A contribution here goes to this book's Sheet only.
+  await page.fill('.amount-input', '50');
+  await page.click('.form-submit');
+  await expect(page.locator('.goal-people')).toHaveText('Ana 250,00 € · Tú 200,00 €');
+  await app.settle();
+  expect(google.records('Contributions', 'book-casa').map((c) => [c.amount, c.createdBy])).toEqual([[150, 'user-1'], [250, 'user-ana'], [50, 'user-1']]);
+  expect(google.records('Contributions')).toHaveLength(2);
+});
+
+test('in a personal book nobody is named', async ({ page, app, google }) => {
+  withGoals(google);
+  await app.open('#/goals/goal?id=g-tv', '.goal-saved');
+  await expect(page.locator('.goal-people')).toHaveCount(0);
+  expect(await app.lines('.goal-contributions')).toEqual([['15/10', '+50,00 €'], ['01/10', '+200,00 €']]);
+});

@@ -8,6 +8,8 @@
 import { SECTIONS, SECTION_HASH } from './ui/router.js';
 import { findEntry } from './domain/history.js';
 import { activeGoals } from './domain/goals.js';
+import { memberName, normalizeEmail } from './domain/members.js';
+import { readMembers } from './data/members.js';
 import { getCurrentUser } from './data/auth.js';
 import { es } from '../i18n/es.js';
 import { cachedBook } from './data/books.js';
@@ -33,6 +35,18 @@ import { renderGoalCard } from './screens/goal-card.js';
 
 // A goal still active in the book, or null (removed meanwhile, a stale link).
 const activeGoalById = (book, id) => activeGoals(book.goals ?? []).find((goal) => goal.id === id) ?? null;
+
+// The people of each shared book, read while the app is open (tarea 25e).
+const membersOf = new Map();
+const isShared = (state) => state.bookInfo?.bookType === 'shared';
+// createdBy → «Tú» for the one signed in; the other person's name in a book
+// of two (Members keeps emails, not Google ids); «Otra persona» otherwise.
+function personNamer(members) {
+  const me = getCurrentUser();
+  const others = members.filter((member) => normalizeEmail(member.email) !== normalizeEmail(me?.email));
+  const other = others.length === 1 ? memberName(others[0]) : es.goals.someoneElse;
+  return (createdBy) => (createdBy === me?.sub ? es.goals.you : other);
+}
 
 // The name of the book open, shown on top of INICIO and Añadir when there
 // is more than one book.
@@ -197,13 +211,25 @@ export const VIEWS = Object.freeze({
 
   // A savings goal (tarea 25c): after each change it stays, with «✓ …
   // Deshacer» when there is something to take back.
-  [SECTIONS.GOAL]: ({ root, state, params, redirect, savedHere, saved }) => {
+  [SECTIONS.GOAL]: function goalView(ctx) {
+    const { root, state, params, redirect, savedHere, saved } = ctx;
     const goal = activeGoalById(state.book, params.id);
     if (!goal) return redirect(SECTION_HASH.home);
+    // A shared book names who put what (tarea 25e). Its people are read once
+    // per book while the app is open; the screen is painted again then.
+    const { fileId } = state;
+    if (isShared(state) && !membersOf.has(fileId) && navigator.onLine) {
+      membersOf.set(fileId, []);
+      readMembers(fileId).then((members) => {
+        membersOf.set(fileId, members);
+        if (state.fileId === fileId && location.hash.startsWith(SECTION_HASH.goal)) goalView(ctx);
+      }).catch(() => membersOf.delete(fileId));
+    }
     return renderGoal(root, {
       book: state.book,
       fileId: state.fileId,
       goal,
+      nameOf: isShared(state) ? personNamer(membersOf.get(fileId) ?? []) : null,
       onSaved: (records, sheet, toast) => {
         savedHere(records, sheet);
         if (toast) showToast({ text: `✓ ${toast.text}`, action: es.add.undo, onAction: () => toast.undo().then((r) => savedHere([r], sheet)) });

@@ -8,6 +8,7 @@ import {
   activeGoals,
   completeGoal,
   completedGoals,
+  savedByPerson,
   available,
   createContribution,
   createGoal,
@@ -324,4 +325,16 @@ test('completedGoals lists the completed ones, latest first, not removed ones', 
     { id: 'd', status: 'completed', completedAt: '2026-11-02T00:00:00Z', deleted: true },
   ];
   assert.deepEqual(completedGoals(goals).map((g) => g.id), ['c', 'a']);
+});
+
+// --- savedByPerson (tarea 25e) ---
+
+test('savedByPerson adds up each person, withdrawals included, the biggest first', () => {
+  const c = (id, goalId, amount, createdBy, deleted = false) => ({ id, goalId, amount, createdBy, deleted });
+  const list = [
+    c('1', 'g', 100.1, 'me'), c('2', 'g', 250, 'ana'), c('3', 'g', 0.2, 'me'), c('4', 'g', -30, 'ana'),
+    c('5', 'g', 999, 'me', true), c('6', 'other', 500, 'me'),
+  ];
+  assert.deepEqual(savedByPerson('g', list), [{ createdBy: 'ana', amount: 220 }, { createdBy: 'me', amount: 100.3 }]);
+  assert.deepEqual(savedByPerson('none', list), []);
 });
