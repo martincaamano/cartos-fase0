@@ -687,3 +687,11 @@ button.settings-link {
   margin: 0;
   font-size: var(--text-sm);
 }
+
+/* By 12 meses or Todo: a month per row, a button as wide as the list. */
+.stat-deviation-month {
+  width: 100%;
+  line-height: inherit;
+  text-align: left;
+  color: inherit;
+}
