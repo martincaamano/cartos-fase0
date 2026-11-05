@@ -1,6 +1,6 @@
 # Tarea 18 — Libro compartido
 
-Estado: definida (2026-10-31), pendiente de implementar.
+Estado: hecha (2026-11-05).
 Depende de: 17 (varios libros) y 19 (Casa do Medio con datos), fusionadas.
 
 ## Objetivo
@@ -34,10 +34,14 @@ Quitar el acceso a alguien (se hace desde Drive). Enlace de invitación. Abrir u
 - Aceptación con Google y Picker simulados: compartir, abrir un libro compartido y verlo en la lista.
 
 ## Pruebas manuales en iPhone
-- [ ] 18a: compartir Casa do Medio con Ana; a Ana le llega el aviso de Drive.
-- [ ] 18a: en el iPhone de Ana, Ajustes → Libros → «Abrir un libro compartido conmigo»: aparece Casa do Medio con sus movimientos.
-- [ ] 18a: Ana apunta un gasto y aparece en tu Casa do Medio.
+- [x] 18a: compartir Casa do Medio con Ana; a Ana le llega el aviso de Drive.
+- [x] 18a: en el iPhone de Ana, Ajustes → Libros → «Abrir un libro compartido conmigo»: aparece Casa do Medio con sus movimientos.
+- [x] 18a: Ana apunta un gasto y aparece en tu Casa do Medio.
 
 ## Criterio de cierre
-- [ ] 18a fusionada y probada en el iPhone (los dos teléfonos), con la clave de API puesta.
-- [ ] `npm test` y `npm run acceptance` en verde.
+- [x] 18a fusionada y probada en el iPhone (los dos teléfonos), con la clave de API puesta.
+- [x] `npm test` y `npm run acceptance` en verde.
+
+## Notas del cierre (2026-11-05)
+- En el iPhone, el Picker sale en blanco con «Can't access your Google Account» si Safari tiene activado «Evitar seguimiento entre sitios» (bloquea las cookies de Google dentro del Picker). Basta con desactivarlo mientras se elige el libro; el permiso queda para siempre y luego se puede volver a activar.
+- Justo después de elegir el libro, Google tardó unos minutos en dejar leer el Sheet (`drive.get:200` y luego `sheets.batchGet:404`). Reintentando más tarde funcionó.

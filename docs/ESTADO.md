@@ -124,7 +124,7 @@ Decidido el 2026-10-29: empezar el libro personal con el histórico real (import
 | 16 | Importar y descargar los datos | Hecha (2026-10-29) | Libro personal real importado y cuadrado; plantilla e importar en Ajustes sin probar en iPhone |
 | 17 | Varios libros | Hecha (2026-10-30) | Probada en iPhone: Casa do Medio creado y transferencia desde Personal que aparece en los dos libros |
 | 20 | Experiencia: pantallas más simples | Hecha (2026-10-31) | En cinco partes (20a Añadir, 20b Historial, 20c Libros/Cuentas/Categorías, 20d Ajustes/INICIO, 20e Análisis), PR #46–#50. Probada en iPhone |
-| 18 | Libro compartido | En curso | 18a (compartir y abrir con el Picker) fusionada; falta la clave de API. 18b (persona en los gastos) descartada |
+| 18 | Libro compartido | Hecha (2026-11-05) | Casa do Medio compartido con Ana y probado en los dos iPhone. 18b (persona en los gastos) descartada. En iOS hay que desactivar «Evitar seguimiento entre sitios» al elegir el libro; Google puede tardar unos minutos en dejar leerlo |
 | 19 | Importar la reforma | Hecha (2026-10-31) | 87 movimientos importados en Casa do Medio; la descarga del libro coincide fila a fila con lo generado y el saldo cuadra con el banco |
 | 21 | Robustez | Hecha (2026-11-01) | Fallos de una revisión completa (PR #58). Comprobada con pruebas de aceptación, no en el iPhone |
 | 22 | Mantenibilidad | Hecha (2026-11-01) | Sin duplicados, en cuatro partes (PR #59–#62). Sin cambios para el usuario |
