@@ -91,9 +91,9 @@ test('book merges the pending movements of the open book only; pendingCount coun
   // Offline, so nothing is uploaded and the pending stay.
   const offline = setup({ isOnline: () => false, cachedBooks: () => ready([m1]) }, {
     outbox: [
-      { fileId: 'f1', movement: edited },
-      { fileId: 'f1', movement: m2 },
-      { fileId: 'other', movement: { id: 'm9', amount: 999999.99 } },
+      { fileId: 'f1', sheet: 'Movements', record: edited },
+      { fileId: 'f1', sheet: 'Movements', record: m2 },
+      { fileId: 'other', sheet: 'Movements', record: { id: 'm9', amount: 999999.99 } },
     ],
   }).state;
   await offline.refresh();
@@ -157,7 +157,7 @@ test('refresh searches Drive once with fetchBooks and does not reload when nothi
 // --- sync: the outbox of every book ---
 
 test('sync that uploaded something of the open book reads it again by its file, without searching Drive', async () => {
-  const { state, log, count } = setup({}, { outbox: [{ fileId: 'f1', movement: m2 }] });
+  const { state, log, count } = setup({}, { outbox: [{ fileId: 'f1', sheet: 'Movements', record: m2 }] });
   await state.refresh();
   assert.equal(count('fetch'), 1, 'only the first read searches Drive');
   assert.equal(count('syncOutbox:f1'), 1);
@@ -171,7 +171,7 @@ test('sync that uploaded something of the open book reads it again by its file, 
 test('an updated row alone also reads the open book again', async () => {
   const { state, log, count } = setup({
     syncOutbox: async (fileId) => { log.push(`syncOutbox:${fileId}`); return { appended: 0, updated: 2 }; },
-    listPending: async () => [{ fileId: 'f9', movement: m1 }],
+    listPending: async () => [{ fileId: 'f9', sheet: 'Movements', record: m1 }],
   });
   state.setUp(ready([], 'f9'));
   log.length = 0;
@@ -181,7 +181,7 @@ test('an updated row alone also reads the open book again', async () => {
 });
 
 test('a pending change of a book that is not open is uploaded, without reading the open one again', async () => {
-  const { state, log, queue } = setup({}, { outbox: [{ fileId: 'f2', movement: m3 }] });
+  const { state, log, queue } = setup({}, { outbox: [{ fileId: 'f2', sheet: 'Movements', record: m3 }] });
   state.setUp({ ...ready([m1]), books: BOOKS });
   log.length = 0;
   await state.sync();
@@ -194,10 +194,10 @@ test('a pending change of a book that is not open is uploaded, without reading t
 test('pending changes in several books: each book is uploaded once, the open one read again once', async () => {
   const { state, log, count, queue } = setup({}, {
     outbox: [
-      { fileId: 'f2', movement: m3 },
-      { fileId: 'f1', movement: m2 },
-      { fileId: 'f2', movement: { ...m1, id: 'm4' } },
-      { fileId: 'f3', movement: { ...m1, id: 'm5' } },
+      { fileId: 'f2', sheet: 'Movements', record: m3 },
+      { fileId: 'f1', sheet: 'Movements', record: m2 },
+      { fileId: 'f2', sheet: 'Movements', record: { ...m1, id: 'm4' } },
+      { fileId: 'f3', sheet: 'Movements', record: { ...m1, id: 'm5' } },
     ],
   });
   state.setUp({ ...ready([m1]), books: BOOKS });
@@ -222,7 +222,7 @@ test('sync with nothing pending makes no upload, no reload, and emits data', asy
 });
 
 test('sync does nothing offline, with an expired token, or without a ready book', async () => {
-  const outbox = [{ fileId: 'f1', movement: m2 }];
+  const outbox = [{ fileId: 'f1', sheet: 'Movements', record: m2 }];
   const offline = setup({ isOnline: () => false }, { outbox });
   offline.state.setUp(ready([]));
   offline.log.length = 0;
@@ -245,7 +245,7 @@ test('sync does nothing offline, with an expired token, or without a ready book'
 test('an expired token while reloading the book asks to re-decide the route', async () => {
   const { state, log, logged } = setup({
     reloadBook: async (fileId) => { log.push(`reload:${fileId}`); throw new TokenExpiredError(); },
-  }, { outbox: [{ fileId: 'f1', movement: m2 }] });
+  }, { outbox: [{ fileId: 'f1', sheet: 'Movements', record: m2 }] });
   state.setUp(ready([m1]));
   log.length = 0;
   await state.sync();
@@ -257,7 +257,7 @@ test('an expired token while reloading the book asks to re-decide the route', as
 test('a sync error that is not the token logs only its name and status', async () => {
   const { state, logged } = setup({
     syncOutbox: async () => { throw Object.assign(new Error('boom'), { name: 'ApiError', status: 500 }); },
-  }, { outbox: [{ fileId: 'f1', movement: m2 }] });
+  }, { outbox: [{ fileId: 'f1', sheet: 'Movements', record: m2 }] });
   await state.refresh();
   assert.deepEqual(logged, [{ type: 'error', result: 'sync:ApiError:500' }]);
   // Nothing of the movement leaks into the log.
@@ -275,9 +275,9 @@ test('a book that fails to upload is logged and the other books are still upload
     },
   }, {
     outbox: [
-      { fileId: 'f2', movement: m3 },
-      { fileId: 'f1', movement: m2 },
-      { fileId: 'f3', movement: { ...m1, id: 'm5' } },
+      { fileId: 'f2', sheet: 'Movements', record: m3 },
+      { fileId: 'f1', sheet: 'Movements', record: m2 },
+      { fileId: 'f3', sheet: 'Movements', record: { ...m1, id: 'm5' } },
     ],
   });
   state.setUp({ ...ready([m1]), books: BOOKS });
@@ -298,7 +298,7 @@ test('when the open book fails to upload, its pending stay and it is not read ag
       if (fileId === 'f1') throw Object.assign(new Error('x'), { name: 'ApiError', status: 503 });
       return { appended: 1, updated: 0 };
     },
-  }, { outbox: [{ fileId: 'f1', movement: m2 }, { fileId: 'f2', movement: m3 }] });
+  }, { outbox: [{ fileId: 'f1', sheet: 'Movements', record: m2 }, { fileId: 'f2', sheet: 'Movements', record: m3 }] });
   state.setUp({ ...ready([m1]), books: BOOKS });
   log.length = 0;
   await state.sync();
@@ -312,7 +312,7 @@ test('when the open book fails to upload, its pending stay and it is not read ag
 test('an expired token while uploading one book stops the others, emits route and logs nothing', async () => {
   const { state, log, logged } = setup({
     syncOutbox: async (fileId) => { log.push(`syncOutbox:${fileId}`); throw new TokenExpiredError(); },
-  }, { outbox: [{ fileId: 'f2', movement: m3 }, { fileId: 'f1', movement: m2 }] });
+  }, { outbox: [{ fileId: 'f2', sheet: 'Movements', record: m3 }, { fileId: 'f1', sheet: 'Movements', record: m2 }] });
   state.setUp({ ...ready([m1]), books: BOOKS });
   log.length = 0;
   await state.sync();
@@ -323,7 +323,7 @@ test('an expired token while uploading one book stops the others, emits route an
 test('an expired token during sync re-decides the route and logs nothing', async () => {
   const { state, log, logged } = setup({
     syncOutbox: async () => { throw new TokenExpiredError(); },
-  }, { outbox: [{ fileId: 'f2', movement: m2 }] });
+  }, { outbox: [{ fileId: 'f2', sheet: 'Movements', record: m2 }] });
   await state.refresh();
   assert.equal(log.at(-1), 'route');
   assert.deepEqual(logged, []);
@@ -346,7 +346,7 @@ test('saved counts the movement at once and starts the upload of its book', asyn
   state.setUp(ready([]));
   log.length = 0;
   // What movements.js writes to the outbox before the form calls saved().
-  queue.push({ fileId: 'f1', movement: m2 });
+  queue.push({ fileId: 'f1', sheet: 'Movements', record: m2 });
   state.saved(m2);
   assert.equal(state.pendingCount, 1);
   assert.deepEqual(state.book.movements, [m2]);
@@ -372,8 +372,8 @@ test('switching books shows the device copy at once, with the pending of the new
   const { state, log } = setup({ isOnline: () => false }, {
     copies: { f2: copyF2 },
     outbox: [
-      { fileId: 'f1', movement: m1 },
-      { fileId: 'f2', movement: m2 },
+      { fileId: 'f1', sheet: 'Movements', record: m1 },
+      { fileId: 'f2', sheet: 'Movements', record: m2 },
     ],
   });
   state.setUp({ ...ready([]), books: BOOKS });
@@ -545,7 +545,7 @@ test('reset forgets the book, the list and the pending movements', async () => {
   const { state } = setup({
     cachedBooks: () => ({ ...ready([m1]), books: BOOKS }),
     isOnline: () => false,
-  }, { outbox: [{ fileId: 'f1', movement: m2 }] });
+  }, { outbox: [{ fileId: 'f1', sheet: 'Movements', record: m2 }] });
   await state.refresh();
   assert.equal(state.pendingCount, 1);
   assert.equal(state.books.length, 3);
@@ -659,10 +659,10 @@ for (const status of [403, 404]) {
   test(`blockedCount counts the queued movements of a book that answers ${status}`, async () => {
     const { state, logged } = setup({ syncOutbox: refusing({ f2: status }) }, {
       outbox: [
-        { fileId: 'f2', movement: m1 },
-        { fileId: 'f2', movement: m3 },
-        { fileId: 'f1', movement: m2 },
-        { fileId: 'f3', movement: { ...m1, id: 'm5' } },
+        { fileId: 'f2', sheet: 'Movements', record: m1 },
+        { fileId: 'f2', sheet: 'Movements', record: m3 },
+        { fileId: 'f1', sheet: 'Movements', record: m2 },
+        { fileId: 'f3', sheet: 'Movements', record: { ...m1, id: 'm5' } },
       ],
     });
     state.setUp({ ...ready([m1]), books: BOOKS });
@@ -678,9 +678,9 @@ for (const status of [403, 404]) {
 test('blockedCount adds up several refusing books', async () => {
   const { state } = setup({ syncOutbox: refusing({ f2: 403, f3: 404 }) }, {
     outbox: [
-      { fileId: 'f2', movement: m1 },
-      { fileId: 'f3', movement: m2 },
-      { fileId: 'f3', movement: m3 },
+      { fileId: 'f2', sheet: 'Movements', record: m1 },
+      { fileId: 'f3', sheet: 'Movements', record: m2 },
+      { fileId: 'f3', sheet: 'Movements', record: m3 },
     ],
   });
   state.setUp({ ...ready([m1]), books: BOOKS });
@@ -695,7 +695,7 @@ test('a later successful sync of that book clears blockedCount', async () => {
       if (status) throw new ApiError(status, 'sheets.batchGet');
       return { appended: 1, updated: 0 };
     },
-  }, { outbox: [{ fileId: 'f2', movement: m1 }] });
+  }, { outbox: [{ fileId: 'f2', sheet: 'Movements', record: m1 }] });
   state.setUp({ ...ready([m1]), books: BOOKS });
   await state.sync();
   assert.equal(state.blockedCount, 1);
@@ -705,7 +705,7 @@ test('a later successful sync of that book clears blockedCount', async () => {
 });
 
 test('reset clears blockedCount', async () => {
-  const { state } = setup({ syncOutbox: refusing({ f2: 404 }) }, { outbox: [{ fileId: 'f2', movement: m1 }] });
+  const { state } = setup({ syncOutbox: refusing({ f2: 404 }) }, { outbox: [{ fileId: 'f2', sheet: 'Movements', record: m1 }] });
   state.setUp({ ...ready([m1]), books: BOOKS });
   await state.sync();
   assert.equal(state.blockedCount, 1);
@@ -719,7 +719,7 @@ test('other errors (400, 500, 503, network 0, not an ApiError) do not count as b
     new ApiError(503, 'sheets.append'), new ApiError(0, 'sheets.append'),
     Object.assign(new Error('x'), { status: 403 }),
   ]) {
-    const { state } = setup({ syncOutbox: async () => { throw error; } }, { outbox: [{ fileId: 'f2', movement: m1 }] });
+    const { state } = setup({ syncOutbox: async () => { throw error; } }, { outbox: [{ fileId: 'f2', sheet: 'Movements', record: m1 }] });
     state.setUp({ ...ready([m1]), books: BOOKS });
     await state.sync();
     assert.equal(state.blockedCount, 0, `${error.name}:${error.status}`);

@@ -9,7 +9,7 @@
 
 import { TokenExpiredError } from './data/auth.js';
 import { ApiError } from './data/errors.js';
-import { enqueue, mergePending } from './storage/outbox-logic.js';
+import { enqueue, mergePending, recordsOf } from './storage/outbox-logic.js';
 
 const UNKNOWN = Object.freeze({ status: 'unknown', fileId: null, book: null });
 
@@ -21,7 +21,8 @@ export function createBookState(deps) {
   let current = UNKNOWN;
   // The user's books (domain/books.js), the personal one first.
   let books = [];
-  // Movements of the book open saved on the device, not in the Sheet yet.
+  // Changes of the book open saved on the device, not in the Sheet yet:
+  // [{ sheet, record }], one per record id.
   let pending = [];
   let fetching = false;
   // Grows each time another book is opened: a Drive read that started
@@ -46,7 +47,7 @@ export function createBookState(deps) {
     try {
       pending = (await deps.listPending())
         .filter((item) => item.fileId === current.fileId)
-        .map((item) => item.movement);
+        .map(({ sheet, record }) => ({ sheet, record }));
     } catch (err) {
       console.warn('Outbox read failed', err);
     }
@@ -150,20 +151,27 @@ export function createBookState(deps) {
     get savedBook() { return current.book; },
     // The book with the pending changes on top, as every screen shows it.
     get book() {
-      return { ...current.book, movements: mergePending(current.book.movements, pending) };
+      const merged = (sheet, records = []) => mergePending(records, recordsOf(pending, sheet));
+      return {
+        ...current.book,
+        movements: merged('Movements', current.book.movements),
+        goals: merged('Goals', current.book.goals),
+        contributions: merged('Contributions', current.book.contributions),
+      };
     },
     get pendingCount() { return pending.length; },
     // Their ids, to mark them on screen.
-    get pendingIds() { return new Set(pending.map((movement) => movement.id)); },
+    get pendingIds() { return new Set(pending.map(({ record }) => record.id)); },
     // Movements that cannot be uploaded: their book refuses them (403/404).
     get blockedCount() { return blockedCount; },
     refresh,
     reloadBook,
     sync,
-    // What the Add form saved (a movement or both halves of a transfer) is
-    // counted at once; the upload follows.
-    saved(movements) {
-      for (const movement of [movements].flat()) pending = enqueue(pending, movement);
+    // What was saved (a movement, both halves of a transfer, a goal or a
+    // contribution: records of the tab `sheet`) is counted at once; the
+    // upload follows.
+    saved(records, sheet = 'Movements') {
+      for (const record of [records].flat()) pending = enqueue(pending, { sheet, record });
       sync();
     },
     // Onboarding created the personal book, or Ajustes → Libros a new one

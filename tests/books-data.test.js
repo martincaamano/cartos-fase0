@@ -16,7 +16,10 @@ import { fakeStorage } from './helpers/fake-storage.js';
 
 const SUB = 'user-1'; // the user of the fake session (helpers/fake-google.js)
 const accountRow = (id, name, balance = 0, deleted = false) => [id, name, '🏦', balance, 't0', 't0', deleted];
-const emptyTabs = () => ({ Accounts: [HEADERS.Accounts], Categories: [HEADERS.Categories], Movements: [HEADERS.Movements] });
+const emptyTabs = () => ({
+  Accounts: [HEADERS.Accounts], Categories: [HEADERS.Categories], Movements: [HEADERS.Movements],
+  Goals: [HEADERS.Goals], Contributions: [HEADERS.Contributions],
+});
 
 const isDrive = (call) => call.url.hostname === 'www.googleapis.com';
 const isList = (call) => isDrive(call) && call.method === 'GET' && call.url.pathname === '/drive/v3/files';
@@ -652,6 +655,8 @@ function bookWithData({ bankBalance = 1000, fileId = 'file-1' } = {}) {
         HEADERS.Movements,
         ['m-0', 'acc-bank', 'expense', 3, '2026-09-01', 'cat-food', '', '', '', 'user-1', 't0', 't0', false],
       ],
+      Goals: [HEADERS.Goals],
+      Contributions: [HEADERS.Contributions],
     },
   }]);
 }

@@ -11,6 +11,13 @@ export const HEADERS = Object.freeze({
   ],
   // Only in shared books (tarea 18), added the first time it is needed.
   Members: ['id', 'email', 'name', 'createdAt'],
+  // Savings goals (tarea 25), added to older books the first time they are
+  // read. What a goal has put aside is the sum of its contributions.
+  Goals: [
+    'id', 'name', 'categoryId', 'targetAmount', 'targetDate', 'status', 'completedAt', 'movementId',
+    'createdBy', 'createdAt', 'updatedAt', 'deleted',
+  ],
+  Contributions: ['id', 'goalId', 'amount', 'date', 'createdBy', 'createdAt', 'updatedAt', 'deleted'],
 });
 
 // The tabs every book has, read and written together.
@@ -20,8 +27,10 @@ export const lastColumn = (sheet) => String.fromCharCode(64 + HEADERS[sheet].len
 export const rowRange = (sheet, row) => `${sheet}!A${row}:${lastColumn(sheet)}${row}`;
 
 export const SHEET_NAMES = Object.freeze(['Accounts', 'Categories', 'Movements']);
+// The tabs added in tarea 25, read with the others.
+export const GOAL_SHEETS = Object.freeze(['Goals', 'Contributions']);
 
-const NUMBER_COLUMNS = new Set(['initialBalance', 'amount']);
+const NUMBER_COLUMNS = new Set(['initialBalance', 'amount', 'targetAmount']);
 const BOOLEAN_COLUMNS = new Set(['deleted', 'isDefault']);
 
 export class SheetFormatError extends Error {

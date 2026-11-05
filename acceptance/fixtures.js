@@ -18,7 +18,8 @@ const AT = '2026-09-01T10:00:00.000Z';
 export const movement = (id, accountId, type, amount, date, categoryId, note = '') =>
   [id, accountId, type, amount, date, categoryId, note, '', '', 'user-1', `${date}T10:00:00.000Z`, `${date}T10:00:00.000Z`, false];
 
-// Two accounts, five categories and movements in October and September.
+// Two accounts, five categories and movements in October and September; no
+// goals yet.
 // Balances: Abanca 1000 + 1500 − 20,50 − 45 = 2.434,50; Efectivo 50 − 9,99 = 40,01.
 export function sampleBook() {
   return {
@@ -42,6 +43,10 @@ export function sampleBook() {
       movement('m-rest', 'acc-bank', 'expense', 45, '2026-10-18', 'cat-rest', 'cena'),
       movement('m-sept', 'acc-cash', 'expense', 9.99, '2026-09-15', 'cat-food'),
     ],
+    // Tarea 25: books have their goal tabs (one without them is tested in
+    // outbox-upgrade.spec.js).
+    Goals: [HEADERS.Goals],
+    Contributions: [HEADERS.Contributions],
   };
 }
 

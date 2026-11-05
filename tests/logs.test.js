@@ -65,13 +65,13 @@ test('queueing and syncing a movement logs no amount, note or category name', as
   // One in-memory outbox: movements.js saves into it, sync.js uploads from it.
   const queued = [];
   configureMovements({
-    add: async (fileId, movements) => { for (const movement of movements) queued.push({ fileId, movement }); },
+    add: async (fileId, movements) => { for (const record of movements) queued.push({ fileId, sheet: 'Movements', record }); },
   });
   configureSync({
     list: async () => queued,
     remove: async (movements) => {
       for (const done of movements) {
-        const i = queued.findIndex((item) => item.movement.id === done.id);
+        const i = queued.findIndex((item) => item.record.id === done.id);
         if (i >= 0) queued.splice(i, 1);
       }
     },

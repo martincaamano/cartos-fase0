@@ -12,7 +12,7 @@ import { setupGoogleApi, TOKEN } from './helpers/fake-google.js';
 const isWrite = (call) => call.method === 'POST' && call.url.hostname === 'sheets.googleapis.com'
   && call.url.pathname.includes('/values');
 
-test('createBook creates the file, the three tabs, headers and default categories', async () => {
+test('createBook creates the file, the five tabs, headers and default categories', async () => {
   const calls = setupGoogleApi((call) => (call.url.hostname === 'www.googleapis.com' ? { body: { id: 'file-1' } } : {}));
   const book = await createBook();
 
@@ -26,13 +26,15 @@ test('createBook creates the file, the three tabs, headers and default categorie
 
   assert.deepEqual(
     structure.body.requests.map((r) => r.updateSheetProperties?.properties.title ?? r.addSheet.properties.title),
-    ['Accounts', 'Categories', 'Movements']
+    ['Accounts', 'Categories', 'Movements', 'Goals', 'Contributions']
   );
 
   assert.equal(values.body.valueInputOption, 'RAW');
-  const [accounts, categories, movements] = values.body.data;
+  const [accounts, categories, movements, goals, contributions] = values.body.data;
   assert.deepEqual(accounts.values, [HEADERS.Accounts]);
   assert.deepEqual(movements.values, [HEADERS.Movements]);
+  assert.deepEqual(goals.values, [HEADERS.Goals]);
+  assert.deepEqual(contributions.values, [HEADERS.Contributions]);
   assert.deepEqual(categories.values[0], HEADERS.Categories);
   assert.ok(categories.values.some((row) => row[0] === 'transfer' && row[1] === 'Transferencia'));
   assert.equal(categories.values.length, 14, 'header + 13 default categories');
@@ -45,6 +47,8 @@ function bookResponse() {
         { values: [HEADERS.Accounts, ['acc-1', 'Banco', '🏦', 100, '', '', false], ['acc-old', 'Vieja', '', 0, '', '', true]] },
         { values: [HEADERS.Categories, ['cat-1', 'Ocio', '🎉', 'expense', true, '', false]] },
         { values: [HEADERS.Movements, ['m-1', 'acc-1', 'expense', 12.5, '2026-10-25', 'cat-1', '', '', '', 'user-1', '', '', false]] },
+        { values: [HEADERS.Goals, ['g-1', 'Tele', 'cat-1', 1000, '2027-03-01', 'active', '', '', 'user-1', '', '', false]] },
+        { values: [HEADERS.Contributions, ['c-1', 'g-1', 250.5, '2026-11-01', 'user-1', '', '', false]] },
       ],
     },
   };
@@ -53,7 +57,10 @@ function bookResponse() {
 test('readBook returns typed accounts, categories and movements', async () => {
   const calls = setupGoogleApi(bookResponse);
   const book = await readBook('file-1');
-  assert.deepEqual(calls[0].url.searchParams.getAll('ranges'), ['Accounts', 'Categories', 'Movements']);
+  assert.deepEqual(calls[0].url.searchParams.getAll('ranges'), ['Accounts', 'Categories', 'Movements', 'Goals', 'Contributions']);
+  assert.equal(calls.length, 1, 'one request when the book has every tab');
+  assert.equal(book.goals[0].targetAmount, 1000);
+  assert.equal(book.contributions[0].amount, 250.5);
   assert.deepEqual(book.accounts.map((a) => [a.id, a.initialBalance, a.deleted]), [['acc-1', 100, false], ['acc-old', 0, true]]);
   assert.equal(book.categories[0].isDefault, true);
   assert.equal(book.movements[0].amount, 12.5);
@@ -354,5 +361,74 @@ test('updateCategory with an id missing from the Sheet reads but never writes', 
   const calls = setupGoogleApi(idColumn(['transfer', 'cat-1']));
   await assert.rejects(updateCategory('file-1', gym, { name: 'Gym', kind: 'expense' }, categoryBook),
     (err) => err instanceof ValidationError && err.errors.includes('category_unknown'));
+  assert.equal(calls.length, 1);
+});
+
+// --- readBook on a book from before tarea 25 ---
+
+const isGet = (call) => call.url.pathname.endsWith('values:batchGet');
+const isAddSheet = (call) => call.url.pathname.endsWith(':batchUpdate') && !call.url.pathname.endsWith('values:batchUpdate');
+const isValuesUpdate = (call) => call.url.pathname.endsWith('values:batchUpdate');
+const BASE_TABS = () => [
+  { values: [HEADERS.Accounts, ['acc-1', 'Banco', '🏦', 100, '', '', false]] },
+  { values: [HEADERS.Categories] },
+  { values: [HEADERS.Movements] },
+];
+
+test('readBook of a book without goal tabs (400) adds them and reads once more', async () => {
+  let reads = 0;
+  const calls = setupGoogleApi((call) => {
+    if (isGet(call)) {
+      reads += 1;
+      if (reads === 1) return { status: 400 };
+      return { body: { valueRanges: [...BASE_TABS(), { values: [HEADERS.Goals] }, { values: [HEADERS.Contributions] }] } };
+    }
+    return {};
+  });
+  const book = await readBook('file-1');
+  assert.deepEqual(book.goals, []);
+  assert.deepEqual(book.contributions, []);
+  assert.equal(book.accounts[0].id, 'acc-1');
+
+  assert.equal(calls.filter(isGet).length, 2, 'exactly one more read');
+  assert.deepEqual(calls.filter(isAddSheet).flatMap((c) => c.body.requests.map((r) => r.addSheet.properties.title)), ['Goals', 'Contributions']);
+  const headers = calls.filter(isValuesUpdate);
+  assert.equal(headers.length, 1);
+  assert.equal(headers[0].body.valueInputOption, 'RAW');
+  assert.deepEqual(headers[0].body.data, [
+    { range: 'Goals!A1', values: [HEADERS.Goals] },
+    { range: 'Contributions!A1', values: [HEADERS.Contributions] },
+  ]);
+  // The tabs are added and headed before the second read.
+  assert.ok(calls.indexOf(headers[0]) < calls.lastIndexOf(calls.filter(isGet)[1]));
+  for (const call of calls) assert.equal(call.headers.Authorization, `Bearer ${TOKEN}`);
+});
+
+test('readBook of a goal tab that exists but is empty writes its header and reads it as []', async () => {
+  const calls = setupGoogleApi((call) => (isGet(call)
+    ? { body: { valueRanges: [...BASE_TABS(), {}, { values: [HEADERS.Contributions, ['c-1', 'g-1', 0.01, '2026-11-05', '', '', '', false]] }] } }
+    : {}));
+  const book = await readBook('file-1');
+  assert.deepEqual(book.goals, []);
+  assert.equal(book.contributions.length, 1);
+  assert.equal(book.contributions[0].amount, 0.01);
+  assert.equal(calls.some(isAddSheet), false, 'no tab added');
+  const headers = calls.filter(isValuesUpdate);
+  assert.equal(headers.length, 1);
+  assert.equal(headers[0].body.valueInputOption, 'RAW');
+  assert.deepEqual(headers[0].body.data, [{ range: 'Goals!A1', values: [HEADERS.Goals] }]);
+  assert.equal(calls.filter(isGet).length, 1);
+});
+
+test('readBook with both goal tabs empty writes both headers in one request', async () => {
+  const calls = setupGoogleApi((call) => (isGet(call) ? { body: { valueRanges: [...BASE_TABS(), {}, {}] } } : {}));
+  const book = await readBook('file-1');
+  assert.deepEqual([book.goals, book.contributions], [[], []]);
+  assert.deepEqual(calls.filter(isValuesUpdate).map((c) => c.body.data.map((d) => d.range)), [['Goals!A1', 'Contributions!A1']]);
+});
+
+test('readBook rethrows an error other than 400 without adding tabs', async () => {
+  const calls = setupGoogleApi(() => ({ status: 403 }));
+  await assert.rejects(readBook('file-1'), (err) => err.status === 403);
   assert.equal(calls.length, 1);
 });

@@ -1,16 +1,18 @@
-// Uploads the outbox (filled by js/data/movements.js) to the book's
-// Movements tab. Reads the ids already in the Sheet first: new movements
-// are appended, edited or deleted ones are written over the row found by
-// id, so a retry after a lost answer never duplicates a row. One run at a
-// time per book: a call for the same book while one is running waits for it
-// and gets one more run after it, so a movement saved meanwhile is uploaded
-// too.
+// Uploads the outbox (filled by js/data/movements.js and js/data/goals.js)
+// to the tabs of the book: Movements, Goals, Contributions, in that order.
+// Reads the ids already in those tabs first: new records are appended,
+// edited or deleted ones are written over the row found by id, so a retry
+// after a lost answer never duplicates a row. One run at a time per book: a
+// call for the same book while one is running waits for it and gets one
+// more run after it, so a change saved meanwhile is uploaded too.
 
 import { currentUserSub } from './auth.js';
 
+import { ApiError } from './errors.js';
 import { append, batchGet, batchUpdateValues } from './sheets.js';
-import { rowRange, rowsById, toRow } from './rows.js';
-import { planSync } from '../storage/outbox-logic.js';
+import { GOAL_SHEETS, rowRange, rowsById, toRow } from './rows.js';
+import { addTabs } from './tabs.js';
+import { OUTBOX_SHEETS, planSync, recordsOf } from '../storage/outbox-logic.js';
 import { listPending, removePending } from '../storage/outbox.js';
 import { logEvent } from '../storage/logs.js';
 
@@ -25,22 +27,38 @@ export function configureSync(overrides = {}) {
   running.clear();
 }
 
-async function run(fileId) {
-  const pending = (await store.list(currentUserSub())).filter((item) => item.fileId === fileId).map((item) => item.movement);
-  if (pending.length === 0) return { appended: 0, updated: 0, pending: 0 };
-
-  const [idColumn] = await batchGet(fileId, ['Movements!A:A']);
-  const { toAppend, toUpdate } = planSync(pending, rowsById(idColumn));
-  if (toUpdate.length > 0) {
-    await batchUpdateValues(fileId, toUpdate.map(({ movement, row }) => ({
-      range: rowRange('Movements', row),
-      values: [toRow('Movements', movement)],
-    })));
+// Column A of each tab. A book read before tarea 25 by another device may
+// lack the goal tabs (Sheets answers 400): they are added, then read again.
+async function readIds(fileId, sheets) {
+  const ranges = sheets.map((sheet) => `${sheet}!A:A`);
+  try {
+    return await batchGet(fileId, ranges);
+  } catch (err) {
+    if (!(err instanceof ApiError && err.status === 400) || !sheets.some((sheet) => GOAL_SHEETS.includes(sheet))) throw err;
+    await addTabs(fileId, GOAL_SHEETS);
+    return batchGet(fileId, ranges);
   }
-  if (toAppend.length > 0) await append(fileId, 'Movements', toAppend.map((m) => toRow('Movements', m)));
-  await store.remove([...toUpdate.map(({ movement }) => movement), ...toAppend]);
-  logEvent({ type: 'sync', result: `ok:${toAppend.length}:${toUpdate.length}` });
-  return { appended: toAppend.length, updated: toUpdate.length, pending: 0 };
+}
+
+async function run(fileId) {
+  const entries = (await store.list(currentUserSub())).filter((item) => item.fileId === fileId);
+  const sheets = OUTBOX_SHEETS.filter((sheet) => entries.some((entry) => entry.sheet === sheet));
+  if (sheets.length === 0) return { appended: 0, updated: 0, pending: 0 };
+
+  const idColumns = await readIds(fileId, sheets);
+  const plans = sheets.map((sheet, i) => ({ sheet, ...planSync(recordsOf(entries, sheet), rowsById(idColumns[i])) }));
+  const updates = plans.flatMap(({ sheet, toUpdate }) => toUpdate.map(({ record, row }) => ({
+    range: rowRange(sheet, row),
+    values: [toRow(sheet, record)],
+  })));
+  if (updates.length > 0) await batchUpdateValues(fileId, updates);
+  for (const { sheet, toAppend } of plans) {
+    if (toAppend.length > 0) await append(fileId, sheet, toAppend.map((record) => toRow(sheet, record)));
+  }
+  const appended = plans.reduce((sum, plan) => sum + plan.toAppend.length, 0);
+  await store.remove(plans.flatMap(({ toAppend, toUpdate }) => [...toUpdate.map(({ record }) => record), ...toAppend]));
+  logEvent({ type: 'sync', result: `ok:${appended}:${updates.length}` });
+  return { appended, updated: updates.length, pending: 0 };
 }
 
 // Resolves with what all the runs did together: { appended, updated, pending }.

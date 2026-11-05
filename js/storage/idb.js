@@ -2,11 +2,12 @@
 // (creating its store on the first open) and waiting for a transaction to
 // end. Not tested in Node (no IndexedDB).
 
-// upgrade(db): creates the stores the first time.
+// upgrade(db, tx, oldVersion): creates the stores the first time, or
+// changes them when the version grows (tx: the upgrade's transaction).
 export function openDb(name, version, upgrade) {
   return new Promise((resolve, reject) => {
     const request = indexedDB.open(name, version);
-    request.onupgradeneeded = () => upgrade(request.result);
+    request.onupgradeneeded = (event) => upgrade(request.result, request.transaction, event.oldVersion);
     request.onsuccess = () => resolve(request.result);
     request.onerror = () => reject(request.error);
   });

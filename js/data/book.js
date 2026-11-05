@@ -1,11 +1,12 @@
 // A book is one Google Sheet with the tabs Accounts, Categories and Movements
-// (architecture §2). Everything is validated with domain/ before it is written.
+// (architecture §2), and Goals and Contributions since tarea 25. Everything is validated with domain/ before it is written.
 
 import { es } from '../../i18n/es.js';
 import { createSpreadsheetFile } from './drive.js';
-import { assertValid, ValidationError } from './errors.js';
+import { ApiError, assertValid, ValidationError } from './errors.js';
 import { append, batchClear, batchGet, batchUpdate, batchUpdateValues } from './sheets.js';
-import { findRowById, HEADERS, rowRange, SHEET_NAMES, toRow, rowsToObjects } from './rows.js';
+import { findRowById, GOAL_SHEETS, HEADERS, rowRange, SHEET_NAMES, toRow, rowsToObjects } from './rows.js';
+import { addTabs, writeHeaders } from './tabs.js';
 import { createAccount, editAccount, validateAccount } from '../domain/account.js';
 import {
   buildDefaultCategories, canRemoveCategory, createCategory, editCategory, validateCategory, validateCategoryEdit,
@@ -24,6 +25,7 @@ export async function createBook({ name = 'Personal', bookType = 'personal', cat
     { updateSheetProperties: { properties: { sheetId: FIRST_SHEET_ID, title: 'Accounts' }, fields: 'title' } },
     { addSheet: { properties: { title: 'Categories' } } },
     { addSheet: { properties: { title: 'Movements' } } },
+    ...GOAL_SHEETS.map((title) => ({ addSheet: { properties: { title } } })),
   ]);
 
   const rows = categories ?? buildDefaultCategories(categoryNames);
@@ -31,17 +33,36 @@ export async function createBook({ name = 'Personal', bookType = 'personal', cat
     { range: 'Accounts!A1', values: [HEADERS.Accounts] },
     { range: 'Categories!A1', values: [HEADERS.Categories, ...rows.map((c) => toRow('Categories', c))] },
     { range: 'Movements!A1', values: [HEADERS.Movements] },
+    ...GOAL_SHEETS.map((sheet) => ({ range: `${sheet}!A1`, values: [HEADERS[sheet]] })),
   ]);
 
   return { fileId: file.id, bookId, name, bookType };
 }
 
+// All the tabs in one request. A book from before tarea 25 lacks the goal
+// tabs (Sheets answers 400): they are added once, then it is read again.
+async function readTabs(fileId) {
+  const ranges = [...SHEET_NAMES, ...GOAL_SHEETS];
+  try {
+    return await batchGet(fileId, ranges);
+  } catch (err) {
+    if (!(err instanceof ApiError && err.status === 400)) throw err;
+    await addTabs(fileId, GOAL_SHEETS);
+    return batchGet(fileId, ranges);
+  }
+}
+
 export async function readBook(fileId) {
-  const [accounts, categories, movements] = await batchGet(fileId, SHEET_NAMES);
+  const [accounts, categories, movements, goals, contributions] = await readTabs(fileId);
+  // A goal tab cut off before its header was written gets it now.
+  const headless = GOAL_SHEETS.filter((sheet, i) => [goals, contributions][i].length === 0);
+  if (headless.length > 0) await writeHeaders(fileId, headless);
   return {
     accounts: rowsToObjects('Accounts', accounts),
     categories: rowsToObjects('Categories', categories),
     movements: rowsToObjects('Movements', movements),
+    goals: goals.length ? rowsToObjects('Goals', goals) : [],
+    contributions: contributions.length ? rowsToObjects('Contributions', contributions) : [],
   };
 }
 
