@@ -229,6 +229,9 @@ function fakeGoogle(book) {
     // Movements of a book as objects, header left out.
     movements: (fileId = null) => (fileId ? files.get(fileId).rows : rows).Movements.slice(1).map((row) =>
       Object.fromEntries(HEADERS.Movements.map((name, i) => [name, row[i]]))),
+    // The rows of any tab as objects (Goals, Contributions...), header left out.
+    records: (tab, fileId = null) => (fileId ? files.get(fileId).rows : rows)[tab].slice(1).map((row) =>
+      Object.fromEntries(HEADERS[tab].map((name, i) => [name, row[i]]))),
     writes: () => calls.filter((call) => call.op === 'append' || call.op === 'update'),
     column,
   };

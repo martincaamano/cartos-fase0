@@ -1,17 +1,19 @@
 // Dashboard as a receipt (design §3.4): TOTAL on top, one line per account,
-// then the latest movements. Sums come from domain/, formats from ui/format.
+// then the savings goals (tarea 25b): what they put aside, what would be
+// left if they are kept, and each goal with its progress. The TOTAL and the
+// balances never change because of the goals. Sums come from domain/,
+// formats from ui/format.
 
 import { es } from '../../i18n/es.js';
 import { accountBalance, totalBalance } from '../domain/balance.js';
-import { latestEntries } from '../domain/transfer.js';
 import { activeOnly } from '../domain/active.js';
-import { formatEuros, labelOf } from '../ui/format.js';
-import { isPendingEntry, lookupsOf, movementLine, receiptLine } from '../ui/receipt.js';
-import { fillTexts, showBookBanner, showSeenAmount } from '../ui/components.js';
+import { activeGoals, available, goalProgress, totalSaved } from '../domain/goals.js';
+import { toIsoDate } from '../domain/movement.js';
+import { formatDate, formatEuros, labelOf } from '../ui/format.js';
+import { receiptLine } from '../ui/receipt.js';
+import { el, fillTexts, showBookBanner, showSeenAmount } from '../ui/components.js';
 import { renderNavbar } from '../ui/navbar.js';
 import { SECTION_HASH } from '../ui/router.js';
-
-const LATEST_COUNT = 4;
 
 // The eye next to the total: open while the amounts show, crossed out while
 // they are hidden. Drawn in the text colour.
@@ -20,17 +22,16 @@ const svgIcon = (body) => `<svg viewBox="0 0 20 20" width="20" height="20" aria-
 const EYE_OPEN = svgIcon(EYE);
 const EYE_CLOSED = svgIcon(`${EYE}<path d="M3 17L17 3"/>`);
 
-// book: movements already include the pending ones (mergePending);
-// bookName: shown on top when there is more than one book;
-// pendingCount: how many of them are not in the Sheet yet; pendingIds:
-// their ids, marked with «·».
+// book: movements, goals and contributions already include the pending
+// ones (mergePending); bookName: shown on top when there is more than one
+// book; pendingCount: how many changes are not in the Sheet yet.
 // hidden: the amounts show as «••••• €»; the eye next to the total calls
 // onToggleHidden. swapped: they just changed, so they fade in.
 // seen: the amounts shown last time, kept by the caller (showSeenAmount);
 // one that changed counts from the old value to the new one (tarea 23).
 export function renderDashboard(root, {
-  book, bookName = '', offline, pendingCount = 0, pendingIds = new Set(), blockedCount = 0, hidden = false, swapped = false,
-  onToggleHidden = () => {}, seen = new Map(),
+  book, bookName = '', offline, pendingCount = 0, blockedCount = 0, hidden = false, swapped = false,
+  onToggleHidden = () => {}, seen = new Map(), today = new Date(),
 }) {
   const t = es.dashboard;
   root.innerHTML = `
@@ -45,11 +46,12 @@ export function renderDashboard(root, {
       </section>
       <h2 class="receipt-heading" data-text="accounts"></h2>
       <ul class="receipt-list receipt-accounts"></ul>
-      <div class="dashboard-latest-head">
-        <h2 class="receipt-heading" data-text="latest"></h2>
-        <a class="link-button dashboard-see-all" data-text="seeAll"></a>
+      <div class="dashboard-goals-head">
+        <h2 class="receipt-heading" data-text="goals"></h2>
+        <a class="link-button dashboard-goal-new" data-text="newGoal"></a>
       </div>
-      <ul class="receipt-list receipt-movements"></ul>
+      <p class="dashboard-goals-sums"></p>
+      <ul class="receipt-list dashboard-goals"></ul>
     </main>
   `;
   const revealed = !hidden;
@@ -62,7 +64,7 @@ export function renderDashboard(root, {
   toggle.setAttribute('aria-label', hidden ? t.showAmounts : t.hideAmounts);
   toggle.setAttribute('aria-pressed', String(hidden));
   toggle.addEventListener('click', onToggleHidden);
-  root.querySelector('.dashboard-see-all').href = SECTION_HASH.history;
+  root.querySelector('.dashboard-goal-new').href = SECTION_HASH.goalNew;
   fillTexts(root, t);
   showBookBanner(root.querySelector('main'), bookName);
   const pending = pendingCount === 1 ? t.pendingOne : t.pendingMany.replace('{n}', pendingCount);
@@ -94,19 +96,41 @@ export function renderDashboard(root, {
     accountList.appendChild(line);
   }
 
-  const movementList = root.querySelector('.receipt-movements');
-  const latest = latestEntries(movements, LATEST_COUNT);
-  if (latest.length === 0) {
-    const empty = document.createElement('li');
-    empty.className = 'receipt-empty text-muted';
-    empty.textContent = t.noMovements;
-    movementList.appendChild(empty);
+  // --- Metas: only the active ones; what they put aside comes out of the
+  // TOTAL as «Disponible», never out of a balance.
+  const { goals = [], contributions = [] } = book;
+  const goalList = root.querySelector('.dashboard-goals');
+  const shown = activeGoals(goals);
+  const sums = root.querySelector('.dashboard-goals-sums');
+  if (shown.length === 0) {
+    sums.remove();
+    goalList.appendChild(el('li', 'receipt-empty text-muted', t.noGoals));
+  } else {
+    const saved = totalSaved(goals, contributions);
+    const total = totalBalance(active, movements);
+    sums.append(el('span', 'dashboard-goals-saved'), ' · ', el('span', 'dashboard-goals-available'));
+    const part = (selector, label, key, value) => {
+      const node = sums.querySelector(selector);
+      node.append(`${label} `, el('span', 'receipt-amount'));
+      show(node.querySelector('.receipt-amount'), key, value);
+    };
+    part('.dashboard-goals-saved', t.saved, 'goals:saved', saved);
+    part('.dashboard-goals-available', t.available, 'goals:available', available(total, saved));
   }
-  const lookups = lookupsOf(book);
-  for (const entry of latest) {
-    movementList.appendChild(movementLine(entry, lookups, {
-      withNote: true, pending: isPendingEntry(entry, pendingIds), amountText: revealed ? null : t.hidden,
-    }));
+  const day = toIsoDate(today);
+  for (const goal of shown) {
+    const progress = goalProgress(goal, contributions, day);
+    const line = receiptLine(goal.name, revealed
+      ? `${formatEuros(progress.saved)} / ${formatEuros(goal.targetAmount)}`
+      : t.hidden, { href: `${SECTION_HASH.goal}?id=${encodeURIComponent(goal.id)}`, className: 'dashboard-goal' });
+    const bar = el('span', 'stat-bar goal-bar');
+    const fill = el('span', 'stat-bar-fill');
+    fill.style.width = `${Math.min(progress.progress, 100)}%`;
+    bar.appendChild(fill);
+    const state = progress.status === 'onTrack' ? t.until.replace('{date}', formatDate(goal.targetDate)) : t[progress.status];
+    // Inside the link, above its dashed rule.
+    line.querySelector('.dashboard-goal').append(bar, el('small', 'goal-state text-muted', state));
+    goalList.appendChild(line);
   }
 
   renderNavbar(root, { active: 'home' });

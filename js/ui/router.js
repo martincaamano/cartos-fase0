@@ -27,6 +27,9 @@ export const SCREENS = Object.freeze([
   { section: 'accountEdit', path: 'settings/accounts/edit' },
   { section: 'categoryNew', path: 'settings/categories/new' },
   { section: 'categoryEdit', path: 'settings/categories/edit' },
+  // Savings goals (tarea 25): one goal, and a new one.
+  { section: 'goal', path: 'goals/goal' },
+  { section: 'goalNew', path: 'goals/new' },
 ].map(Object.freeze));
 
 // SECTIONS.HOME === 'home', SECTIONS.BOOK_NEW === 'bookNew'...

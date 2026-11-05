@@ -12,7 +12,7 @@ test('a movement saved offline waits, then goes up once without duplicates', asy
   await goOffline(context, page, true);
   await app.addMovement({ amount: '3', category: 'Supermercado' });
 
-  await expect(page.locator('.dashboard-notice')).toContainText('1 movimiento pendiente');
+  await expect(page.locator('.dashboard-notice')).toContainText('1 cambio pendiente');
   await app.reveal();
   await expect(page.locator('.receipt-total-amount')).toHaveText('2.471,51 €');
   expect(google.writes()).toEqual([]);

@@ -54,8 +54,10 @@ test('a transfer writes both halves in one request and shows as one line', async
     ['acc-cash', 'income', 'transfer'],
   ]);
   expect(halves[0].transferId).toBe(halves[1].transferId);
-  await app.reveal();
-  expect((await app.lines('.receipt-movements'))[0]).toEqual(['20/10  🏦 Abanca → 💶 Efectivo', '30,00 €']);
+  await app.go('#/history');
+  await page.click('.history-view[data-view=list]');
+  expect((await app.lines('.history-list'))[0]).toEqual(['20/10  🏦 Abanca → 💶 Efectivo', '30,00 €']);
+  await app.go('#/');
   await app.reveal();
   await expect(page.locator('.receipt-total-amount')).toHaveText('2.474,51 €');
 });

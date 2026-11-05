@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { buildTransfer, buildCrossBookTransfer, validateTransfer, latestEntries } from '../js/domain/transfer.js';
+import { buildTransfer, buildCrossBookTransfer, validateTransfer, groupEntries, newestFirst } from '../js/domain/transfer.js';
 import { accountBalance } from '../js/domain/balance.js';
 import { TRANSFER_CATEGORY_ID } from '../js/domain/category.js';
 
@@ -49,10 +49,10 @@ test('validateTransfer rejects same account, bad amounts, unknown accounts and b
 
 const movement = (extra) => ({ deleted: false, transferId: '', createdAt: '2026-10-25T09:00:00Z', ...extra });
 
-test('latestEntries joins both halves of a transfer into one line', () => {
+test('groupEntries joins both halves of a transfer into one line', () => {
   const [out, inc] = buildTransfer(fields, deps);
   const groceries = movement({ id: 'g', accountId: 'bank', type: 'expense', amount: 10, date: '2026-10-24' });
-  const entries = latestEntries([groceries, out, inc], 5);
+  const entries = groupEntries([groceries, out, inc]).sort(newestFirst);
   assert.deepEqual(entries.map((e) => e.kind), ['transfer', 'movement']);
   assert.deepEqual(
     { from: entries[0].from, to: entries[0].to, amount: entries[0].amount },
@@ -62,14 +62,14 @@ test('latestEntries joins both halves of a transfer into one line', () => {
 
 test('a half without its pair shows as an ordinary movement', () => {
   const [out, inc] = buildTransfer(fields, deps);
-  assert.deepEqual(latestEntries([out], 5).map((e) => e.kind), ['movement']);
-  assert.deepEqual(latestEntries([out, { ...inc, deleted: true }], 5).map((e) => e.kind), ['movement']);
+  assert.deepEqual(groupEntries([out]).map((e) => e.kind), ['movement']);
+  assert.deepEqual(groupEntries([out, { ...inc, deleted: true }]).map((e) => e.kind), ['movement']);
 });
 
-test('latestEntries keeps newest first and the requested count', () => {
+test('newestFirst puts the newest entry first', () => {
   const older = movement({ id: 'a', date: '2026-10-01' });
   const newer = movement({ id: 'b', date: '2026-10-20' });
-  assert.deepEqual(latestEntries([older, newer], 1).map((e) => e.id), ['b']);
+  assert.deepEqual(groupEntries([older, newer]).sort(newestFirst).map((e) => e.id), ['b', 'a']);
 });
 
 // --- buildCrossBookTransfer (transfer to an account of another book) ---
