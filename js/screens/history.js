@@ -26,7 +26,7 @@ const PAGE_SIZE = 200;
 
 // book: movements already include the pending ones (mergePending).
 // params: { account } opens it filtered by that account (from INICIO);
-// { month } by that month (from Análisis).
+// { month } by that month and { category } by that category (from Análisis).
 // storage: where the view chosen last is remembered.
 // pendingIds: movements not in the Sheet yet, marked with «·».
 export function renderHistory(root, {
@@ -64,7 +64,7 @@ export function renderHistory(root, {
     view: loadHistoryView(storage),
     range: isMonth(params.month) ? { from: params.month, to: params.month, open: false } : null,
     accountIds: new Set(book.accounts.some((a) => a.id === params.account) ? [params.account] : []),
-    categoryIds: new Set(),
+    categoryIds: new Set(categories.some((c) => c.id === params.category) ? [params.category] : []),
     open: new Set(),
   };
   const filters = () => ({

@@ -670,3 +670,20 @@ button.settings-link {
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
+
+/* Desviaciones (tarea 24): the sentence, then a category per row that
+   opens on its movements (the History tree's look). */
+.stat-deviation-summary {
+  margin: 0 0 var(--space-2);
+}
+
+.stat-deviation-new {
+  font-size: var(--text-xs);
+  color: var(--color-ink-muted);
+  letter-spacing: var(--tracking-wide);
+}
+
+.stat-deviation-sums {
+  margin: 0;
+  font-size: var(--text-sm);
+}

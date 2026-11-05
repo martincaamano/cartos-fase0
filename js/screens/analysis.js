@@ -13,10 +13,11 @@ import {
   periodMonths, weekdayPattern,
 } from '../domain/analysis.js';
 import { rankAllCategories } from '../domain/category.js';
+import { monthDeviations } from '../domain/deviations.js';
 import {
-  formatEuros, formatMonth, formatShortDate, formatShortMonth, formatSums, formatWholeEuros, labelOf,
+  formatEuros, formatMonth, formatMonthName, formatShortDate, formatShortMonth, formatSums, formatWholeEuros, labelOf,
 } from '../ui/format.js';
-import { appendFolded, receiptLine } from '../ui/receipt.js';
+import { appendFolded, linkRow, receiptLine } from '../ui/receipt.js';
 import { SECTION_HASH } from '../ui/router.js';
 import { el, fillTexts, foldAway, renderChoices, toggleChip, unfold } from '../ui/components.js';
 import { renderNavbar } from '../ui/navbar.js';
@@ -26,6 +27,13 @@ import { loadExcluded, saveExcluded } from '../storage/analysis-exclude.js';
 const PERIODS = ['month', 'year', 'all'];
 // Categories shown in "¿En qué?" before "+ N más".
 const SHOWN_CATEGORIES = 6;
+// Categories the deviations sentence names ("sobre todo por Ocio y Hogar").
+const NAMED_DEVIATIONS = 2;
+
+// "Ocio", "Ocio y Hogar", "Ocio, Hogar y Ropa".
+function joinNames(names, and) {
+  return names.length < 2 ? names.join('') : `${names.slice(0, -1).join(', ')}${and}${names.at(-1)}`;
+}
 
 // "▲ 12 %" (more spending, in the expense colour) or "▼ 5 %".
 function changeBadge(percent) {
@@ -87,6 +95,8 @@ export function renderAnalysis(root, {
     month: validMonth(params.month) ? params.month : last,
     excluded: new Set(loadExcluded(storage, fileId)),
     picked: null,
+    // Deviations open (category ids), kept while the screen lives.
+    openDeviations: new Set(),
   };
 
   const remember = () => {
@@ -105,6 +115,7 @@ export function renderAnalysis(root, {
       onSelect: (period) => {
         state.period = period;
         state.picked = null;
+        state.openDeviations.clear();
         remember();
         paint();
       },
@@ -117,6 +128,7 @@ export function renderAnalysis(root, {
   };
   const step = (delta) => {
     state.month = shiftMonth(state.month, delta);
+    state.openDeviations.clear();
     remember();
     paint();
   };
@@ -180,6 +192,85 @@ export function renderAnalysis(root, {
     );
     body.appendChild(tiles);
     return figures;
+  }
+
+  // Why the month went off its average (tarea 24): a sentence, then the
+  // categories that went up, each opening on its movements.
+  function paintDeviations(movements) {
+    const result = monthDeviations(movements, state.month, day);
+    body.appendChild(heading(t.deviations, result.inProgress ? t.inProgress : t.deviationsHint));
+    const block = el('div', 'stat-deviations');
+    body.appendChild(block);
+    if (result.status === 'insufficient') {
+      block.appendChild(el('p', 'text-muted stat-deviation-summary', t.notEnough));
+      return;
+    }
+    const up = result.difference > 0;
+    const sentence = result.difference === 0 ? t.same : up ? t.above : t.below;
+    const [before, after = ''] = sentence.replace('{month}', formatMonthName(state.month))
+      .replace('{n}', result.baselineMonths).split('{amount}');
+    const names = result.categories.slice(0, NAMED_DEVIATIONS).map((c) => categoryById.get(c.categoryId)?.name ?? c.categoryId);
+    let tail = t.noneOut;
+    if (names.length) {
+      const although = names.length > 1 ? t.althoughMany : t.althoughOne;
+      tail = (up ? t.mostlyBy : although).replace('{names}', joinNames(names, t.and));
+    }
+    const summary = el('p', 'stat-deviation-summary');
+    summary.append(before);
+    if (result.difference !== 0) {
+      summary.append(el('strong', up ? 'amount-expense' : 'amount-income', `${up ? '+' : ''}${formatWholeEuros(result.difference)}`));
+    }
+    summary.append(after + tail);
+    block.appendChild(summary);
+
+    for (const row of result.categories) {
+      const isOpen = state.openDeviations.has(row.categoryId);
+      const wrap = el('div', 'tree-node stat-deviation');
+      const head = el('button', 'tree-head');
+      head.type = 'button';
+      head.setAttribute('aria-expanded', String(isOpen));
+      const label = el('span', 'tree-label', categoryName(row.categoryId));
+      if (row.isNew) label.append(' ', el('small', 'stat-deviation-new', t.isNew));
+      head.append(
+        el('span', 'tree-twisty', isOpen ? '▾' : '▸'),
+        label,
+        el('span', 'tree-value amount-expense', `+${formatWholeEuros(row.excess)}`),
+      );
+      wrap.appendChild(head);
+      const detail = el('div', 'tree-body');
+      detail.hidden = !isOpen;
+      detail.appendChild(el('p', 'text-muted stat-deviation-sums', t.spentVsAverage
+        .replace('{spent}', formatEuros(row.spent)).replace('{average}', formatEuros(row.average))));
+      const list = el('ul', 'receipt-list');
+      for (const movement of row.movements) {
+        list.appendChild(receiptLine(formatShortDate(movement.date), formatEuros(-movement.amount), { tone: 'expense', note: movement.note }));
+      }
+      list.appendChild(linkRow({
+        label: t.seeInHistory,
+        hash: `${SECTION_HASH.history}?month=${state.month}&category=${encodeURIComponent(row.categoryId)}`,
+        className: 'stat-deviation-link',
+        end: '',
+      }));
+      detail.appendChild(list);
+      wrap.appendChild(detail);
+      head.addEventListener('click', () => {
+        if (detail.hidden) {
+          state.openDeviations.add(row.categoryId);
+          detail.hidden = false;
+          head.setAttribute('aria-expanded', 'true');
+          head.querySelector('.tree-twisty').textContent = '▾';
+          unfold(detail);
+          return;
+        }
+        foldAway(detail).then(() => {
+          state.openDeviations.delete(row.categoryId);
+          detail.hidden = true;
+          head.setAttribute('aria-expanded', 'false');
+          head.querySelector('.tree-twisty').textContent = '▸';
+        });
+      });
+      block.appendChild(wrap);
+    }
   }
 
   function paintEvolution(movements, months) {
@@ -342,6 +433,7 @@ export function renderAnalysis(root, {
     const movements = countable(book.movements, state.excluded);
     const months = periodMonths(state.period, { today: day, first, month: state.month });
     const figures = paintKeyFigures(movements, months);
+    if (state.period === 'month') paintDeviations(movements);
     paintEvolution(movements, months);
     paintCategories(movements, months);
     paintTrends(movements);

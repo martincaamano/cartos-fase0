@@ -2,7 +2,7 @@
 // reads back the same with parseAmountInput), month names and whole euros.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { formatAmountInput, formatMonth, formatMonthRange, formatShortMonth, formatWholeEuros } from '../js/ui/format.js';
+import { formatAmountInput, formatMonth, formatMonthName, formatMonthRange, formatShortMonth, formatWholeEuros } from '../js/ui/format.js';
 import { parseAmountInput } from '../js/domain/money.js';
 
 const cases = [
@@ -54,4 +54,9 @@ test('formatWholeEuros rounds to whole euros for the big figures', () => {
   assert.equal(formatWholeEuros(1684.4), '1.684 €');
   assert.equal(formatWholeEuros(-0.6), '−1 €');
   assert.equal(formatWholeEuros(0), '0 €');
+});
+
+test('formatMonthName names a month to start a sentence', () => {
+  assert.equal(formatMonthName('2026-10'), 'Octubre');
+  assert.equal(formatMonthName('2026-01'), 'Enero');
 });

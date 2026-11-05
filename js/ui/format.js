@@ -66,6 +66,12 @@ export function formatMonth(month) {
   return `${es.months[Number(number) - 1]} ${year}`;
 }
 
+// "2026-10" → "Octubre" (to start a sentence).
+export function formatMonthName(month) {
+  const name = es.months[Number(month.slice(5)) - 1];
+  return name[0] + name.slice(1).toLocaleLowerCase('es');
+}
+
 // "2026-10" → "Oct".
 export const formatShortMonth = (month) => es.monthsShort[Number(month.slice(5)) - 1];
 
