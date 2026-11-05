@@ -145,3 +145,67 @@ test('editing a goal, then removing it frees what it put aside', async ({ page, 
   const goal = google.records('Goals').find((g) => g.id === 'g-tv');
   expect([goal.name, goal.targetAmount, goal.deleted]).toEqual(['Tele grande', 1200, true]);
 });
+
+// --- Tarea 25d: the purchase of a reached goal ---
+
+function withReachedGoal(google) {
+  google.rows.Goals.push(goalRow('g-tv', 'Televisión', 1000, '2027-03-01'));
+  google.rows.Contributions.push(contributionRow('c-1', 'g-tv', 600, '2026-09-01'), contributionRow('c-2', 'g-tv', 400, '2026-10-01'));
+}
+
+test('a reached goal records its purchase in Añadir, prefilled, and is completed with it', async ({ page, app, google }) => {
+  withReachedGoal(google);
+  await app.open('#/goals/goal?id=g-tv', '.goal-saved');
+  await expect(page.locator('.goal-detail')).toContainText('objetivo alcanzado');
+  await page.click('.goal-buy');
+  await expect(page).toHaveURL(/#\/add\?type=expense&goal=g-tv/);
+  await expect(page.locator('.amount-input')).toHaveValue('1000,00');
+  await expect(page.locator('input[name=note]')).toHaveValue('Televisión');
+  await expect(page.locator('.category-option.is-selected')).toContainText('Supermercado');
+
+  // It cost less than planned.
+  await page.fill('.amount-input', '950');
+  await page.click('.form-submit');
+  await expect(page.locator('.toast')).toContainText('Televisión: compra registrada, meta cumplida');
+  await app.reveal();
+  // The goal is out of METAS, archived; nothing is put aside any more.
+  await expect(page.locator('.dashboard-goals')).toHaveText('Aún no tienes metas. Crea una para apartar dinero para algo concreto.');
+  await expect(page.locator('.dashboard-goals-done')).toHaveText('Cumplidas: Televisión');
+  await expect(page.locator('.receipt-total-amount')).toHaveText('1.524,51 €');
+
+  await app.settle();
+  const [movement] = google.movements().filter((m) => m.note === 'Televisión');
+  expect([movement.type, movement.amount, movement.categoryId]).toEqual(['expense', 950, 'cat-food']);
+  const goal = google.records('Goals')[0];
+  expect([goal.status, goal.movementId]).toEqual(['completed', movement.id]);
+  // Both in the same sync: the goal's row rewritten, the movement appended.
+  expect(google.writes().slice(-2).map((w) => w.tab ?? w.body.data[0].range.split('!')[0])).toEqual(['Goals', 'Movements']);
+});
+
+test('leaving Añadir without saving changes nothing', async ({ page, app, google }) => {
+  withReachedGoal(google);
+  await app.open('#/add?type=expense&goal=g-tv', '.amount-input');
+  await page.click('.back-link');
+  await expect(page.locator('.goal-buy')).toBeVisible();
+  await app.settle();
+  expect(google.writes()).toEqual([]);
+  expect(google.records('Goals')[0].status).toBe('active');
+});
+
+test('a purchase saved offline goes up together with its goal', async ({ page, context, app, google }) => {
+  withReachedGoal(google);
+  await app.open('#/add?type=expense&goal=g-tv', '.amount-input');
+  await context.setOffline(true);
+  await page.evaluate(() => dispatchEvent(new Event('offline')));
+  await page.click('.form-submit');
+  await app.reveal();
+  await expect(page.locator('.dashboard-notice')).toContainText('2 cambios pendientes');
+  await expect(page.locator('.dashboard-goals-done')).toHaveText('Cumplidas: Televisión');
+  expect(google.writes()).toEqual([]);
+
+  await context.setOffline(false);
+  await page.evaluate(() => dispatchEvent(new Event('online')));
+  await app.settle();
+  expect(google.records('Goals')[0].status).toBe('completed');
+  expect(google.movements().some((m) => m.note === 'Televisión' && m.amount === 1000)).toBe(true);
+});

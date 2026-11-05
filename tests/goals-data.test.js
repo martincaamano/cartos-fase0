@@ -10,6 +10,7 @@ import {
   queueContribution,
   queueContributionEdit,
   queueContributionDelete,
+  queuePurchase,
 } from '../js/data/goals.js';
 import { ValidationError } from '../js/data/errors.js';
 import { setupGoogleApi } from './helpers/fake-google.js';
@@ -213,4 +214,31 @@ test('queueContributionDelete marks it deleted and queues it into Contributions'
   assert.equal(deleted.amount, 250);
   assert.equal(original.deleted, false);
   assert.deepEqual([...items.values()], [{ fileId: 'f1', sheet: 'Contributions', record: deleted }]);
+});
+
+// --- queuePurchase (tarea 25d) ---
+
+const purchaseBook = { ...book, accounts: [{ id: 'acc-1', deleted: false }] };
+const purchase = { accountId: 'acc-1', amount: 950, date: '2026-11-05', categoryId: 'food', note: 'Tele' };
+
+test('queuePurchase queues the expense and the goal, completed with it, together', async () => {
+  const [movement, completed] = await queuePurchase('f1', purchase, goal('g-1'), purchaseBook);
+  assert.equal(movement.type, 'expense');
+  assert.equal(movement.amount, 950);
+  assert.equal(completed.id, 'g-1');
+  assert.equal(completed.status, 'completed');
+  assert.equal(completed.movementId, movement.id);
+  assert.ok(completed.completedAt);
+  assert.deepEqual([...items.values()].map((e) => [e.sheet, e.record.id]), [['Movements', movement.id], ['Goals', 'g-1']]);
+  assert.equal(calls.length, 0, 'nothing reaches Google while saving');
+});
+
+test('queuePurchase keeps the goal category even if it was removed since', async () => {
+  const [movement] = await queuePurchase('f1', { ...purchase, categoryId: 'gone' }, goal('g-1', { categoryId: 'gone' }), purchaseBook);
+  assert.equal(movement.categoryId, 'gone');
+});
+
+test('queuePurchase with an invalid movement queues nothing', async () => {
+  await rejectsWith(queuePurchase('f1', { ...purchase, amount: 0 }, goal('g-1'), purchaseBook), 'amount_invalid');
+  assert.equal(items.size, 0);
 });

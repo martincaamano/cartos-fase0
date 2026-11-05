@@ -90,13 +90,21 @@ export const VIEWS = Object.freeze({
   },
 
   // After saving it stays, clean for the next one, with «✓ … Deshacer».
-  [SECTIONS.ADD]: ({ root, state, params, savedHere }) =>
+  // ?goal=: the purchase of a reached goal (tarea 25d); once saved, the goal
+  // is completed and INICIO shows what is free again.
+  [SECTIONS.ADD]: ({ root, state, params, savedHere, saved }) =>
     renderAddMovement(root, {
       book: state.book,
       bookName: bookName(state),
       otherBooks: otherBooks(state),
       fileId: state.fileId,
       params,
+      goal: params.goal ? activeGoalById(state.book, params.goal) : null,
+      onPurchased: (movement, completed) => {
+        state.saved([completed], 'Goals');
+        saved(SECTION_HASH.home)([movement]);
+        showToast({ text: `✓ ${es.goals.purchased.replace('{name}', completed.name)}` });
+      },
       onSaved: (movements, { summary, undo }) => {
         savedHere(movements);
         showToast({ text: `✓ ${summary}`, action: es.add.undo, onAction: () => undo().then(savedHere) });

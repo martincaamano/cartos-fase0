@@ -7,6 +7,7 @@
 // is fixed, and a transfer changes both halves together.
 
 import { es } from '../../i18n/es.js';
+import { queuePurchase } from '../data/goals.js';
 import { parseAmountInput } from '../domain/money.js';
 import { rankCategories } from '../domain/category.js';
 import { activeOnly } from '../domain/active.js';
@@ -67,7 +68,7 @@ function fillOtherBooks(select, otherBooks) {
 // storage: where the account used last and the categories of the last
 // transfer to another book are remembered.
 export function renderAddMovement(root, {
-  book, bookName = '', fileId, params = {}, entry = null, today = new Date(), onSaved,
+  book, bookName = '', fileId, params = {}, entry = null, goal = null, today = new Date(), onSaved, onPurchased = () => {},
   otherBooks = [], storage = globalThis.localStorage,
 }) {
   const t = es.add;
@@ -175,7 +176,8 @@ export function renderAddMovement(root, {
   // What is being edited: one movement, or both halves of a transfer.
   const original = entry?.kind === 'movement' ? entry.movement : null;
   const halves = entry?.kind === 'transfer' ? entry.halves : null;
-  const initialType = halves ? 'transfer' : original?.type ?? params.type;
+  // goal: the purchase a savings goal was for (tarea 25d), an expense.
+  const initialType = halves ? 'transfer' : original?.type ?? (goal ? 'expense' : params.type);
   const state = {
     type: TYPES.includes(initialType) ? initialType : 'expense',
     categoryId: null,
@@ -186,7 +188,8 @@ export function renderAddMovement(root, {
     const ranked = rankCategories(book.categories, book.movements, state.type);
     // A removed category (or Transferencia on a loose half) stays selectable
     // for the movement that already uses it.
-    const own = original && book.categories.find((c) => c.id === original.categoryId);
+    const keptId = original?.categoryId ?? goal?.categoryId;
+    const own = keptId && book.categories.find((c) => c.id === keptId);
     return own && !ranked.includes(own) ? [own, ...ranked] : ranked;
   };
 
@@ -195,7 +198,7 @@ export function renderAddMovement(root, {
     if (state.type === 'transfer') return;
     renderCategoryPicker(root.querySelector('.category-picker'), {
       categories: categoryChoices(),
-      selectedId: original?.categoryId ?? null,
+      selectedId: original?.categoryId ?? goal?.categoryId ?? null,
       onSelect: (category) => { state.categoryId = category.id; },
       texts: { seeAll: t.seeAll, search: t.search, empty: t.noMatches },
     });
@@ -241,7 +244,7 @@ export function renderAddMovement(root, {
   };
   // Editing keeps the type: the other tabs are off.
   renderChoices(root.querySelector('.tabs'), TYPES.map((type) => ({
-    value: type, label: t[type], disabled: Boolean(entry) && type !== state.type,
+    value: type, label: t[type], disabled: Boolean(entry || goal) && type !== state.type,
   })), {
     selected: state.type,
     className: 'tab',
@@ -253,6 +256,16 @@ export function renderAddMovement(root, {
     },
   });
   applyType();
+
+  if (goal) {
+    root.querySelector('.add-top').hidden = false;
+    const back = root.querySelector('.back-link');
+    back.href = `${SECTION_HASH.goal}?id=${encodeURIComponent(goal.id)}`;
+    back.textContent = es.goals.backGoal;
+    amount.value = formatAmountInput(goal.targetAmount);
+    note.value = goal.name;
+    openNote();
+  }
 
   const saved = original ?? halves?.[0];
   if (saved) {
@@ -320,6 +333,16 @@ export function renderAddMovement(root, {
           // Undoing takes back both halves, each in its book.
           undo = () => queueDelete(other.fileId, [incoming]).then(() => queueDelete(fileId, [outgoing]));
           return outgoing;
+        });
+    } else if (goal) {
+      // The purchase and the goal it completes, together.
+      return queuePurchase(fileId, single, goal, book)
+        .then(([movement, completed]) => onPurchased(movement, completed))
+        .catch((err) => {
+          error.textContent = errorText(err.errors ?? [], ERROR_TEXT, t) || t.failed;
+          submit.disabled = false;
+          remove.disabled = false;
+          submit.textContent = t.save;
         });
     } else if (halves) saving = queueTransferEdit(fileId, halves, transfer, book);
     else if (original) saving = queueEdit(fileId, original, single, book);

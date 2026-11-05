@@ -6,6 +6,8 @@ import assert from 'node:assert/strict';
 import {
   GOAL_STATUSES,
   activeGoals,
+  completeGoal,
+  completedGoals,
   available,
   createContribution,
   createGoal,
@@ -302,4 +304,24 @@ test('goalProgress with the target today: one month left, the whole remaining', 
   assert.equal(p.status, 'onTrack');
   assert.equal(p.monthsLeft, 1);
   assert.equal(p.suggestedMonthly, 0.01);
+});
+
+// --- completeGoal / completedGoals (tarea 25d) ---
+
+test('completeGoal marks the goal completed with its movement and the time', () => {
+  const g = createGoal({ name: 'Tele', categoryId: 'c', targetAmount: 1000, targetDate: '2027-03-01' }, { now: () => new Date('2026-10-01T00:00:00Z'), newId: () => 'g' });
+  const done = completeGoal(g, 'm-1', new Date('2026-11-05T10:00:00Z'));
+  assert.deepEqual([done.status, done.movementId, done.completedAt, done.updatedAt, done.createdAt],
+    ['completed', 'm-1', '2026-11-05T10:00:00.000Z', '2026-11-05T10:00:00.000Z', '2026-10-01T00:00:00.000Z']);
+  assert.deepEqual(activeGoals([done]), []);
+});
+
+test('completedGoals lists the completed ones, latest first, not removed ones', () => {
+  const goals = [
+    { id: 'a', status: 'completed', completedAt: '2026-10-01T00:00:00Z', deleted: false },
+    { id: 'b', status: 'active', completedAt: '', deleted: false },
+    { id: 'c', status: 'completed', completedAt: '2026-11-01T00:00:00Z', deleted: false },
+    { id: 'd', status: 'completed', completedAt: '2026-11-02T00:00:00Z', deleted: true },
+  ];
+  assert.deepEqual(completedGoals(goals).map((g) => g.id), ['c', 'a']);
 });

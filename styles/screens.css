@@ -720,3 +720,8 @@ button.settings-link {
   text-align: left;
   color: inherit;
 }
+
+.dashboard-goals-done {
+  margin: var(--space-2) 0 0;
+  font-size: var(--text-xs);
+}

@@ -7,7 +7,7 @@
 import { es } from '../../i18n/es.js';
 import { accountBalance, totalBalance } from '../domain/balance.js';
 import { activeOnly } from '../domain/active.js';
-import { activeGoals, available, goalProgress, totalSaved } from '../domain/goals.js';
+import { activeGoals, available, completedGoals, goalProgress, totalSaved } from '../domain/goals.js';
 import { toIsoDate } from '../domain/movement.js';
 import { formatDate, formatEuros, labelOf } from '../ui/format.js';
 import { receiptLine } from '../ui/receipt.js';
@@ -52,6 +52,7 @@ export function renderDashboard(root, {
       </div>
       <p class="dashboard-goals-sums"></p>
       <ul class="receipt-list dashboard-goals"></ul>
+      <p class="text-muted dashboard-goals-done" hidden></p>
     </main>
   `;
   const revealed = !hidden;
@@ -117,6 +118,11 @@ export function renderDashboard(root, {
     part('.dashboard-goals-saved', t.saved, 'goals:saved', saved);
     part('.dashboard-goals-available', t.available, 'goals:available', available(total, saved));
   }
+  // The completed ones, archived in a line (tarea 25d).
+  const done = completedGoals(goals);
+  const doneLine = root.querySelector('.dashboard-goals-done');
+  doneLine.hidden = done.length === 0;
+  doneLine.textContent = t.completed.replace('{names}', done.map((goal) => goal.name).join(' · '));
   const day = toIsoDate(today);
   for (const goal of shown) {
     const progress = goalProgress(goal, contributions, day);
