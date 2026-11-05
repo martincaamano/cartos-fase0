@@ -128,6 +128,9 @@ Decidido el 2026-10-29: empezar el libro personal con el histórico real (import
 | 19 | Importar la reforma | Hecha (2026-10-31) | 87 movimientos importados en Casa do Medio; la descarga del libro coincide fila a fila con lo generado y el saldo cuadra con el banco |
 | 21 | Robustez | Hecha (2026-11-01) | Fallos de una revisión completa (PR #58). Comprobada con pruebas de aceptación, no en el iPhone |
 | 22 | Mantenibilidad | Hecha (2026-11-01) | Sin duplicados, en cuatro partes (PR #59–#62). Sin cambios para el usuario |
+| 23 | Experiencia: fluidez | En curso | Quedarse en Añadir con Deshacer, «·» de pendientes, ojo de INICIO, animaciones y contadores (PR #64–#66). Falta probarla en el iPhone |
+| 24 | Análisis de desviaciones | Definida (2026-11-05) | 24a dominio, 24b bloque del mes, 24c vista anual |
+| 25 | Metas de ahorro | Definida (2026-11-05) | 25a cola por pestaña + dominio y datos, 25b Inicio, 25c crear y aportar, 25d cumplir, 25e compartidos |
 
 ### Decisiones tomadas en la tarea 19
 - Hecha antes que la 18 y sin código: se usó el importador de la tarea 16 (JSON de Cartos desde Ajustes → Datos), que trae los emojis de las categorías nuevas.
