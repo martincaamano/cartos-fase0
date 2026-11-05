@@ -1,5 +1,5 @@
 # Unit tests (npm test) and acceptance tests (npm run acceptance) on every
-# pull request and every push to main. Pages deploys on its own; this only
+# pull request and every push to main or develop. Pages deploys on its own; this only
 # reports. On failure the Playwright report is kept as an artifact.
 #
 # Runs inside Playwright's official image for the version in package.json:
@@ -10,7 +10,7 @@ name: Tests
 on:
   pull_request:
   push:
-    branches: [main]
+    branches: [main, develop]
 
 permissions:
   contents: read

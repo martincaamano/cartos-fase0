@@ -63,14 +63,14 @@ Lee solo las secciones que necesites para la tarea en curso, no todos los docume
 3. Toda lógica nueva de negocio lleva su test en `tests/` (con `node:test`). Para probar `data/` se simula `fetch`; nunca se llama a Google de verdad desde los tests.
 4. No des una tarea por cerrada. Las pruebas en iPhone las hace el usuario: déjale la lista de comprobaciones lista, solo con lo que las pruebas de aceptación no cubren (inicio de sesión real con Google, la app instalada en la pantalla de inicio, cómo se ve en el iPhone).
 5. Al terminar, resume en pocas líneas qué cambió y qué debe probar a mano.
-6. Una rama por tarea. Da comandos exactos, listos para pegar, sin huecos que rellenar.
+6. Se trabaja en la rama `develop` (decidido el 2026-11-05): cada tarea o parte terminada, con `npm test` y `npm run acceptance` en verde, se commitea y se sube a `develop` sin pedir permiso, con `Closes #N` de su issue en el mensaje. CI corre en cada push a `develop`. A `main` (lo que publica GitHub Pages) solo se llega con un PR `develop` → `main` que el usuario revisa y fusiona al final de un bloque de tareas. Da comandos exactos, listos para pegar, sin huecos que rellenar.
 7. Sé económico con el contexto (el plan del usuario tiene un límite compartido): lee solo lo necesario y usa `/planificar` antes de `/tarea`.
 8. Issues: las tareas nuevas se crean como issue (y sub-issues por parte) sin PR. Las decisiones que tome el usuario se anotan en la issue (cuerpo y, si hace falta, un comentario). Cada PR de código lleva `Closes #N` de su sub-issue; la issue de la tarea la cierra `/cerrar` cuando el usuario ha probado en el iPhone. No hacen falta PRs solo de documentación para definir o cerrar tareas.
 9. `.claude/` es la configuración principal. `.opencode/` y `opencode.json` son un espejo para OpenCode: no los mantengas salvo que el usuario lo pida.
 
 ## Prohibido sin permiso explícito
 
-- `git push`, y `git commit` salvo que el usuario lo pida.
+- `git commit` o `git push` fuera de `develop`, y cualquier push a `main`. Reescribir historia ya subida (`--force`, `rebase` de lo publicado).
 - Borrar archivos, cambiar la arquitectura o añadir dependencias.
 - Implementar funciones de fases futuras: Apple Shortcuts, pagos programados, backend de tokens. (Los libros compartidos ya existen, tarea 18.)
 - Refactorizar código ajeno a la tarea en curso.
