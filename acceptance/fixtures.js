@@ -15,7 +15,7 @@ export const TODAY = new Date('2026-10-20T12:00:00+02:00');
 export const MEMBERS_HEADER = HEADERS.Members;
 
 const AT = '2026-09-01T10:00:00.000Z';
-const movement = (id, accountId, type, amount, date, categoryId, note = '') =>
+export const movement = (id, accountId, type, amount, date, categoryId, note = '') =>
   [id, accountId, type, amount, date, categoryId, note, '', '', 'user-1', `${date}T10:00:00.000Z`, `${date}T10:00:00.000Z`, false];
 
 // Two accounts, five categories and movements in October and September.
