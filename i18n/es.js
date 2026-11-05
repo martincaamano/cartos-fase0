@@ -222,6 +222,8 @@ export const es = {
     notEnough: 'Aún no hay histórico suficiente para compararlo con tu media.',
     inProgress: 'mes en curso',
     isNew: 'nueva',
+    withinUsual: 'dentro de lo normal',
+    current: 'en curso',
     spentVsAverage: 'Gastado {spent} · media {average}',
     seeInHistory: 'Ver en Historial →',
   },

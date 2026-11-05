@@ -69,12 +69,44 @@ test('the categories left out of Análisis are left out of the deviations too', 
   await expect(rows(page)).toHaveText([/🎭 Ocio nueva\s*\+60 €/]);
 });
 
-test('deviations only show by month', async ({ page, app, google }) => {
+test('by 12 meses every month with history is listed, newest first, and a tap opens it', async ({ page, app, google }) => {
   withHistory(google);
-  await app.open('#/analysis', '.stat-categories');
-  await expect(page.locator('.stat-deviations')).toHaveCount(0);
-  await page.click('.stat-period[data-period=all]');
-  await expect(page.locator('.stat-deviations')).toHaveCount(0);
-  await page.click('.stat-period[data-period=month]');
-  await expect(page.locator('.stat-deviations')).toHaveCount(1);
+  await app.open('#/analysis', '.stat-deviation-months');
+  // March to May have not enough history before them; October is in
+  // progress (20,50 + 45 against the 919,99 / 6 = 153,33 of April to
+  // September).
+  expect(await app.lines('.stat-deviation-months')).toEqual([
+    ['Oct 2026 en curso · dentro de lo normal', '−88 €'],
+    ['Sep 2026 · 🍽️ Restaurantes', '+128 €'],
+    ['Ago 2026 · dentro de lo normal', '+10 €'],
+    ['Jul 2026 · dentro de lo normal', '0 €'],
+    ['Jun 2026 · dentro de lo normal', '0 €'],
+  ]);
+
+  await page.locator('.stat-deviation-month', { hasText: 'Sep 2026' }).click();
+  await expect(page).toHaveURL(/period=month&month=2026-09/);
+  await expect(page.locator('.month-label')).toHaveText('SEPTIEMBRE 2026');
+  await expect(summary(page)).toContainText('Septiembre: +128 €');
+});
+
+test('Todo shows the 12 newest months and the rest behind «+ N más»', async ({ page, app, google }) => {
+  // Two years of the same spending, October 2024 to September 2026: from
+  // January 2025 on, 22 months have enough history.
+  for (let i = 0; i < 24; i += 1) {
+    const month = `${2024 + Math.floor((i + 9) / 12)}-${String(((i + 9) % 12) + 1).padStart(2, '0')}`;
+    google.rows.Movements.push(movement(`m-old-${i}`, 'acc-bank', 'expense', 50, `${month}-03`, 'cat-food'));
+  }
+  await app.open('#/analysis?period=all', '.stat-deviation-months');
+  const months = page.locator('.stat-deviation-month');
+  await expect(months).toHaveCount(12);
+  await expect(months.first()).toContainText('Oct 2026 en curso');
+  await page.locator('.stat-deviations .stat-more').click();
+  await expect(months).toHaveCount(22);
+  await expect(months.last()).toContainText('Ene 2025');
+});
+
+test('a young book says there is not enough history in every period', async ({ page, app }) => {
+  await app.open('#/analysis', '.stat-deviations');
+  await expect(summary(page)).toHaveText('Aún no hay histórico suficiente para compararlo con tu media.');
+  await expect(page.locator('.stat-deviation-month')).toHaveCount(0);
 });
