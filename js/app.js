@@ -63,13 +63,14 @@ function showSection({ section, params }, offline, repaint) {
     repaint,
     redirect: (hash) => location.replace(hash),
     // After the Add form saved: count it and upload, then go to `hash`.
-    saved: (hash) => (movements) => {
-      state.saved(movements);
+    // sheet: the tab of what was saved (Movements unless said).
+    saved: (hash) => (records, sheet) => {
+      state.saved(records, sheet);
       location.hash = hash;
     },
     // Saved, and the same screen again, clean (Añadir, tarea 23).
-    savedHere: (movements) => {
-      state.saved(movements);
+    savedHere: (records, sheet) => {
+      if ([records].flat().length > 0) state.saved(records, sheet);
       show({ force: true });
     },
     signOut: () => {

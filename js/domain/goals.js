@@ -52,6 +52,18 @@ export function editGoal(original, fields, now = new Date()) {
   };
 }
 
+// The goal once its purchase was recorded (tarea 25d): completed, with the
+// movement that spent it. Its contributions stop counting as put aside.
+export function completeGoal(goal, movementId, now = new Date()) {
+  const at = now.toISOString();
+  return { ...goal, status: 'completed', completedAt: at, movementId, updatedAt: at };
+}
+
+// The completed goals, the latest first.
+export const completedGoals = (goals) => goals
+  .filter((goal) => !goal.deleted && goal.status === 'completed')
+  .sort((a, b) => b.completedAt.localeCompare(a.completedAt));
+
 // categoryIds: the expense categories the goal may use (what it will be
 // spent on). Returns a list of error codes; empty means valid.
 export function validateGoal(goal, { categoryIds }) {
@@ -108,6 +120,19 @@ export const savedOf = (goalId, contributions) => fromCents(savedCentsOf(goalId,
 // What the active goals put aside together, in euros.
 export function totalSaved(goals, contributions) {
   return fromCents(activeGoals(goals).reduce((sum, goal) => sum + savedCentsOf(goal.id, contributions), 0));
+}
+
+// Who put how much into a goal (tarea 25e, shared books): [{ createdBy,
+// amount }] in euros, the biggest first; withdrawals count against whoever
+// made them.
+export function savedByPerson(goalId, contributions) {
+  const cents = new Map();
+  for (const c of contributions) {
+    if (c.deleted || c.goalId !== goalId) continue;
+    cents.set(c.createdBy, (cents.get(c.createdBy) ?? 0) + toCents(c.amount));
+  }
+  return [...cents].map(([createdBy, total]) => ({ createdBy, amount: fromCents(total) }))
+    .sort((a, b) => b.amount - a.amount || a.createdBy.localeCompare(b.createdBy));
 }
 
 // The TOTAL of the book minus what the goals put aside: what is left to

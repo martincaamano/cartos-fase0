@@ -1,7 +1,7 @@
 // Opening the app and moving around (lists of tareas 04, 07, 08, 09).
 import { test, expect } from './fixtures.js';
 
-test('opens on the Dashboard with the total, the balances and the latest movements', async ({ page, app }) => {
+test('opens on the Dashboard with the total, the balances and the goals block', async ({ page, app }) => {
   await app.open();
   await app.reveal();
   await expect(page.locator('.receipt-total-amount')).toHaveText('2.474,51 €');
@@ -9,13 +9,10 @@ test('opens on the Dashboard with the total, the balances and the latest movemen
     ['🏦 Abanca', '2.434,50 €'],
     ['💶 Efectivo', '40,01 €'],
   ]);
-  // The four latest, with their note in grey (tarea 20d).
-  expect(await app.lines('.receipt-movements')).toEqual([
-    ['18/10  🍽️ Restaurantes cena', '−45,00 €'],
-    ['15/10  🛒 Supermercado', '−20,50 €'],
-    ['01/10  💼 Nómina', '1.500,00 €'],
-    ['15/09  🛒 Supermercado', '−9,99 €'],
-  ]);
+  // No latest movements any more (tarea 25b): the goals, none yet.
+  await expect(page.locator('.receipt-movements')).toHaveCount(0);
+  await expect(page.locator('.dashboard-goals')).toHaveText('Aún no tienes metas. Crea una para apartar dinero para algo concreto.');
+  await expect(page.locator('.dashboard-goals-sums')).toHaveCount(0);
 });
 
 test('the navbar reaches every section and marks the one on view', async ({ page, app }) => {
@@ -71,14 +68,14 @@ test('the eye next to TOTAL hides and shows the amounts, and the choice is kept'
   await expect(page.locator('.receipt-total-amount')).toHaveText('2.474,51 €');
 });
 
-test('an account on INICIO opens History filtered by it; «Ver todo» opens it whole', async ({ page, app }) => {
+test('an account on INICIO opens History filtered by it; the bar opens it whole', async ({ page, app }) => {
   await app.open();
   await page.locator('.dashboard-account', { hasText: 'Efectivo' }).click();
   await page.click('.history-view[data-view=list]');
   expect((await app.lines('.history-list')).map(([label]) => label)).toEqual(['15/09  🛒 Supermercado']);
   await expect(page.locator('.history-filter-toggle')).toContainText('Filtrar · 1');
   await app.go('#/');
-  await page.click('.dashboard-see-all');
+  await page.getByRole('button', { name: 'HISTORIAL', exact: true }).click();
   await expect(page.locator('.history-filter-toggle')).toHaveText('Filtrar ▾');
 });
 

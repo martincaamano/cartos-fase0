@@ -83,6 +83,8 @@ test('the screen table produces exactly the expected hashes, books included', ()
       accountEdit: '#/settings/accounts/edit',
       categoryNew: '#/settings/categories/new',
       categoryEdit: '#/settings/categories/edit',
+      goal: '#/goals/goal',
+      goalNew: '#/goals/new',
     }
   );
   assert.deepEqual(parseHash('#/settings/import'), { section: SECTIONS.IMPORT, params: {} });

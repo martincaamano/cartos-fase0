@@ -15,5 +15,5 @@ Antes de empezar: Busca la issue de GitHub titulada «Tarea $0 · …» y léela
 - Si la tarea tiene "decisiones previas" sin resolver, para y pregúntame antes de escribir código.
 - Trabaja en pasos pequeños y ejecuta `npm test` después de cada uno. Al final, ejecuta también `npm run acceptance`; si la tarea cambia lo que se ve a propósito, actualiza las fotos de estilos con `npm run acceptance:update` y explica el cambio.
 - Delega en el subagente `tester` los tests de la lógica nueva de `domain/` y de `data/`.
-- No hagas commit ni push. No marques la tarea como cerrada. Si te pido el PR, su descripción lleva `Closes #N` de la issue de la parte.
+- Trabaja en `develop` (actualízala antes con `git pull`). Al terminar, con `npm test` y `npm run acceptance` en verde, haz commit y push a `develop` con `Closes #N` de la issue de la parte en el mensaje. No abras PR a `main` ni marques la tarea como cerrada: eso lo decide el usuario al revisar el bloque.
 - Al terminar, dame: qué has cambiado (archivos), resultado de `npm test` y de `npm run acceptance`, y la lista de pruebas manuales en iPhone de la issue (solo lo que las pruebas de aceptación no cubren).

@@ -109,7 +109,3 @@ export function groupEntries(movements) {
   return entries;
 }
 
-// Latest activity for the Dashboard, newest first.
-export function latestEntries(movements, count) {
-  return groupEntries(movements).sort(newestFirst).slice(0, count);
-}

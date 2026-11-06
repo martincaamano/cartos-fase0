@@ -27,14 +27,14 @@ test('after saving, Añadir stays clean with «✓ … Deshacer», and Deshacer 
   await expect(page.locator('.receipt-total-amount')).toHaveText('2.474,51 €');
 });
 
-test('a movement not in the Sheet yet carries «·» on INICIO and in History until it goes up', async ({ page, context, app }) => {
+test('a movement not in the Sheet yet carries «·» in History and INICIO counts it until it goes up', async ({ page, context, app }) => {
   await app.open();
   await context.setOffline(true);
   await app.go('#/add?type=expense');
   await saveExpense(page, '3');
   await expect(page.locator('.toast')).toBeVisible();
   await app.go('#/');
-  await expect(page.locator('.receipt-movements .pending-dot')).toHaveCount(1);
+  await expect(page.locator('.dashboard-notice')).toContainText('1 cambio pendiente');
   await app.go('#/history');
   await page.click('.history-view[data-view=list]');
   await expect(page.locator('.history-line .pending-dot')).toHaveCount(1);
@@ -43,6 +43,9 @@ test('a movement not in the Sheet yet carries «·» on INICIO and in History un
   await page.evaluate(() => window.dispatchEvent(new Event('online')));
   await app.settle();
   await app.go('#/');
+  await expect(page.locator('.dashboard-notice')).toBeHidden();
+  await app.go('#/history');
+  await expect(page.locator('.history-line')).not.toHaveCount(0);
   await expect(page.locator('.pending-dot')).toHaveCount(0);
 });
 
