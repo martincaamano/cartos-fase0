@@ -125,3 +125,17 @@ test('the Picker only opens shared Cartos books, and says when it is not set up'
   await expect(page.locator('.books-error')).toHaveText('Ese archivo no es un libro compartido de Cartos.');
   await expect(page.locator('.book-open')).toContainText('Personal');
 });
+
+test('a book just shared opens even if Google takes a moment to let Sheets read it', async ({ page, context, app, google }) => {
+  await withPickerKey(context);
+  sharedByAna(google);
+  google.pick('book-ana');
+  google.notYet('book-ana', 1);
+  await app.open('#/settings/books', '.book-list');
+  // The Safari hint under the button.
+  await expect(page.locator('.books-shared-help')).toContainText('Evitar seguimiento entre sitios');
+
+  await page.click('.book-open-shared');
+  await expect(page.locator('.book-banner')).toHaveText('LIBRO · Casa compartida', { timeout: 10_000 });
+  expect(google.calls.filter((call) => call.op === 'notYet')).toHaveLength(1);
+});

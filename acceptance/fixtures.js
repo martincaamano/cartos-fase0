@@ -78,7 +78,9 @@ function fakeGoogle(book) {
   const preflight = (route) => route.request().method() === 'OPTIONS' && route.fulfill({ status: 204, headers: CORS });
   // picked: the file the fake Picker picks. delay: ms Sheets waits before
   // answering, to have one upload still running when the next one starts.
-  const fake = { picked: null, delay: 0 };
+  // notYet: fileId → how many Sheets calls still answer 404 (a book just
+  // picked that Google does not let Sheets read yet).
+  const fake = { picked: null, delay: 0, notYet: new Map() };
   const metadata = (id, { name, appProperties, createdTime, canShare = true }) =>
     ({ id, name, createdTime, appProperties, capabilities: { canShare } });
 
@@ -158,6 +160,11 @@ function fakeGoogle(book) {
       const url = new URL(request.url());
       const fileId = decodeURIComponent(url.pathname.match(/spreadsheets\/([^/:]+)/)[1]);
       const tabs = files.get(fileId)?.rows;
+      if (fake.notYet.get(fileId) > 0) {
+        fake.notYet.set(fileId, fake.notYet.get(fileId) - 1);
+        calls.push({ op: 'notYet', fileId });
+        return route.fulfill({ status: 404, headers: CORS });
+      }
       if (!tabs) {
         calls.push({ op: 'unexpected', path: url.pathname });
         return route.fulfill({ status: 404, headers: CORS });
@@ -226,6 +233,8 @@ function fakeGoogle(book) {
     pick: (fileId) => { fake.picked = fileId; },
     // Sheets answers `ms` later from now on.
     slow: (ms) => { fake.delay = ms; },
+    // The next `count` Sheets calls on `fileId` answer 404.
+    notYet: (fileId, count) => { fake.notYet.set(fileId, count); },
     // Movements of a book as objects, header left out.
     movements: (fileId = null) => (fileId ? files.get(fileId).rows : rows).Movements.slice(1).map((row) =>
       Object.fromEntries(HEADERS.Movements.map((name, i) => [name, row[i]]))),

@@ -33,7 +33,10 @@ const fileOfCall = (call) => call.url.pathname.split('/')[3]?.split(':')[0];
 // An in-memory Drive with several Cartos files, each a Sheet with three
 // tabs. Drive list/create/rename and the Sheets calls used by the app act on it.
 // files: [{ id, name, createdTime, appProperties, tabs? }]
-function fakeDrive(files = [], { failRename = false } = {}) {
+// sheets404: how many Sheets calls answer 404 first (a book just picked
+// that Google does not let Sheets read yet).
+function fakeDrive(files = [], { failRename = false, sheets404 = 0 } = {}) {
+  let notYet = sheets404;
   const drive = {
     files: files.map(({ tabs, ...meta }) => meta),
     tabs: Object.fromEntries(files.map((f) => [f.id, f.tabs ?? emptyTabs()])),
@@ -41,6 +44,10 @@ function fakeDrive(files = [], { failRename = false } = {}) {
   };
   drive.calls = setupGoogleApi((call) => {
     const path = call.url.pathname;
+    if (call.url.hostname === 'sheets.googleapis.com' && notYet > 0) {
+      notYet -= 1;
+      return { status: 404 };
+    }
     if (isList(call)) return { body: { files: drive.files } };
     if (isGetFile(call)) {
       const meta = drive.files.find((f) => f.id === decodeURIComponent(path.split('/').at(-1)));
@@ -833,4 +840,34 @@ test('openSharedBook: a file Drive cannot find rejects and saves nothing', async
   fakeDrive([]);
   await assert.rejects(openSharedBook('file-s', otherBooks), (err) => err instanceof ApiError && err.op === 'drive.get' && err.status === 404);
   assert.equal(loadBooksCache(storage, SUB), null);
+});
+
+// --- openSharedBook right after the pick: Sheets may not see it yet ---
+
+test('openSharedBook tries again while Sheets answers 404 for a book just picked', async () => {
+  const waits = [];
+  configureBooks({ storage: () => storage, wait: async (ms) => { waits.push(ms); } });
+  fakeDrive([sharedFile([HEADERS.Members])], { sheets404: 2 });
+  const result = await openSharedBook('file-s', otherBooks);
+  assert.equal(result.status, 'ready');
+  assert.equal(result.book.accounts[0].name, 'Cuenta común');
+  assert.deepEqual(waits, [2000, 4000], 'waits more each time');
+});
+
+test('openSharedBook gives up after the last try when Sheets keeps answering 404', async () => {
+  const waits = [];
+  configureBooks({ storage: () => storage, wait: async (ms) => { waits.push(ms); } });
+  fakeDrive([sharedFile([HEADERS.Members])], { sheets404: 99 });
+  await assert.rejects(openSharedBook('file-s', otherBooks), (err) => err instanceof ApiError && err.status === 404);
+  assert.deepEqual(waits, [2000, 4000, 8000, 16000]);
+  assert.equal(loadBooksCache(storage, SUB), null, 'nothing saved');
+});
+
+test('openSharedBook does not try again on other errors', async () => {
+  const waits = [];
+  configureBooks({ storage: () => storage, wait: async (ms) => { waits.push(ms); } });
+  // Drive sees the file; Sheets refuses it (403): no point in waiting.
+  setupGoogleApi((call) => (call.url.hostname === 'sheets.googleapis.com' ? { status: 403 } : { body: sharedFile(null) }));
+  await assert.rejects(openSharedBook('file-s', otherBooks), (err) => err instanceof ApiError && err.status === 403);
+  assert.deepEqual(waits, []);
 });

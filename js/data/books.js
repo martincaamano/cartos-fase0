@@ -12,7 +12,7 @@ import { es } from '../../i18n/es.js';
 import { addAccount, appendBookRows, createBook, readBook, writeBookRows } from './book.js';
 import { currentUserSub, TokenExpiredError } from './auth.js';
 import { joinBook } from './members.js';
-import { assertValid, ValidationError } from './errors.js';
+import { ApiError, assertValid, ValidationError } from './errors.js';
 import {
   loadBookCache, loadBooksCache, saveBookCache, saveBookList, saveCurrentBook,
 } from '../storage/book-cache.js';
@@ -23,7 +23,16 @@ import { isSharedBookFile } from '../domain/members.js';
 import { buildDefaultCategories, TRANSFER_CATEGORY_ID } from '../domain/category.js';
 import { buildImport, validateImport } from '../domain/import.js';
 
-const defaults = { storage: () => globalThis.localStorage };
+// Right after a book is picked, Google may take a while to let Sheets read
+// it (Drive already can: drive.get 200, sheets 404). Waits before each new
+// try, about 30 s in all (2026-11-05, Casa do Medio).
+const SHARED_RETRY_MS = [2000, 4000, 8000, 16000];
+
+const defaults = {
+  storage: () => globalThis.localStorage,
+  wait: (ms) => new Promise((resolve) => { setTimeout(resolve, ms); }),
+  retryMs: SHARED_RETRY_MS,
+};
 let deps = defaults;
 
 // Lets the tests swap localStorage for a fake.
@@ -118,6 +127,20 @@ export async function createNewBook({ name, account }, books) {
   return { status: 'ready', fileId: created.fileId, book, books: ordered };
 }
 
+// work() again while Sheets answers 404 for a book just picked, after each
+// of the waits; any other error, or the last 404, goes up.
+async function whileSheetsCatchesUp(work) {
+  for (const ms of deps.retryMs) {
+    try {
+      return await work();
+    } catch (err) {
+      if (!(err instanceof ApiError && err.status === 404)) throw err;
+      await deps.wait(ms);
+    }
+  }
+  return work();
+}
+
 // Ajustes → Libros → «Abrir un libro compartido conmigo»: the file picked
 // in the Picker (data/picker.js) becomes one of the user's books, opened at
 // once. Only a shared Cartos book is accepted. The signed-in person joins
@@ -125,8 +148,10 @@ export async function createNewBook({ name, account }, books) {
 export async function openSharedBook(fileId, books) {
   const file = await getFile(fileId);
   if (!isSharedBookFile(file)) throw new ValidationError(['not_shared_book']);
-  await joinBook(fileId);
-  const book = await readBook(fileId);
+  const book = await whileSheetsCatchesUp(async () => {
+    await joinBook(fileId);
+    return readBook(fileId);
+  });
   const list = addBook(books.filter((item) => item.fileId !== fileId), bookOf(file));
   saveBookList(deps.storage(), { sub: sub(), books: list });
   keepOpen(fileId, book);
