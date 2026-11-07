@@ -2,7 +2,7 @@
 // book (js/storage/transfer-categories.js), with an in-memory storage.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { loadTransferCategories, saveTransferCategories } from '../js/storage/transfer-categories.js';
+import { loadTransferCategories, saveTransferCategories, replaceTransferCategory } from '../js/storage/transfer-categories.js';
 import { fakeStorage } from './helpers/fake-storage.js';
 
 const KEY = 'cartos.transferCategories';
@@ -100,4 +100,49 @@ test('a storage whose write fails keeps the previous value', (t) => {
   storage.setItem = () => { throw new Error('quota'); };
   assert.doesNotThrow(() => saveTransferCategories(storage, 'house-bank', { expenseCategoryId: 'c', incomeCategoryId: 'd' }));
   assert.deepEqual(loadTransferCategories(storage, 'house-bank'), { expenseCategoryId: 'a', incomeCategoryId: 'b' });
+});
+
+// --- replaceTransferCategory (tarea 29) ---
+
+test('replaceTransferCategory replaces the id on the expense side, the income side or both', () => {
+  const storage = fakeStorage();
+  saveTransferCategories(storage, 'house-bank', { expenseCategoryId: 'old', incomeCategoryId: 'contribution' });
+  saveTransferCategories(storage, 'trip-bank', { expenseCategoryId: 'trip', incomeCategoryId: 'old' });
+  saveTransferCategories(storage, 'both-bank', { expenseCategoryId: 'old', incomeCategoryId: 'old' });
+  replaceTransferCategory(storage, 'old', 'new');
+  assert.deepEqual(loadTransferCategories(storage, 'house-bank'), { expenseCategoryId: 'new', incomeCategoryId: 'contribution' });
+  assert.deepEqual(loadTransferCategories(storage, 'trip-bank'), { expenseCategoryId: 'trip', incomeCategoryId: 'new' });
+  assert.deepEqual(loadTransferCategories(storage, 'both-bank'), { expenseCategoryId: 'new', incomeCategoryId: 'new' });
+});
+
+test('replaceTransferCategory leaves the accounts that do not use the id untouched', () => {
+  const storage = fakeStorage();
+  saveTransferCategories(storage, 'house-bank', { expenseCategoryId: 'old', incomeCategoryId: 'b' });
+  saveTransferCategories(storage, 'other-bank', { expenseCategoryId: 'c', incomeCategoryId: 'd' });
+  replaceTransferCategory(storage, 'old', 'new');
+  assert.deepEqual(JSON.parse(storage.data.get(KEY)), {
+    'house-bank': { expenseCategoryId: 'new', incomeCategoryId: 'b' },
+    'other-bank': { expenseCategoryId: 'c', incomeCategoryId: 'd' },
+  });
+});
+
+test('replaceTransferCategory does not write when no account uses the id', () => {
+  const storage = fakeStorage();
+  saveTransferCategories(storage, 'house-bank', { expenseCategoryId: 'a', incomeCategoryId: 'b' });
+  const raw = storage.data.get(KEY);
+  let writes = 0;
+  storage.setItem = () => { writes += 1; };
+  replaceTransferCategory(storage, 'old', 'new');
+  assert.equal(writes, 0);
+  assert.equal(storage.data.get(KEY), raw);
+});
+
+test('replaceTransferCategory on an empty, malformed or throwing storage does not throw', (t) => {
+  t.mock.method(console, 'warn', () => {});
+  const empty = fakeStorage();
+  replaceTransferCategory(empty, 'old', 'new');
+  assert.equal(empty.data.has(KEY), false);
+  assert.doesNotThrow(() => replaceTransferCategory(fakeStorage({ [KEY]: '{broken' }), 'old', 'new'));
+  assert.doesNotThrow(() => replaceTransferCategory(fakeStorage({ [KEY]: JSON.stringify({ x: null }) }), 'old', 'new'));
+  assert.doesNotThrow(() => replaceTransferCategory(throwingStorage, 'old', 'new'));
 });

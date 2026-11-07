@@ -13,6 +13,12 @@ export function loadExcluded(storage, fileId) {
   return Array.isArray(ids) ? ids.filter((id) => typeof id === 'string') : [];
 }
 
+// A category removed (tarea 29) is no longer left out.
+export function forgetExcluded(storage, fileId, categoryId) {
+  const ids = loadExcluded(storage, fileId);
+  if (ids.includes(categoryId)) saveExcluded(storage, fileId, ids.filter((id) => id !== categoryId));
+}
+
 export function saveExcluded(storage, fileId, ids) {
   writeEntry(storage, KEY, fileId, [...ids]);
 }

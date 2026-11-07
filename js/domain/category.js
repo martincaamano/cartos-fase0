@@ -153,3 +153,45 @@ export function rankAllCategories(categories, movements, today = null) {
     ...rankCategories(categories, movements, 'income', today).filter((c) => c.kind !== 'both'),
   ];
 }
+
+// --- Moving a category's movements to another one (tarea 29) ---
+
+// The types (expense, income) of the active movements of a category.
+export function typesUsed(categoryId, movements) {
+  return [...new Set(movements.filter((m) => !m.deleted && m.categoryId === categoryId).map((m) => m.type))];
+}
+
+// Where the movements of `origin` may go: active categories, not origin,
+// not Transferencia, accepting every type its movements use (gasto → gasto
+// or «ambas»; ingreso → ingreso or «ambas»).
+export function moveTargets(origin, categories, movements) {
+  const types = typesUsed(origin.id, movements);
+  return categories.filter((c) => !c.deleted && c.id !== origin.id && c.id !== TRANSFER_CATEGORY_ID
+    && types.every((type) => c.kind === 'both' || c.kind === type));
+}
+
+// Returns a list of error codes; empty means the move can be done.
+export function validateMove(origin, target, { categories, movements }) {
+  if (!origin || origin.deleted) return ['category_unknown'];
+  if (!canRemoveCategory(origin)) return ['not_removable'];
+  if (!target) return ['target_unknown'];
+  if (target.id === origin.id) return ['same_category'];
+  if (!moveTargets(origin, categories, movements).some((c) => c.id === target.id)) return ['target_invalid'];
+  return [];
+}
+
+// What changes when the movements of `origin` go to `target`: those
+// movements and the goals that use it get the new category; with remove,
+// origin is marked deleted too. Deleted ones are left as they are.
+// → { movements: [changed], goals: [changed], categories: [origin deleted] | [] }
+export function moveCategory(origin, target, { movements, goals = [] }, { remove = false, now = new Date() } = {}) {
+  const at = now.toISOString();
+  const moved = (items) => items
+    .filter((item) => !item.deleted && item.categoryId === origin.id)
+    .map((item) => ({ ...item, categoryId: target.id, updatedAt: at }));
+  return {
+    movements: moved(movements),
+    goals: moved(goals),
+    categories: remove ? [{ ...origin, deleted: true, updatedAt: at }] : [],
+  };
+}

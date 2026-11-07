@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { loadExcluded, saveExcluded } from '../js/storage/analysis-exclude.js';
+import { loadExcluded, saveExcluded, forgetExcluded } from '../js/storage/analysis-exclude.js';
 import { fakeStorage } from './helpers/fake-storage.js';
 
 const KEY = 'cartos.analysisExclude';
@@ -61,4 +61,49 @@ test('saveExcluded does not throw when setItem fails', (t) => {
   };
   assert.doesNotThrow(() => saveExcluded(storage, 'book-1', ['rent']));
   assert.equal(console.warn.mock.callCount(), 1);
+});
+
+// --- forgetExcluded (tarea 29) ---
+
+// A storage that counts its writes.
+const countingStorage = (initial) => {
+  const storage = fakeStorage(initial);
+  let writes = 0;
+  const setItem = storage.setItem;
+  storage.setItem = (key, value) => { writes += 1; setItem(key, value); };
+  return { storage, writes: () => writes };
+};
+
+test('forgetExcluded removes only that id, only in that book', () => {
+  const storage = fakeStorage();
+  saveExcluded(storage, 'book-1', ['rent', 'food', 'fun']);
+  saveExcluded(storage, 'book-2', ['food', 'fun']);
+  forgetExcluded(storage, 'book-1', 'food');
+  assert.deepEqual(loadExcluded(storage, 'book-1'), ['rent', 'fun']);
+  assert.deepEqual(loadExcluded(storage, 'book-2'), ['food', 'fun']);
+});
+
+test('forgetExcluded of the last id leaves the book with []', () => {
+  const storage = fakeStorage();
+  saveExcluded(storage, 'book-1', ['food']);
+  forgetExcluded(storage, 'book-1', 'food');
+  assert.deepEqual(loadExcluded(storage, 'book-1'), []);
+});
+
+test('forgetExcluded does not write when the id is not excluded', () => {
+  const { storage, writes } = countingStorage({ [KEY]: JSON.stringify({ 'book-1': ['rent'], 'book-2': ['food'] }) });
+  forgetExcluded(storage, 'book-1', 'food');
+  forgetExcluded(storage, 'book-3', 'food');
+  assert.equal(writes(), 0);
+  assert.deepEqual(JSON.parse(storage.data.get(KEY)), { 'book-1': ['rent'], 'book-2': ['food'] });
+});
+
+test('forgetExcluded on an empty or corrupt storage does nothing and does not throw', () => {
+  const empty = countingStorage();
+  forgetExcluded(empty.storage, 'book-1', 'food');
+  assert.equal(empty.writes(), 0);
+  assert.equal(empty.storage.data.has(KEY), false);
+  const corrupt = countingStorage({ [KEY]: '{not json' });
+  assert.doesNotThrow(() => forgetExcluded(corrupt.storage, 'book-1', 'food'));
+  assert.equal(corrupt.writes(), 0);
 });

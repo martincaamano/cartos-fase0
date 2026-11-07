@@ -154,6 +154,7 @@ export function createBookState(deps) {
       const merged = (sheet, records = []) => mergePending(records, recordsOf(pending, sheet));
       return {
         ...current.book,
+        categories: merged('Categories', current.book.categories),
         movements: merged('Movements', current.book.movements),
         goals: merged('Goals', current.book.goals),
         contributions: merged('Contributions', current.book.contributions),
@@ -171,7 +172,12 @@ export function createBookState(deps) {
     // contribution: records of the tab `sheet`) is counted at once; the
     // upload follows.
     saved(records, sheet = 'Movements') {
-      for (const record of [records].flat()) pending = enqueue(pending, { sheet, record });
+      this.savedAcross([records].flat().map((record) => ({ sheet, record })));
+    },
+    // Changes of several tabs saved together (tarea 29: a category, its
+    // movements and goals): [{ sheet, record }], one upload.
+    savedAcross(entries) {
+      for (const entry of entries) pending = enqueue(pending, entry);
       sync();
     },
     // Onboarding created the personal book, or Ajustes → Libros a new one

@@ -743,3 +743,17 @@ button.settings-link {
   color: var(--color-ink);
   text-decoration: underline;
 }
+
+/* Category card: its movements to another category (tarea 29). */
+.card-move {
+  margin-top: var(--space-4);
+}
+
+.card-move .btn-primary {
+  margin-top: var(--space-3);
+}
+
+.card-move-keep {
+  display: block;
+  margin-top: var(--space-3);
+}
