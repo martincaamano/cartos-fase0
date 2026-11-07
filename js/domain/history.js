@@ -8,6 +8,7 @@ import { TRANSFER_CATEGORY_ID } from './category.js';
 import { groupEntries, newestFirst } from './transfer.js';
 import { fromCents, incomeExpenseNet, sumCents, toCents } from './money.js';
 import { monthOf, monthsBetween } from './stats.js';
+import { isSearching, matchNote } from './search.js';
 
 const accountsOf = (entry) => (entry.kind === 'transfer' ? [entry.from, entry.to] : [entry.movement.accountId]);
 const categoryOf = (entry) => (entry.kind === 'transfer' ? TRANSFER_CATEGORY_ID : entry.movement.categoryId);
@@ -16,20 +17,29 @@ export const entryMonth = (entry) => monthOf(entry.date);
 // A transfer, or a loose half of one (its category is still Transferencia).
 const isTransfer = (entry) => categoryOf(entry) === TRANSFER_CATEGORY_ID;
 
-// filters: { accountIds, categoryIds, fromMonth, toMonth }. An empty list or
-// month means no filter. Months are YYYY-MM and both ends are included. A
-// transfer matches an account when either half belongs to it.
-export function historyEntries(movements, { accountIds = [], categoryIds = [], fromMonth = '', toMonth = '' } = {}) {
+// The note of an entry: a transfer's is that of its halves.
+export const entryNote = (entry) => (entry.kind === 'transfer' ? entry.halves[0].note : entry.movement.note);
+
+// filters: { accountIds, categoryIds, fromMonth, toMonth, query }. An empty
+// list, month or query means no filter. Months are YYYY-MM and both ends
+// are included. A transfer matches an account when either half belongs to
+// it. query: words searched in the notes (tarea 26, domain/search.js).
+export function historyEntries(movements, {
+  accountIds = [], categoryIds = [], fromMonth = '', toMonth = '', query = '',
+} = {}) {
+  const searching = isSearching(query);
   return groupEntries(movements)
+    .filter((entry) => !searching || matchNote(entryNote(entry), query).matches)
     .filter((entry) => accountIds.length === 0 || accountsOf(entry).some((id) => accountIds.includes(id)))
     .filter((entry) => categoryIds.length === 0 || categoryIds.includes(categoryOf(entry)))
     .filter((entry) => (!fromMonth || entryMonth(entry) >= fromMonth) && (!toMonth || entryMonth(entry) <= toMonth))
     .sort(newestFirst);
 }
 
-// How many filters are on: each month range, account and category counts one.
-export function activeFilterCount({ accountIds = [], categoryIds = [], fromMonth = '' } = {}) {
-  return accountIds.length + categoryIds.length + (fromMonth ? 1 : 0);
+// How many filters are on: each month range, account, category and a
+// search count one.
+export function activeFilterCount({ accountIds = [], categoryIds = [], fromMonth = '', query = '' } = {}) {
+  return accountIds.length + categoryIds.length + (fromMonth ? 1 : 0) + (isSearching(query) ? 1 : 0);
 }
 
 // The entry a history line points to: a movement id or a transferId.

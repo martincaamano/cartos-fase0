@@ -6,8 +6,9 @@
 // harmless to repeat.
 
 // The tabs the outbox writes to, in the order a sync uploads them (a goal
-// before the contributions to it).
-export const OUTBOX_SHEETS = Object.freeze(['Movements', 'Goals', 'Contributions']);
+// before the contributions to it). Categories (tarea 29): moving the
+// movements of one to another and removing it, offline too.
+export const OUTBOX_SHEETS = Object.freeze(['Categories', 'Movements', 'Goals', 'Contributions']);
 
 // An entry as stored before tarea 25 ({ fileId, movement, sub }) in the
 // shape of today's; today's are returned as they are.

@@ -149,7 +149,21 @@ export const VIEWS = Object.freeze({
     const category = state.book.categories.find((item) => item.id === params.id && !item.deleted);
     if (!category) return redirect(SECTION_HASH.categories);
     return renderCategoryCard(root, {
-      book: state.book, fileId: state.fileId, category, onDone: savedTo(state, redirect, SECTION_HASH.categories),
+      book: state.book,
+      fileId: state.fileId,
+      category,
+      shared: isShared(state),
+      onDone: savedTo(state, redirect, SECTION_HASH.categories),
+      // Its movements moved to another one (tarea 29): counted at once, one
+      // upload; back to the list.
+      onMoved: ({ categories, movements, goals }) => {
+        state.savedAcross([
+          ...categories.map((record) => ({ sheet: 'Categories', record })),
+          ...movements.map((record) => ({ sheet: 'Movements', record })),
+          ...goals.map((record) => ({ sheet: 'Goals', record })),
+        ]);
+        redirect(SECTION_HASH.categories);
+      },
     });
   },
 

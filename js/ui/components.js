@@ -376,6 +376,20 @@ function categoryButton(category, onSelect) {
   return button;
 }
 
+// A row of suggestions to tap (tarea 27: notes used before). Hidden, taking
+// no room, when there are none. onPick(text) on a tap.
+export function renderSuggestions(container, suggestions, onPick) {
+  container.hidden = suggestions.length === 0;
+  container.replaceChildren(...suggestions.map((text) => {
+    const chip = document.createElement('button');
+    chip.type = 'button';
+    chip.className = 'chip suggestion';
+    chip.textContent = text;
+    chip.addEventListener('click', () => onPick(text));
+    return chip;
+  }));
+}
+
 // A block that just changed size grows (or shrinks) from `before`, its
 // height a moment ago, to its height now (tarea 28).
 function resizedFrom(node, before) {
