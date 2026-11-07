@@ -1,6 +1,6 @@
 # Tarea 23 — Experiencia: fluidez
 
-Estado: en curso (2026-11-01).
+Estado: hecha (2026-11-06).
 Depende de: 22 (fusionada).
 
 ## Objetivo
@@ -30,5 +30,9 @@ Dominio y almacenamiento con `node:test`; aceptación para el ojo (y que se recu
 Solo cómo se siente (no se puede automatizar): las animaciones en el iPhone real.
 
 ## Criterio de cierre
-- [ ] Fusionada; `npm test` y `npm run acceptance` en verde.
-- [ ] Las animaciones se sienten bien en el iPhone.
+- [x] Fusionada; `npm test` y `npm run acceptance` en verde.
+- [x] Las animaciones se sienten bien en el iPhone.
+
+## Notas del cierre (2026-11-06)
+- Probada en el iPhone: las animaciones y los contadores se sienten bien.
+- Desde la tarea 25b, INICIO ya no tiene «Últimos movimientos»: el «·» de pendiente queda solo en Historial y INICIO avisa con «N cambios pendientes».

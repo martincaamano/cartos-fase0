@@ -23,6 +23,7 @@ export function renderBooks(root, { books, fileId, onOpen, onShared }) {
       <h1 class="form-title" data-text="title"></h1>
       <ul class="receipt-list book-list"></ul>
       <p class="form-error books-error" role="alert"></p>
+      <p class="text-muted form-note books-shared-help" data-text="sharedHelp"></p>
       <p class="text-muted form-note" data-text="note"></p>
     </main>
   `;
