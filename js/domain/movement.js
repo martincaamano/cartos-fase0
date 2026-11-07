@@ -99,3 +99,15 @@ export function startingAccounts(accountIds, last, hasOtherBooks) {
   if (known && to === known) to = accountIds.find((id) => id !== known) ?? '';
   return { account: from, from, to };
 }
+
+// What saving the Add form does (tarea 30b), from what it holds: a transfer
+// to another book, the purchase of a reached goal, an edit of a transfer or
+// of a movement, a new transfer or a new movement. The first that applies.
+// → 'crossBook' | 'purchase' | 'transferEdit' | 'edit' | 'transfer' | 'movement'
+export function saveAction({ type, toOtherBook = false, goal = false, editingTransfer = false, editing = false }) {
+  if (type === 'transfer' && toOtherBook) return 'crossBook';
+  if (goal) return 'purchase';
+  if (editingTransfer) return 'transferEdit';
+  if (editing) return 'edit';
+  return type === 'transfer' ? 'transfer' : 'movement';
+}

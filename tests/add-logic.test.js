@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { parseAmountInput } from '../js/domain/money.js';
-import { quickDates } from '../js/domain/movement.js';
+import { quickDates, saveAction } from '../js/domain/movement.js';
 import {
   createCategory, validateCategory, canRemoveCategory, rankCategories, rankAllCategories,
   TRANSFER_CATEGORY_ID, RANK_MONTHS,
@@ -176,4 +176,17 @@ test('rankAllCategories passes today through', () => {
   ];
   assert.deepEqual(ids(rankAllCategories(categories, movements)), ['e2', 'e1', 'i2', 'i1']);
   assert.deepEqual(ids(rankAllCategories(categories, movements, '2026-11-07')), ['e1', 'e2', 'i1', 'i2']);
+});
+
+// --- saveAction (tarea 30b): what saving the Add form does ---
+
+test('saveAction picks the first that applies, in order', () => {
+  assert.equal(saveAction({ type: 'transfer', toOtherBook: true }), 'crossBook');
+  assert.equal(saveAction({ type: 'expense', toOtherBook: true }), 'movement', 'another book only counts for a transfer');
+  assert.equal(saveAction({ type: 'expense', goal: true }), 'purchase');
+  assert.equal(saveAction({ type: 'transfer', editingTransfer: true }), 'transferEdit');
+  assert.equal(saveAction({ type: 'income', editing: true }), 'edit');
+  assert.equal(saveAction({ type: 'transfer' }), 'transfer');
+  assert.equal(saveAction({ type: 'expense' }), 'movement');
+  assert.equal(saveAction({ type: 'income' }), 'movement');
 });
