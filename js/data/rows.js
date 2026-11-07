@@ -75,7 +75,3 @@ export function rowsById(idColumn = []) {
   });
   return rows;
 }
-
-export function findRowById(idColumn, id) {
-  return rowsById(idColumn).get(id) ?? null;
-}

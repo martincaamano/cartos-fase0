@@ -9,7 +9,7 @@ import { assertValid } from './errors.js';
 import { outboxStore } from './outbox-store.js';
 import { createAccount, editAccount, validateAccount } from '../domain/account.js';
 import {
-  canRemoveCategory, createCategory, editCategory, validateCategory, validateCategoryEdit,
+  canRemoveCategory, categoryUses, createCategory, editCategory, validateCategory, validateCategoryEdit,
 } from '../domain/category.js';
 import { markDeleted } from '../domain/movement.js';
 
@@ -21,7 +21,7 @@ export function configureBookItems(overrides = {}) {
 }
 
 async function save(fileId, sheet, record) {
-  await store.add(fileId, [record], currentUserSub(), sheet);
+  await store.add({ fileId, records: [record], sub: currentUserSub(), sheet });
   return record;
 }
 
@@ -54,8 +54,9 @@ export async function queueCategoryEdit(fileId, original, fields, book) {
 }
 
 // Logical delete of a category no movement uses (one with movements is
-// moved first: data/category-move.js).
-export async function queueCategoryRemove(fileId, category) {
+// moved first: data/category-move.js). movements: the book's, to check it.
+export async function queueCategoryRemove(fileId, category, movements) {
   assertValid(canRemoveCategory(category) ? [] : ['not_removable']);
+  assertValid(categoryUses(category, movements) === 0 ? [] : ['in_use']);
   return save(fileId, 'Categories', markDeleted(category));
 }

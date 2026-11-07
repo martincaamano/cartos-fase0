@@ -2,7 +2,7 @@
 // the toast with «Deshacer», and the two taps that confirm a removal.
 
 import { el } from './dom.js';
-import { logEvent } from '../storage/logs.js';
+import { failureResult, logEvent } from '../storage/logs.js';
 
 // A button busy with something: disabled, with `text`. Returns what puts
 // it back as it was (when the work failed).
@@ -95,5 +95,5 @@ export function twoTap(button, { confirm, busy, work, fails = () => {}, before =
 // the console. where: a short code, e.g. 'categoryMove'.
 export function reportFailure(where, err) {
   console.warn(`${where} failed`, err);
-  logEvent({ type: 'error', result: `${where}:${err?.name ?? 'Error'}${err?.status ? `:${err.status}` : ''}` }).catch(() => {});
+  logEvent({ type: 'error', result: failureResult(where, err) }).catch(() => {});
 }

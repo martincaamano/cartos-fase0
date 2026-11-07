@@ -11,7 +11,7 @@ import {
   queueCategoryEdit,
   queueCategoryRemove,
 } from '../js/data/book-items.js';
-import { queueMovement } from '../js/data/movements.js';
+import { queueEdit, queueMovement } from '../js/data/movements.js';
 import { syncOutbox } from '../js/data/sync.js';
 import { ValidationError } from '../js/data/errors.js';
 import { toRow } from '../js/data/rows.js';
@@ -212,7 +212,7 @@ test('queueCategoryEdit refuses Transferencia, a taken name and an invalid kind'
 // --- queueCategoryRemove ---
 
 test('queueCategoryRemove queues the category with deleted: true and a new updatedAt', async () => {
-  const removed = await queueCategoryRemove('f1', cafe);
+  const removed = await queueCategoryRemove('f1', cafe, []);
   assert.deepEqual(removed, { ...cafe, deleted: true, updatedAt: removed.updatedAt });
   assert.notEqual(removed.updatedAt, OLD);
   assert.equal(cafe.deleted, false, 'the original is not changed');
@@ -221,9 +221,16 @@ test('queueCategoryRemove queues the category with deleted: true and a new updat
 });
 
 test('queueCategoryRemove refuses Transferencia and an already deleted category', async () => {
-  await rejectsWith(queueCategoryRemove('f1', transfer), 'not_removable');
-  await rejectsWith(queueCategoryRemove('f1', gone), 'not_removable');
+  await rejectsWith(queueCategoryRemove('f1', transfer, []), 'not_removable');
+  await rejectsWith(queueCategoryRemove('f1', gone, []), 'not_removable');
   assert.equal(items.size, 0);
+});
+
+test('queueCategoryRemove refuses a category an active movement uses, not one only deleted ones use', async () => {
+  await rejectsWith(queueCategoryRemove('f1', cafe, [mv('m1', 'cafe')]), 'in_use');
+  assert.equal(items.size, 0);
+  const removed = await queueCategoryRemove('f1', cafe, [mv('m1', 'cafe', { deleted: true }), mv('m2', 'food')]);
+  assert.equal(removed.deleted, true);
 });
 
 // --- upload ---
@@ -276,10 +283,25 @@ test('a new account and a movement using it upload Accounts first, then Movement
   assert.equal(items.size, 0);
 });
 
+test('a new category goes up before the edited movement that now uses it', async () => {
+  fakeSheet({ Categories: ['id', 'transfer', 'food', 'cafe', 'salary'], Movements: ['id', 'm1'] });
+  const created = await queueCategory('f1', { name: 'Regalos', kind: 'expense' }, categories);
+  await queueEdit('f1', mv('m1', 'food'), {
+    accountId: 'bank', type: 'expense', amount: 10, date: '2026-10-25', categoryId: created.id, note: '',
+  }, { accounts, categories: [...categories, created] });
+
+  assert.deepEqual(await syncOutbox('f1'), { appended: 1, updated: 1, pending: 0 });
+
+  const append = calls.find(isAppend);
+  const update = calls.find(isBatchUpdate);
+  assert.equal(appendedTab(append), 'Categories');
+  assert.ok(calls.indexOf(append) < calls.indexOf(update), 'the category row is in the Sheet before the movement points at it');
+});
+
 test('an edited and a removed category already in the Sheet go in one values:batchUpdate', async () => {
   fakeSheet({ Categories: ['id', 'transfer', 'food', 'cafe', 'salary'] });
   const edited = await queueCategoryEdit('f1', food, { name: 'Supermercado', kind: 'expense' }, { categories, movements: [] });
-  const removed = await queueCategoryRemove('f1', cafe);
+  const removed = await queueCategoryRemove('f1', cafe, []);
 
   assert.deepEqual(await syncOutbox('f1'), { appended: 0, updated: 2, pending: 0 });
 

@@ -10,7 +10,7 @@ import { configureSync } from '../../js/data/sync.js';
 
 export function memoryOutbox() {
   const items = new Map();
-  const add = async (fileId, records, sub, sheet = 'Movements') => {
+  const add = async ({ fileId, records, sheet = 'Movements' }) => {
     for (const record of records) items.set(record.id, { fileId, sheet, record });
   };
   configureMovements({ add });

@@ -24,6 +24,13 @@ export function buildLogEntry({ type, result, durationMs = null, ref = null }, n
   };
 }
 
+// The result of an 'error' entry: where it happened and the error's name
+// and HTTP code, never its message or the data involved. where: a short
+// code, e.g. 'sync' or 'categoryMove'.
+export function failureResult(where, err) {
+  return `${where}:${err?.name ?? 'Error'}${err?.status ? `:${err.status}` : ''}`;
+}
+
 export function countToDrop(total, max = MAX_LOGS) {
   return Math.max(0, total - max);
 }

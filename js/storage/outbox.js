@@ -1,5 +1,5 @@
 // Outbox in IndexedDB: a change is stored here the moment it is saved
-// (js/data/movements.js, js/data/goals.js) and leaves once it is in the
+// (js/data/movements.js, goals.js, category-move.js, book-items.js) and leaves once it is in the
 // Sheet (js/data/sync.js). Its own database, so its schema never collides
 // with the logs. Each entry is { fileId, sheet, record, sub }, keyed by the
 // record's id: saving the same record twice keeps a single entry. Not
@@ -41,7 +41,7 @@ async function withStore(mode, work) {
 // records: of the tab `sheet` of the book `fileId`; several (both halves of
 // a transfer) are stored in one transaction: all or none. sub: who saved
 // them, so another account signed in on the same device never uploads them.
-export function addPending(fileId, records, sub = '', sheet = 'Movements') {
+export function addPending({ fileId, records, sub = '', sheet = 'Movements' }) {
   return addPendingAcross(records.map((record) => ({ fileId, sheet, record })), sub);
 }
 

@@ -10,6 +10,7 @@
 import { TokenExpiredError } from './data/auth.js';
 import { ApiError } from './data/errors.js';
 import { enqueue, mergePending, recordsOf } from './storage/outbox-logic.js';
+import { failureResult } from './storage/logs.js';
 
 const UNKNOWN = Object.freeze({ status: 'unknown', fileId: null, book: null });
 
@@ -73,7 +74,7 @@ export function createBookState(deps) {
 
   const logSyncError = (err) => {
     // Only the error name and code: never the data being synced.
-    deps.logEvent({ type: 'error', result: `sync:${err?.name ?? 'Error'}${err?.status ? `:${err.status}` : ''}` });
+    deps.logEvent({ type: 'error', result: failureResult('sync', err) });
     console.warn('Sync failed', err);
   };
 

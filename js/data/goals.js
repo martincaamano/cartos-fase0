@@ -19,7 +19,7 @@ export function configureGoals(overrides = {}) {
   store = outboxStore(overrides);
 }
 
-const save = (fileId, sheet, records) => store.add(fileId, records, currentUserSub(), sheet);
+const save = (fileId, sheet, records) => store.add({ fileId, records, sub: currentUserSub(), sheet });
 
 // What a goal may be spent on: the expense categories of the book.
 const expenseIds = (book) => rankCategories(book.categories, book.movements, 'expense').map((c) => c.id);

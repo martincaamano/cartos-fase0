@@ -1,6 +1,6 @@
 // An account's card (Ajustes → Cuentas, tarea 20c): name, emoji and initial
-// balance, to create a new account or edit a saved one. Goes straight to
-// the Sheet, so it needs a connection.
+// balance, to create a new account or edit a saved one. Goes to the outbox
+// (tarea 30c), so it works offline.
 
 import { es } from '../../i18n/es.js';
 import { queueAccount, queueAccountEdit } from '../data/book-items.js';

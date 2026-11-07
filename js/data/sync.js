@@ -1,10 +1,14 @@
-// Uploads the outbox (filled by js/data/movements.js and js/data/goals.js)
-// to the tabs of the book: Movements, Goals, Contributions, in that order.
-// Reads the ids already in those tabs first: new records are appended,
-// edited or deleted ones are written over the row found by id, so a retry
-// after a lost answer never duplicates a row. One run at a time per book: a
-// call for the same book while one is running waits for it and gets one
-// more run after it, so a change saved meanwhile is uploaded too.
+// Uploads the outbox (filled by js/data/movements.js, goals.js,
+// category-move.js and book-items.js) to the tabs of the book. Reads the
+// ids already in those tabs first: new records are appended, edited or
+// deleted ones are written over the row found by id, so a retry after a
+// lost answer never duplicates a row. New rows go first, tab by tab in
+// OUTBOX_SHEETS order (Accounts, Categories, Movements, Goals,
+// Contributions), then all the edits in one write: a row never reaches the
+// Sheet before the account, category or goal it points at. One run at a
+// time per book: a call for the same book while one is running waits for
+// it and gets one more run after it, so a change saved meanwhile is
+// uploaded too.
 
 import { currentUserSub } from './auth.js';
 
@@ -44,10 +48,10 @@ async function run(fileId) {
     range: rowRange(sheet, row),
     values: [toRow(sheet, record)],
   })));
-  if (updates.length > 0) await batchUpdateValues(fileId, updates);
   for (const { sheet, toAppend } of plans) {
     if (toAppend.length > 0) await append(fileId, sheet, toAppend.map((record) => toRow(sheet, record)));
   }
+  if (updates.length > 0) await batchUpdateValues(fileId, updates);
   const appended = plans.reduce((sum, plan) => sum + plan.toAppend.length, 0);
   await store.remove(plans.flatMap(({ toAppend, toUpdate }) => [...toUpdate.map(({ record }) => record), ...toAppend]));
   logEvent({ type: 'sync', result: `ok:${appended}:${updates.length}` });

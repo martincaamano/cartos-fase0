@@ -365,6 +365,19 @@ test('saved takes both halves of a transfer and keeps one version per id', () =>
   assert.equal(state.pendingCount, 2);
 });
 
+test('saved accounts and categories show in their own lists of book, a new one added and an edit on top', () => {
+  const { state } = setup({ isOnline: () => false });
+  state.setUp({ status: 'ready', fileId: 'f1', book: { ...book([]), categories: [{ id: 'c1', name: 'Comida' }] } });
+  const savings = { id: 'a2', name: 'Ahorro' };
+  state.saved([savings], 'Accounts');
+  state.saved([{ id: 'c1', name: 'Supermercado' }], 'Categories');
+  assert.deepEqual(state.book.accounts.map((a) => a.id).sort(), ['a1', 'a2']);
+  assert.deepEqual(state.book.categories, [{ id: 'c1', name: 'Supermercado' }]);
+  assert.deepEqual(state.book.movements, [], 'they never reach the movements');
+  assert.deepEqual(state.savedBook.accounts, [{ id: 'a1' }], 'the book as read stays as it was');
+  assert.equal(state.pendingCount, 2);
+});
+
 // --- switchBook ---
 
 test('switching books shows the device copy at once, with the pending of the new book only', async () => {

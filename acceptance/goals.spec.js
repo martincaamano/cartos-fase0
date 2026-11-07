@@ -178,8 +178,9 @@ test('a reached goal records its purchase in Añadir, prefilled, and is complete
   expect([movement.type, movement.amount, movement.categoryId]).toEqual(['expense', 950, 'cat-food']);
   const goal = google.records('Goals')[0];
   expect([goal.status, goal.movementId]).toEqual(['completed', movement.id]);
-  // Both in the same sync: the goal's row rewritten, the movement appended.
-  expect(google.writes().slice(-2).map((w) => w.tab ?? w.body.data[0].range.split('!')[0])).toEqual(['Goals', 'Movements']);
+  // Both in the same sync: the movement appended first, then the goal's row
+  // rewritten, so the goal never points at a movement not in the Sheet yet.
+  expect(google.writes().slice(-2).map((w) => w.tab ?? w.body.data[0].range.split('!')[0])).toEqual(['Movements', 'Goals']);
 });
 
 test('leaving Añadir without saving changes nothing', async ({ page, app, google }) => {

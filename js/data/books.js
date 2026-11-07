@@ -12,6 +12,7 @@ import { es } from '../../i18n/es.js';
 import { addAccount, appendBookRows, createBook, readBook, writeBookRows } from './book.js';
 import { currentUserSub, TokenExpiredError } from './auth.js';
 import { joinBook } from './members.js';
+import { syncOutbox } from './sync.js';
 import { ApiError, assertValid, ValidationError } from './errors.js';
 import {
   loadBookCache, loadBooksCache, saveBookCache, saveBookList, saveCurrentBook,
@@ -204,6 +205,9 @@ export async function importPersonalBook({ fileId = null, data }) {
 // category) to the book open. The book is read again first, so the names
 // are matched against what is in the Sheet now.
 export async function importIntoBook(fileId, data) {
+  // Accounts and categories still in the outbox go up first, so the import
+  // reuses them by name instead of adding a second one.
+  await syncOutbox(fileId);
   const current = await readBook(fileId);
   const errors = validateImport(data, current);
   if (errors.length) throw new ValidationError(errors.map((error) => error.code));

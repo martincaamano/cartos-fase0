@@ -191,7 +191,7 @@ export function renderCategoryCard(root, {
     twoTap(remove, {
       confirm: t.confirmRemove,
       busy: t.removing,
-      work: () => queueCategoryRemove(fileId, category).then(onDone),
+      work: () => queueCategoryRemove(fileId, category, book.movements).then(onDone),
       fails: failed,
     });
   }
