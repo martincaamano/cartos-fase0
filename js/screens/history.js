@@ -320,7 +320,6 @@ export function renderHistory(root, {
 
   // The search runs a moment after typing stops.
   const search = root.querySelector('.history-search');
-  search.placeholder = t.searchPlaceholder;
   let typing = null;
   search.addEventListener('input', () => {
     clearTimeout(typing);

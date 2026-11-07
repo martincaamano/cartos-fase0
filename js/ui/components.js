@@ -262,6 +262,7 @@ export function createAmountInput(name) {
   input.name = name;
   input.inputMode = 'decimal';
   input.autocomplete = 'off';
+  // Only amounts show a hint of what to type; text fields show none.
   input.placeholder = '0,00';
   return input;
 }
@@ -291,8 +292,7 @@ export function showBookBanner(main, name) {
 // texts.creating, and if it fails the form says texts.failed (or
 // texts.offline when needsConnection and there is no network).
 // existing: the book's accounts, to reject a repeated name.
-// texts: nameLabel, namePlaceholder, emojiLabel, balanceLabel,
-// balancePlaceholder, submit, creating, failed, nameRequired, nameTaken,
+// texts: nameLabel, emojiLabel, balanceLabel, submit, creating, failed, nameRequired, nameTaken,
 // balanceInvalid and, with needsConnection, offline.
 // check: another problem outside the form (the book name in Ajustes →
 // Libros) as a text, or '' when there is none.
@@ -322,10 +322,8 @@ export function renderAccountForm(container, {
   `;
   fillTexts(form, texts);
   const { name, emoji } = form.elements;
-  name.placeholder = texts.namePlaceholder;
   emoji.setAttribute('aria-label', texts.emojiLabel);
   const balance = createAmountInput('balance');
-  balance.placeholder = texts.balancePlaceholder;
   form.querySelector('.field-balance').appendChild(balance);
   const error = form.querySelector('.form-error');
   const submit = form.querySelector('.form-submit');
@@ -433,7 +431,6 @@ export function renderCategoryPicker(container, { categories, selectedId = null,
     const search = document.createElement('input');
     search.className = 'field-input category-search';
     search.type = 'search';
-    search.placeholder = texts.search;
     search.setAttribute('aria-label', texts.search);
     search.hidden = true;
     const empty = document.createElement('p');

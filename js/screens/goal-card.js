@@ -62,7 +62,6 @@ export function renderGoalCard(root, { book, fileId, goal = null, today = new Da
   amount.setAttribute('aria-label', t.target);
   root.querySelector('.amount-slot').appendChild(amount);
   const { name, targetDate } = form.elements;
-  name.placeholder = t.namePlaceholder;
   targetDate.min = toIsoDate(today);
   const error = root.querySelector('.form-error');
   const submit = root.querySelector('.form-submit');
