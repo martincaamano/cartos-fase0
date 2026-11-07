@@ -291,8 +291,7 @@ export function showBookBanner(main, name) {
 // texts.creating, and if it fails the form says texts.failed (or
 // texts.offline when needsConnection and there is no network).
 // existing: the book's accounts, to reject a repeated name.
-// texts: nameLabel, namePlaceholder, emojiLabel, balanceLabel,
-// balancePlaceholder, submit, creating, failed, nameRequired, nameTaken,
+// texts: nameLabel, emojiLabel, balanceLabel, submit, creating, failed, nameRequired, nameTaken,
 // balanceInvalid and, with needsConnection, offline.
 // check: another problem outside the form (the book name in Ajustes →
 // Libros) as a text, or '' when there is none.
@@ -322,10 +321,8 @@ export function renderAccountForm(container, {
   `;
   fillTexts(form, texts);
   const { name, emoji } = form.elements;
-  name.placeholder = texts.namePlaceholder;
   emoji.setAttribute('aria-label', texts.emojiLabel);
   const balance = createAmountInput('balance');
-  balance.placeholder = texts.balancePlaceholder;
   form.querySelector('.field-balance').appendChild(balance);
   const error = form.querySelector('.form-error');
   const submit = form.querySelector('.form-submit');

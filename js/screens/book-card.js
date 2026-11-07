@@ -44,7 +44,6 @@ export function renderBookNew(root, { books, onCreated }) {
   root.querySelector('.form-title').textContent = t.newTitle;
 
   const bookName = root.querySelector('input[name=bookName]');
-  bookName.placeholder = t.bookNamePlaceholder;
   renderAccountForm(root.querySelector('main'), {
     texts: { ...es.onboarding, ...es.accountAdmin, ...t, submit: t.create, creating: t.creating },
     needsConnection: true,

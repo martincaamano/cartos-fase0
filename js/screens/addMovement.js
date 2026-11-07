@@ -144,7 +144,8 @@ export function renderAddMovement(root, {
   // The note stays folded until it is wanted (or the movement has one).
   const note = form.elements.note;
   const noteToggle = root.querySelector('.note-toggle');
-  note.placeholder = t.notePlaceholder;
+  note.placeholder = t.note;
+  note.setAttribute('aria-label', t.note);
   // Notes used before with this category (tarea 27), under the note once
   // it is open; typing filters them, a tap fills the note in.
   const suggestions = root.querySelector('.note-suggestions');
