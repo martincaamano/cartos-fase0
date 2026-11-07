@@ -139,7 +139,7 @@ export function renderAnalysis(root, {
 
   const excludeToggle = root.querySelector('.stat-exclude-toggle');
   const excludeChips = root.querySelector('.stat-exclude-chips');
-  const choosable = rankAllCategories(categories, book.movements);
+  const choosable = rankAllCategories(categories, book.movements, day);
   // A category removed after it was excluded is not offered any more, so it
   // stops being left out.
   for (const id of [...state.excluded]) if (!choosable.some((c) => c.id === id)) state.excluded.delete(id);

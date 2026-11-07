@@ -128,6 +128,7 @@ export const es = {
     amount: 'Importe',
     category: 'Categoría',
     seeAll: 'Ver todas',
+    seeLess: 'Ver menos',
     search: 'Buscar categoría',
     noMatches: 'Ninguna categoría coincide.',
     date: 'Fecha',

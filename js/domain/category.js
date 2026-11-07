@@ -108,29 +108,48 @@ export function validateCategoryEdit(edited, original, { categories = [], moveme
   return errors;
 }
 
-// Categories offered for a movement type, most used first; ties keep the
-// book order (defaults first). Transfer is never offered by hand.
-export function rankCategories(categories, movements, type) {
+// How far back the use of a category counts for its place (tarea 28): what
+// is used now goes first, not what was used a year ago.
+export const RANK_MONTHS = 6;
+
+// The first day that counts: today, RANK_MONTHS months ago ("2026-11-07" →
+// "2026-05-07"; a day the month lacks still compares right as text).
+function rankSince(today) {
+  const [year, month] = today.split('-').map(Number);
+  const index = year * 12 + (month - 1) - RANK_MONTHS;
+  return `${Math.floor(index / 12)}-${String((index % 12) + 1).padStart(2, '0')}-${today.slice(8, 10)}`;
+}
+
+// Categories offered for a movement type, most used first: active
+// movements of that type in the last RANK_MONTHS months (today:
+// YYYY-MM-DD; without it, all of them). Ties: the one used last first, then
+// the book order (defaults first). Transfer is never offered by hand.
+export function rankCategories(categories, movements, type, today = null) {
+  const since = today ? rankSince(today) : '';
   const uses = new Map();
+  const last = new Map();
   for (const movement of movements) {
-    if (!movement.deleted && movement.type === type) {
-      uses.set(movement.categoryId, (uses.get(movement.categoryId) ?? 0) + 1);
-    }
+    if (movement.deleted || movement.type !== type || (since && !(movement.date >= since))) continue;
+    uses.set(movement.categoryId, (uses.get(movement.categoryId) ?? 0) + 1);
+    if (!(last.get(movement.categoryId) >= movement.date)) last.set(movement.categoryId, movement.date ?? '');
   }
+  const lastOf = (id) => last.get(id) ?? '';
   return categories
     .map((category, index) => ({ category, index }))
     .filter(({ category }) => !category.deleted && category.id !== TRANSFER_CATEGORY_ID
       && (category.kind === type || category.kind === 'both'))
-    .sort((a, b) => (uses.get(b.category.id) ?? 0) - (uses.get(a.category.id) ?? 0) || a.index - b.index)
+    .sort((a, b) => (uses.get(b.category.id) ?? 0) - (uses.get(a.category.id) ?? 0)
+      || lastOf(b.category.id).localeCompare(lastOf(a.category.id))
+      || a.index - b.index)
     .map(({ category }) => category);
 }
 
 // Every category a list offers (History filters, Análisis exclusions,
 // Ajustes → Categorías): expenses first, then incomes, each most used
-// first. One of both kinds is listed once, with the expenses.
-export function rankAllCategories(categories, movements) {
+// first (rankCategories). One of both kinds is listed once, with the expenses.
+export function rankAllCategories(categories, movements, today = null) {
   return [
-    ...rankCategories(categories, movements, 'expense'),
-    ...rankCategories(categories, movements, 'income').filter((c) => c.kind !== 'both'),
+    ...rankCategories(categories, movements, 'expense', today),
+    ...rankCategories(categories, movements, 'income', today).filter((c) => c.kind !== 'both'),
   ];
 }

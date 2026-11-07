@@ -75,10 +75,10 @@ export function renderGoalCard(root, { book, fileId, goal = null, today = new Da
     targetDate.value = goal.targetDate;
   }
   renderCategoryPicker(root.querySelector('.category-picker'), {
-    categories: rankCategories(book.categories, book.movements, 'expense'),
+    categories: rankCategories(book.categories, book.movements, 'expense', toIsoDate(today)),
     selectedId: categoryId,
     onSelect: (category) => { categoryId = category.id; },
-    texts: { seeAll: es.add.seeAll, search: es.add.search, empty: es.add.noMatches },
+    texts: { seeAll: es.add.seeAll, seeLess: es.add.seeLess, search: es.add.search, empty: es.add.noMatches },
   });
 
   form.addEventListener('submit', (event) => {

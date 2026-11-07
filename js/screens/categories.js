@@ -5,6 +5,7 @@
 
 import { es } from '../../i18n/es.js';
 import { rankCategories, TRANSFER_CATEGORY_ID } from '../domain/category.js';
+import { toIsoDate } from '../domain/movement.js';
 import { labelOf } from '../ui/format.js';
 import { appendFolded, receiptLine } from '../ui/receipt.js';
 import { fillTexts } from '../ui/components.js';
@@ -19,7 +20,7 @@ const cardLine = (category) => receiptLine(labelOf(category), '›', {
   className: 'category-line',
 });
 
-export function renderCategories(root, { book }) {
+export function renderCategories(root, { book, today = new Date() }) {
   const t = es.categoryAdmin;
   root.innerHTML = `
     <main class="screen screen-form screen-with-navbar">
@@ -37,8 +38,9 @@ export function renderCategories(root, { book }) {
 
   const { categories, movements } = book;
   // A category of both kinds is listed once, with the expenses.
-  const expenses = rankCategories(categories, movements, 'expense');
-  const incomes = rankCategories(categories, movements, 'income').filter((c) => c.kind !== 'both');
+  const day = toIsoDate(today);
+  const expenses = rankCategories(categories, movements, 'expense', day);
+  const incomes = rankCategories(categories, movements, 'income', day).filter((c) => c.kind !== 'both');
 
   const expenseList = root.querySelector('.list-expense');
   appendFolded(expenseList, expenses, {

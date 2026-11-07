@@ -363,15 +363,13 @@ select.field-input {
   gap: var(--space-2);
 }
 
-.category-list {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: var(--space-2);
-  margin-top: var(--space-2);
+/* «Ver todas» grows the same grid (tarea 28); its search box sits above. */
+.category-search {
+  margin-bottom: var(--space-2);
 }
 
-.category-all {
-  margin-top: var(--space-2);
+.category-empty {
+  margin: var(--space-2) 0 0;
 }
 
 .category-option {
@@ -384,13 +382,6 @@ select.field-input {
   padding: var(--space-1) 2px;
   border: var(--rule);
   border-radius: var(--radius);
-}
-
-.category-list .category-option {
-  flex-direction: row;
-  justify-content: flex-start;
-  min-height: var(--touch);
-  padding: 0 var(--space-2);
 }
 
 .category-option.is-selected,
@@ -416,10 +407,6 @@ select.field-input {
 
 .category-more .category-emoji {
   color: var(--color-ink-muted);
-}
-
-.category-list .category-name {
-  font-size: var(--text-md);
 }
 
 /* Chips (dates, theme, category kind) */

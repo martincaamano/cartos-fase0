@@ -376,28 +376,59 @@ function categoryButton(category, onSelect) {
   return button;
 }
 
-// categories: already ranked (rankCategories). Shows them as a grid of
-// `gridSize` tiles; when there are more, the last tile is "Ver todas", which
-// opens the full list with a search box.
-// texts: { seeAll, search, empty }.
-export function renderCategoryPicker(container, { categories, selectedId = null, onSelect, gridSize = 12, texts }) {
+// A block that just changed size grows (or shrinks) from `before`, its
+// height a moment ago, to its height now (tarea 28).
+function resizedFrom(node, before) {
+  if (!node?.animate || stillMotion()) return;
+  const after = node.offsetHeight;
+  if (after !== before) resize(node, { height: `${before}px` }, { height: `${after}px` });
+}
+
+// How many tiles the category grid shows before «Ver todas» (tarea 28).
+export const CATEGORY_TILES = 8;
+
+// categories: already ranked (rankCategories). Shows the first ones as a
+// grid of `gridSize` tiles; when there are more, the last tile is «Ver
+// todas», which grows the same grid with the rest, in the same order, and
+// shows a search box above it that filters the tiles; then the tile is «Ver
+// menos». A selected category beyond the first ones opens it grown.
+// texts: { seeAll, seeLess, search, empty }.
+export function renderCategoryPicker(container, { categories, selectedId = null, onSelect, gridSize = CATEGORY_TILES, texts }) {
   container.replaceChildren();
   let selected = selectedId;
-  const select = (category) => {
-    selected = category.id;
+  const mark = () => {
     for (const button of container.querySelectorAll('.category-option')) {
       button.classList.toggle('is-selected', button.dataset.id === selected);
     }
+  };
+  const select = (category) => {
+    selected = category.id;
+    mark();
     onSelect(category);
   };
 
   const grid = document.createElement('div');
   grid.className = 'category-grid';
   const more = categories.length > gridSize;
-  for (const category of categories.slice(0, more ? gridSize - 1 : gridSize)) grid.appendChild(categoryButton(category, select));
+  const shown = more ? gridSize - 1 : gridSize;
+  for (const category of categories.slice(0, shown)) grid.appendChild(categoryButton(category, select));
   container.appendChild(grid);
 
   if (more) {
+    const rest = categories.slice(shown).map((category) => categoryButton(category, select));
+    const search = document.createElement('input');
+    search.className = 'field-input category-search';
+    search.type = 'search';
+    search.placeholder = texts.search;
+    search.setAttribute('aria-label', texts.search);
+    search.hidden = true;
+    const empty = document.createElement('p');
+    empty.className = 'text-muted category-empty';
+    empty.textContent = texts.empty;
+    empty.hidden = true;
+    container.prepend(search);
+    container.append(empty);
+
     const toggle = document.createElement('button');
     toggle.type = 'button';
     toggle.className = 'category-option category-more';
@@ -407,39 +438,39 @@ export function renderCategoryPicker(container, { categories, selectedId = null,
     dots.textContent = '···';
     const label = document.createElement('span');
     label.className = 'category-name';
-    label.textContent = texts.seeAll;
     toggle.append(dots, label);
     grid.appendChild(toggle);
-    const panel = document.createElement('div');
-    panel.className = 'category-all';
-    panel.hidden = true;
-    const search = document.createElement('input');
-    search.className = 'field-input';
-    search.type = 'search';
-    search.placeholder = texts.search;
-    const list = document.createElement('div');
-    list.className = 'category-list';
-    const paint = () => {
+
+    let open = false;
+    const filter = () => {
       const query = search.value.trim().toLocaleLowerCase('es');
-      const matches = categories.filter((c) => c.name.toLocaleLowerCase('es').includes(query));
-      list.replaceChildren(...matches.map((c) => categoryButton(c, select)));
-      if (matches.length === 0) {
-        const empty = document.createElement('p');
-        empty.className = 'text-muted';
-        empty.textContent = texts.empty;
-        list.appendChild(empty);
+      let matches = 0;
+      for (const button of grid.querySelectorAll('.category-option:not(.category-more)')) {
+        const hit = button.textContent.toLocaleLowerCase('es').includes(query);
+        button.hidden = !hit;
+        if (hit) matches += 1;
       }
-      for (const button of list.querySelectorAll('.category-option')) {
-        button.classList.toggle('is-selected', button.dataset.id === selected);
-      }
+      empty.hidden = matches > 0;
     };
-    search.addEventListener('input', paint);
-    toggle.addEventListener('click', () => {
-      panel.hidden = !panel.hidden;
-      if (!panel.hidden) paint();
-    });
-    panel.append(search, list);
-    container.append(panel);
+    const setOpen = (value, { animate = true } = {}) => {
+      const before = grid.offsetHeight;
+      open = value;
+      if (open) toggle.before(...rest);
+      else {
+        for (const button of rest) button.remove();
+        search.value = '';
+      }
+      filter();
+      search.hidden = !open;
+      label.textContent = open ? texts.seeLess : texts.seeAll;
+      toggle.setAttribute('aria-expanded', String(open));
+      mark();
+      if (animate) resizedFrom(grid, before);
+    };
+    search.addEventListener('input', filter);
+    toggle.addEventListener('click', () => setOpen(!open));
+    // A category chosen before (editing) that is not among the first ones.
+    setOpen(rest.some((button) => button.dataset.id === selected), { animate: false });
   }
   if (selected) select(categories.find((c) => c.id === selected) ?? categories[0]);
 }
