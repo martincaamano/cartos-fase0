@@ -1,16 +1,16 @@
 // A book is one Google Sheet with the tabs Accounts, Categories and Movements
-// (architecture §2), and Goals and Contributions since tarea 25. Everything is validated with domain/ before it is written.
+// (architecture §2), and Goals and Contributions since tarea 25. Everything
+// is validated with domain/ before it is written. Accounts and categories
+// edited in Ajustes go through the outbox (data/book-items.js, tarea 30c).
 
 import { es } from '../../i18n/es.js';
 import { createSpreadsheetFile } from './drive.js';
-import { assertValid, ValidationError } from './errors.js';
-import { append, batchClear, batchGet, batchUpdate, batchUpdateValues } from './sheets.js';
-import { findRowById, GOAL_SHEETS, HEADERS, rowRange, SHEET_NAMES, toRow, rowsToObjects } from './rows.js';
+import { assertValid } from './errors.js';
+import { append, batchClear, batchUpdate, batchUpdateValues } from './sheets.js';
+import { GOAL_SHEETS, HEADERS, SHEET_NAMES, toRow, rowsToObjects } from './rows.js';
 import { readWithGoalTabs, writeHeaders } from './tabs.js';
-import { createAccount, editAccount, validateAccount } from '../domain/account.js';
-import {
-  buildDefaultCategories, canRemoveCategory, createCategory, editCategory, validateCategory, validateCategoryEdit,
-} from '../domain/category.js';
+import { createAccount, validateAccount } from '../domain/account.js';
+import { buildDefaultCategories } from '../domain/category.js';
 
 // A new spreadsheet always starts with one tab whose sheetId is 0.
 const FIRST_SHEET_ID = 0;
@@ -83,54 +83,3 @@ export async function addAccount(fileId, fields, existing = []) {
   return account;
 }
 
-// existing: the categories already in the book, to reject a repeated name.
-export async function addCategory(fileId, fields, existing) {
-  const category = createCategory(fields);
-  const errors = validateCategory(category, existing);
-  assertValid(errors);
-  await append(fileId, 'Categories', [toRow('Categories', category)]);
-  return category;
-}
-
-const columnLetter = (sheet, column) => String.fromCharCode(65 + HEADERS[sheet].indexOf(column));
-
-// Writes a whole row over the one with the same id, found by its id (never
-// by a remembered row number), RAW.
-async function writeRowById(fileId, sheet, item) {
-  const [idColumn] = await batchGet(fileId, [`${sheet}!A:A`]);
-  const row = findRowById(idColumn, item.id);
-  if (row === null) throw new ValidationError([sheet === 'Accounts' ? 'account_unknown' : 'category_unknown']);
-  await batchUpdateValues(fileId, [{ range: rowRange(sheet, row), values: [toRow(sheet, item)] }]);
-}
-
-// Ajustes → Cuentas, the card of an account: name, emoji and initial
-// balance. existing: the book's accounts, to reject a repeated name.
-export async function updateAccount(fileId, original, fields, existing = []) {
-  const account = editAccount(original, fields);
-  const errors = validateAccount(account, existing);
-  assertValid(errors);
-  await writeRowById(fileId, 'Accounts', account);
-  return account;
-}
-
-// Ajustes → Categorías, the card of a category: name, emoji and kind (the
-// kind only while no movement uses it). book: { categories, movements }.
-export async function updateCategory(fileId, original, fields, book) {
-  const category = editCategory(original, fields);
-  const errors = validateCategoryEdit(category, original, book);
-  assertValid(errors);
-  await writeRowById(fileId, 'Categories', category);
-  return category;
-}
-
-// Logical delete: finds the row by id (never by a remembered row number)
-// and sets updatedAt and deleted. The row itself is never removed.
-export async function removeCategory(fileId, category, now = new Date()) {
-  if (!canRemoveCategory(category)) throw new ValidationError(['not_removable']);
-  const [idColumn] = await batchGet(fileId, ['Categories!A:A']);
-  const row = findRowById(idColumn, category.id);
-  if (row === null) throw new ValidationError(['category_unknown']);
-  const from = columnLetter('Categories', 'updatedAt');
-  const to = columnLetter('Categories', 'deleted');
-  await batchUpdateValues(fileId, [{ range: `Categories!${from}${row}:${to}${row}`, values: [[now.toISOString(), true]] }]);
-}

@@ -161,6 +161,7 @@ export function createBookState(deps) {
       const merged = (sheet, records = []) => mergePending(records, recordsOf(pending, sheet));
       return {
         ...current.book,
+        accounts: merged('Accounts', current.book.accounts),
         categories: merged('Categories', current.book.categories),
         movements: merged('Movements', current.book.movements),
         goals: merged('Goals', current.book.goals),

@@ -91,3 +91,39 @@ test('signing out goes back to the Login and forgets the session', async ({ page
   expect(await page.evaluate(() => [localStorage.getItem('cartos.session'), localStorage.getItem('cartos.book')]))
     .toEqual([null, null]);
 });
+
+// Tarea 30c: accounts and categories go through the outbox like movements.
+test('offline, a new account and a new category are saved on the device and go up later', async ({ page, context, app, google }) => {
+  await app.open('#/settings/accounts', '.account-list');
+  await context.setOffline(true);
+  await page.evaluate(() => dispatchEvent(new Event('offline')));
+
+  await page.click('.add-row');
+  await page.fill('input[name=name]', 'Hucha');
+  await page.fill('input[name=balance]', '20');
+  await page.click('.form-submit');
+  // No «Necesitas conexión»: it is listed at once.
+  await expect(page.locator('.account-list')).toContainText('Hucha');
+
+  await app.go('#/settings/categories/new');
+  await page.fill('input[name=name]', 'Gimnasio');
+  await page.click('.form-submit');
+  await expect(page.locator('.list-expense')).toContainText('Gimnasio');
+  // And it can be used straight away, with the new account.
+  await app.addMovement({ amount: '12', category: 'Gimnasio', account: '🏦 Hucha' });
+  expect(google.writes()).toEqual([]);
+
+  await context.setOffline(false);
+  await page.evaluate(() => dispatchEvent(new Event('online')));
+  await app.settle();
+  const account = google.rows.Accounts.find((row) => row[1] === 'Hucha');
+  const category = google.rows.Categories.find((row) => row[1] === 'Gimnasio');
+  expect(account?.[3]).toBe(20);
+  expect(category).toBeTruthy();
+  const movement = google.movements().find((m) => m.amount === 12);
+  expect([movement.accountId, movement.categoryId]).toEqual([account[0], category[0]]);
+  // The account and the category went up before the movement that uses them.
+  const tabs = google.writes().map((w) => w.tab).filter(Boolean);
+  expect(tabs.indexOf('Movements')).toBeGreaterThan(tabs.indexOf('Accounts'));
+  expect(tabs.indexOf('Movements')).toBeGreaterThan(tabs.indexOf('Categories'));
+});

@@ -51,11 +51,11 @@ function personNamer(members) {
 // is more than one book.
 const bookName = (state) => (state.books.length > 1 ? state.bookInfo?.name ?? '' : '');
 
-// After a card saved to the Sheet: back to its list, which repaints once
-// the book is read again.
-const savedTo = (state, redirect, hash) => () => {
+// After a card saved to the outbox (an account or a category, tarea 30c):
+// counted at once, uploaded; back to its list.
+const savedTo = (state, redirect, hash, sheet) => (record) => {
+  state.saved([record], sheet);
   redirect(hash);
-  state.reloadBook();
 };
 
 // The other books with a copy on the device: where a transfer can go.
@@ -142,7 +142,7 @@ export const VIEWS = Object.freeze({
   [SECTIONS.CATEGORIES]: ({ root, state }) => renderCategories(root, { book: state.book }),
 
   [SECTIONS.CATEGORY_NEW]: ({ root, state, redirect }) =>
-    renderCategoryCard(root, { book: state.book, fileId: state.fileId, onDone: savedTo(state, redirect, SECTION_HASH.categories) }),
+    renderCategoryCard(root, { book: state.book, fileId: state.fileId, onDone: savedTo(state, redirect, SECTION_HASH.categories, 'Categories') }),
 
   [SECTIONS.CATEGORY_EDIT]: ({ root, state, params, redirect }) => {
     const category = state.book.categories.find((item) => item.id === params.id && !item.deleted);
@@ -152,7 +152,7 @@ export const VIEWS = Object.freeze({
       fileId: state.fileId,
       category,
       shared: isShared(state),
-      onDone: savedTo(state, redirect, SECTION_HASH.categories),
+      onDone: savedTo(state, redirect, SECTION_HASH.categories, 'Categories'),
       // Its movements moved to another one (tarea 29): counted at once, one
       // upload; back to the list.
       onMoved: ({ categories, movements, goals }) => {
@@ -169,13 +169,13 @@ export const VIEWS = Object.freeze({
   [SECTIONS.ACCOUNTS]: ({ root, state }) => renderAccounts(root, { book: state.book }),
 
   [SECTIONS.ACCOUNT_NEW]: ({ root, state, redirect }) =>
-    renderAccountCard(root, { book: state.book, fileId: state.fileId, onDone: savedTo(state, redirect, SECTION_HASH.accounts) }),
+    renderAccountCard(root, { book: state.book, fileId: state.fileId, onDone: savedTo(state, redirect, SECTION_HASH.accounts, 'Accounts') }),
 
   [SECTIONS.ACCOUNT_EDIT]: ({ root, state, params, redirect }) => {
     const account = state.book.accounts.find((item) => item.id === params.id && !item.deleted);
     if (!account) return redirect(SECTION_HASH.accounts);
     return renderAccountCard(root, {
-      book: state.book, fileId: state.fileId, account, onDone: savedTo(state, redirect, SECTION_HASH.accounts),
+      book: state.book, fileId: state.fileId, account, onDone: savedTo(state, redirect, SECTION_HASH.accounts, 'Accounts'),
     });
   },
 
