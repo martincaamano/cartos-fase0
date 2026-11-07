@@ -489,3 +489,8 @@ select.field-input {
   from { transform: scaleY(0); }
   to { transform: none; }
 }
+
+/* Notes used before, under the note (tarea 27). */
+.note-suggestions {
+  margin-top: var(--space-2);
+}

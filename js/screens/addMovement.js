@@ -8,6 +8,7 @@
 
 import { es } from '../../i18n/es.js';
 import { queuePurchase } from '../data/goals.js';
+import { suggestNotes } from '../domain/noteSuggestions.js';
 import { parseAmountInput } from '../domain/money.js';
 import { rankCategories } from '../domain/category.js';
 import { activeOnly } from '../domain/active.js';
@@ -18,7 +19,8 @@ import {
 import { loadTransferCategories, saveTransferCategories } from '../storage/transfer-categories.js';
 import { loadLastAccount, saveLastAccount } from '../storage/last-account.js';
 import {
-  createAmountInput, errorText, fillTexts, renderCategoryPicker, renderChoices, renderDatePicker, showBookBanner, twoTap,
+  createAmountInput, errorText, fillTexts, renderCategoryPicker, renderChoices, renderDatePicker, renderSuggestions, showBookBanner,
+  twoTap,
 } from '../ui/components.js';
 import { formatAmountInput, formatEuros, labelOf } from '../ui/format.js';
 import { SECTION_HASH } from '../ui/router.js';
@@ -118,6 +120,7 @@ export function renderAddMovement(root, {
         <div class="note-field">
           <button type="button" class="link-button note-toggle" data-text="addNote"></button>
           <input class="field-input" name="note" maxlength="140" autocomplete="off" hidden>
+          <div class="chip-strip note-suggestions" hidden></div>
         </div>
         <p class="form-error" role="alert"></p>
         <div class="add-actions">
@@ -142,14 +145,32 @@ export function renderAddMovement(root, {
   const note = form.elements.note;
   const noteToggle = root.querySelector('.note-toggle');
   note.placeholder = t.notePlaceholder;
+  // Notes used before with this category (tarea 27), under the note once
+  // it is open; typing filters them, a tap fills the note in.
+  const suggestions = root.querySelector('.note-suggestions');
+  const paintSuggestions = () => {
+    if (note.hidden) {
+      suggestions.hidden = true;
+      return;
+    }
+    const offered = state.type === 'transfer' || state.categoryId
+      ? suggestNotes(book.movements, { type: state.type, categoryId: state.categoryId, typed: note.value })
+      : [];
+    renderSuggestions(suggestions, offered, (text) => {
+      note.value = text;
+      paintSuggestions();
+    });
+  };
   const openNote = () => {
     noteToggle.hidden = true;
     note.hidden = false;
+    paintSuggestions();
   };
   noteToggle.addEventListener('click', () => {
     openNote();
     note.focus();
   });
+  note.addEventListener('input', () => paintSuggestions());
 
   const blocked = root.querySelector('.transfer-blocked');
   blocked.querySelector('.form-note').textContent = t.needTwoAccounts;
@@ -201,7 +222,10 @@ export function renderAddMovement(root, {
     renderCategoryPicker(root.querySelector('.category-picker'), {
       categories: categoryChoices(),
       selectedId: original?.categoryId ?? goal?.categoryId ?? null,
-      onSelect: (category) => { state.categoryId = category.id; },
+      onSelect: (category) => {
+        state.categoryId = category.id;
+        paintSuggestions();
+      },
       texts: { seeAll: t.seeAll, seeLess: t.seeLess, search: t.search, empty: t.noMatches },
     });
   };
@@ -243,6 +267,7 @@ export function renderAddMovement(root, {
     error.textContent = '';
     paintCategories();
     paintCross();
+    paintSuggestions();
   };
   // Editing keeps the type: the other tabs are off.
   renderChoices(root.querySelector('.tabs'), TYPES.map((type) => ({
