@@ -2,14 +2,16 @@
 // summary (total → months → categories → movements, opened by tapping) or
 // as a plain list by month. Both show income − spending = net for the total
 // and each month. Filters by a range of months, accounts and categories,
-// folded under "Filtrar" and cleared every time the screen opens. Tapping a
+// folded under "Filtrar" with a search in the notes (tarea 26), and
+// cleared every time the screen opens. Tapping a
 // movement opens the Add form to edit or delete it. Filtering and sums come
 // from domain/history.js.
 
 import { es } from '../../i18n/es.js';
 import {
-  activeFilterCount, entryMonth, historyEntries, monthsSpan, selectMonth, summarizeHistory, transferAmount,
+  activeFilterCount, entryMonth, entryNote, historyEntries, monthsSpan, selectMonth, summarizeHistory, sumEntries, transferAmount,
 } from '../domain/history.js';
+import { isSearching, markedParts, matchNote } from '../domain/search.js';
 import { activeOnly } from '../domain/active.js';
 import { rankAllCategories, TRANSFER_CATEGORY_ID } from '../domain/category.js';
 import { toIsoDate } from '../domain/movement.js';
@@ -23,6 +25,8 @@ import { HISTORY_VIEWS, loadHistoryView, saveHistoryView } from '../storage/hist
 
 // Lines painted at once in the list view; "Mostrar más" adds another page.
 const PAGE_SIZE = 200;
+// The search in the notes runs this long after typing stops (tarea 26).
+const SEARCH_WAIT_MS = 150;
 
 // book: movements already include the pending ones (mergePending).
 // params: { account } opens it filtered by that account (from INICIO);
@@ -41,6 +45,10 @@ export function renderHistory(root, {
         <div class="history-views" role="group"></div>
       </div>
       <div class="history-filters" hidden>
+        <label class="history-search-field">
+          <span class="history-filter-head" data-text="search"></span>
+          <input type="search" class="field-input history-search" autocomplete="off" enterkeyhint="search">
+        </label>
         <p class="history-filter-head"><span data-text="months"></span><span class="history-range"></span></p>
         <div class="chip-strip history-months"></div>
         <p class="history-filter-head"><span data-text="accounts"></span><span class="history-count-accounts"></span></p>
@@ -48,6 +56,7 @@ export function renderHistory(root, {
         <p class="history-filter-head"><span data-text="categories"></span><span class="history-count-categories"></span></p>
         <div class="chip-strip history-categories"></div>
       </div>
+      <p class="text-muted history-found" hidden></p>
       <div class="history-list"></div>
       <button type="button" class="link-button history-more" data-text="more" hidden></button>
     </main>
@@ -65,6 +74,8 @@ export function renderHistory(root, {
     range: isMonth(params.month) ? { from: params.month, to: params.month, open: false } : null,
     accountIds: new Set(book.accounts.some((a) => a.id === params.account) ? [params.account] : []),
     categoryIds: new Set(categories.some((c) => c.id === params.category) ? [params.category] : []),
+    // Words searched in the notes (tarea 26).
+    query: '',
     open: new Set(),
   };
   const filters = () => ({
@@ -72,6 +83,7 @@ export function renderHistory(root, {
     categoryIds: [...state.categoryIds],
     fromMonth: state.range?.from ?? '',
     toMonth: state.range?.to ?? '',
+    query: state.query,
   });
 
   const list = root.querySelector('.history-list');
@@ -82,12 +94,22 @@ export function renderHistory(root, {
   let entries = [];
   let shown = 0;
 
-  const movementItem = (entry) => movementLine(entry, lookups, {
-    pending: isPendingEntry(entry, pendingIds),
-    withNote: true,
-    href: `${SECTION_HASH.edit}?id=${encodeURIComponent(entry.id)}`,
-    className: 'history-line',
-  });
+  const movementItem = (entry) => {
+    const line = movementLine(entry, lookups, {
+      pending: isPendingEntry(entry, pendingIds),
+      withNote: true,
+      href: `${SECTION_HASH.edit}?id=${encodeURIComponent(entry.id)}`,
+      className: 'history-line',
+    });
+    // While searching, the words found are marked in the note.
+    const note = line.querySelector('.receipt-note');
+    if (note && isSearching(state.query)) {
+      const { words } = matchNote(entryNote(entry), state.query);
+      note.replaceChildren(' ', ...markedParts(entryNote(entry), words)
+        .map((part) => (part.hit ? el('mark', 'note-hit', part.text) : document.createTextNode(part.text))));
+    }
+    return line;
+  };
 
   // --- Lista: every movement, a heading with the sums wherever the month changes.
   let summary = null;
@@ -272,14 +294,41 @@ export function renderHistory(root, {
     else paintPage();
   }
 
+  // While searching: «12 movimientos · 340,00 € de gasto · 50,00 € de
+  // ingreso» (transfers listed, not counted).
+  const found = root.querySelector('.history-found');
+  const paintFound = () => {
+    found.hidden = !isSearching(state.query);
+    if (found.hidden) return;
+    const { income, expense } = sumEntries(entries);
+    found.textContent = [
+      entries.length === 1 ? t.foundOne : t.foundMany.replace('{n}', entries.length),
+      expense ? t.foundExpense.replace('{amount}', formatEuros(expense)) : '',
+      income ? t.foundIncome.replace('{amount}', formatEuros(income)) : '',
+    ].filter(Boolean).join(' · ');
+  };
+
   function apply() {
     entries = historyEntries(movements, filters());
     // The sums of the total and of each month, for both views.
     summary = summarizeHistory(entries);
     monthSums = new Map(summary.months.map((month) => [month.month, month]));
     paintFilters();
+    paintFound();
     paint();
   }
+
+  // The search runs a moment after typing stops.
+  const search = root.querySelector('.history-search');
+  search.placeholder = t.searchPlaceholder;
+  let typing = null;
+  search.addEventListener('input', () => {
+    clearTimeout(typing);
+    typing = setTimeout(() => {
+      state.query = search.value;
+      apply();
+    }, SEARCH_WAIT_MS);
+  });
 
   toggle.addEventListener('click', () => {
     if (!panel.hidden) {
@@ -300,6 +349,8 @@ export function renderHistory(root, {
     state.range = null;
     state.accountIds.clear();
     state.categoryIds.clear();
+    state.query = '';
+    search.value = '';
     apply();
   });
   more.addEventListener('click', paintPage);

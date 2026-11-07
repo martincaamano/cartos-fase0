@@ -175,6 +175,12 @@ export const es = {
     empty: 'No hay movimientos.',
     noMatches: 'Ningún movimiento coincide con los filtros.',
     more: 'Mostrar más',
+    search: 'BUSCAR EN NOTAS',
+    searchPlaceholder: 'Andorra, regalo…',
+    foundOne: '1 movimiento',
+    foundMany: '{n} movimientos',
+    foundExpense: '{amount} de gasto',
+    foundIncome: '{amount} de ingreso',
   },
   analysis: {
     previous: 'Mes anterior',

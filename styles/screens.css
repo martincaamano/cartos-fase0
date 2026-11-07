@@ -725,3 +725,21 @@ button.settings-link {
   margin: var(--space-2) 0 0;
   font-size: var(--text-xs);
 }
+
+/* Historial: search in the notes (tarea 26). The words found are marked
+   with ink and an underline, no colour. */
+.history-search-field {
+  display: block;
+  margin-bottom: var(--space-3);
+}
+
+.history-found {
+  margin: var(--space-2) 0;
+  font-size: var(--text-sm);
+}
+
+.note-hit {
+  background: none;
+  color: var(--color-ink);
+  text-decoration: underline;
+}

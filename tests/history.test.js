@@ -11,6 +11,7 @@ import {
   entryMonth,
   monthsSpan,
   selectMonth,
+  entryNote,
 } from '../js/domain/history.js';
 import { editMovement, markDeleted, startingAccounts } from '../js/domain/movement.js';
 import { editTransfer, deleteTransfer } from '../js/domain/transfer.js';
@@ -737,6 +738,101 @@ test('a closed selectMonth range filters historyEntries', () => {
     ids(historyEntries(book(), { fromMonth: range.from, toMonth: range.to })),
     ['m-nov', 'm-salary', 'm-food-2', 't-1', 'm-food-1'],
   );
+});
+
+// --- search in the notes (tarea 26) ---
+
+const withNote = (note, halves) => halves.map((half) => ({ ...half, note }));
+
+const noteBook = () => [
+  mov('m-fuel', { date: '2026-10-02', accountId: 'acc-1', categoryId: 'cat-car', note: 'Gasolina Andorra' }),
+  mov('m-hotel', { date: '2026-10-03', accountId: 'acc-2', categoryId: 'cat-trip', note: 'Hotel en Andorra la Vella' }),
+  mov('m-gift', { date: '2026-10-20', accountId: 'acc-1', categoryId: 'cat-gift', note: 'Regalo Ana' }),
+  mov('m-dinner', { date: '2026-11-04', accountId: 'acc-1', categoryId: 'cat-food', note: 'Cena en Andorra' }),
+  mov('m-empty', { date: '2026-10-25', accountId: 'acc-1', categoryId: 'cat-food', note: '' }),
+  mov('m-gone', { date: '2026-10-30', accountId: 'acc-1', categoryId: 'cat-car', note: 'Peaje Andorra', deleted: true }),
+  mov('m-salary', { date: '2026-10-31', type: 'income', amount: 2000, accountId: 'acc-1', categoryId: 'cat-salary', note: 'Nómina' }),
+  ...withNote('Ahorro viaje Andorra', transferHalves('t-trip', { from: 'acc-1', to: 'acc-2', amount: 300, date: '2026-10-10' })),
+];
+
+test('entryNote: a movement gives its note, a transfer that of its first half', () => {
+  const entries = historyEntries(noteBook());
+  assert.equal(entryNote(entries.find((e) => e.id === 'm-gift')), 'Regalo Ana');
+  assert.equal(entryNote(entries.find((e) => e.id === 'm-empty')), '');
+  const transfer = entries.find((e) => e.id === 't-trip');
+  assert.equal(transfer.kind, 'transfer');
+  assert.equal(entryNote(transfer), 'Ahorro viaje Andorra');
+  const [outgoing, incoming] = transferHalves('t-2');
+  const [entry] = historyEntries([{ ...incoming, note: 'in' }, { ...outgoing, note: 'out' }]);
+  assert.equal(entryNote(entry), entry.halves[0].note);
+  assert.equal(entryNote(entry), 'out');
+});
+
+test('historyEntries with a query keeps movements and transfers whose note matches, newest first', () => {
+  // m-gone matches too but is deleted.
+  assert.deepEqual(ids(historyEntries(noteBook(), { query: 'andorra' })), ['m-dinner', 't-trip', 'm-hotel', 'm-fuel']);
+  assert.deepEqual(ids(historyEntries(noteBook(), { query: 'ANDORRO' })), ['m-dinner', 't-trip', 'm-hotel', 'm-fuel']);
+  assert.deepEqual(ids(historyEntries(noteBook(), { query: 'ana regalo' })), ['m-gift']);
+  assert.deepEqual(ids(historyEntries(noteBook(), { query: 'viaje' })), ['t-trip']);
+  assert.deepEqual(ids(historyEntries(noteBook(), { query: 'nomina' })), ['m-salary']);
+  assert.deepEqual(historyEntries(noteBook(), { query: 'xyzw' }), []);
+});
+
+test('historyEntries with a query keeps a loose transfer half by its own note', () => {
+  const [outgoing, incoming] = withNote('Ahorro Andorra', transferHalves('t-loose', { date: '2026-10-05' }));
+  const entries = historyEntries([{ ...outgoing, deleted: true }, incoming], { query: 'andorra' });
+  assert.deepEqual(ids(entries), ['t-loose-in']);
+  assert.equal(entries[0].kind, 'movement');
+});
+
+test('historyEntries with a query never shows deleted movements', () => {
+  assert.deepEqual(ids(historyEntries(noteBook(), { query: 'peaje' })), []);
+  const halves = withNote('Peaje', transferHalves('t-x')).map((half) => ({ ...half, deleted: true }));
+  assert.deepEqual(historyEntries(halves, { query: 'peaje' }), []);
+});
+
+test('historyEntries with an empty or only-short query is the same as no query', () => {
+  const all = ids(historyEntries(noteBook()));
+  assert.equal(all.length, 7);
+  for (const query of ['', '   ', 'a de', 'en la']) {
+    assert.deepEqual(ids(historyEntries(noteBook(), { query })), all, `query ${JSON.stringify(query)}`);
+  }
+  // Entries with an empty note stay when nothing is searched.
+  assert.ok(all.includes('m-empty'));
+});
+
+test('historyEntries combines the query with account, category and month filters', () => {
+  assert.deepEqual(ids(historyEntries(noteBook(), { query: 'andorra', accountIds: ['acc-2'] })), ['t-trip', 'm-hotel']);
+  assert.deepEqual(ids(historyEntries(noteBook(), { query: 'andorra', categoryIds: ['cat-car', 'transfer'] })), ['t-trip', 'm-fuel']);
+  assert.deepEqual(
+    ids(historyEntries(noteBook(), { query: 'andorra', fromMonth: '2026-10', toMonth: '2026-10' })),
+    ['t-trip', 'm-hotel', 'm-fuel'],
+  );
+  assert.deepEqual(ids(historyEntries(noteBook(), { query: 'andorra', fromMonth: '2026-11' })), ['m-dinner']);
+  assert.deepEqual(
+    ids(historyEntries(noteBook(), {
+      query: 'andorra', accountIds: ['acc-1'], categoryIds: ['cat-car', 'cat-food'], fromMonth: '2026-10', toMonth: '2026-10',
+    })),
+    ['m-fuel'],
+  );
+  assert.deepEqual(historyEntries(noteBook(), { query: 'regalo', accountIds: ['acc-2'] }), []);
+});
+
+test('activeFilterCount counts a real query as one and ignores only-short words', () => {
+  assert.equal(activeFilterCount({ query: 'andorra' }), 1);
+  assert.equal(activeFilterCount({ query: 'viaje a Andorra' }), 1);
+  assert.equal(activeFilterCount({ query: '' }), 0);
+  assert.equal(activeFilterCount({ query: '   ' }), 0);
+  assert.equal(activeFilterCount({ query: 'a de' }), 0);
+  assert.equal(activeFilterCount({ accountIds: ['acc-1', 'acc-2'], categoryIds: ['cat-food'], fromMonth: '2026-10', query: 'ana' }), 5);
+  assert.equal(activeFilterCount({ accountIds: ['acc-1'], query: 'el' }), 1);
+});
+
+test('sumEntries over searched entries leaves the transfer out', () => {
+  const entries = historyEntries(noteBook(), { query: 'andorra' });
+  assert.ok(entries.some((e) => e.kind === 'transfer'));
+  // m-fuel, m-hotel, m-dinner: 10 each; t-trip (300) does not count.
+  assert.deepEqual(sumEntries(entries), { income: 0, expense: 30, net: -30 });
 });
 
 // --- startingAccounts (tarea 22c) ---
