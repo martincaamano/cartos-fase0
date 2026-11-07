@@ -26,20 +26,20 @@ async function save(fileId, sheet, record) {
 }
 
 // existing: the book's accounts, to reject a repeated name.
-export function queueAccount(fileId, fields, existing) {
+export async function queueAccount(fileId, fields, existing) {
   const account = createAccount(fields);
   assertValid(validateAccount(account, existing));
   return save(fileId, 'Accounts', account);
 }
 
-export function queueAccountEdit(fileId, original, fields, existing) {
+export async function queueAccountEdit(fileId, original, fields, existing) {
   const account = editAccount(original, fields);
   assertValid(validateAccount(account, existing));
   return save(fileId, 'Accounts', account);
 }
 
 // existing: the book's categories, to reject a repeated name.
-export function queueCategory(fileId, fields, existing) {
+export async function queueCategory(fileId, fields, existing) {
   const category = createCategory(fields);
   assertValid(validateCategory(category, existing));
   return save(fileId, 'Categories', category);
@@ -47,7 +47,7 @@ export function queueCategory(fileId, fields, existing) {
 
 // book: { categories, movements } (the kind changes only while no movement
 // uses the category).
-export function queueCategoryEdit(fileId, original, fields, book) {
+export async function queueCategoryEdit(fileId, original, fields, book) {
   const category = editCategory(original, fields);
   assertValid(validateCategoryEdit(category, original, book));
   return save(fileId, 'Categories', category);
@@ -55,7 +55,7 @@ export function queueCategoryEdit(fileId, original, fields, book) {
 
 // Logical delete of a category no movement uses (one with movements is
 // moved first: data/category-move.js).
-export function queueCategoryRemove(fileId, category) {
+export async function queueCategoryRemove(fileId, category) {
   assertValid(canRemoveCategory(category) ? [] : ['not_removable']);
   return save(fileId, 'Categories', markDeleted(category));
 }
