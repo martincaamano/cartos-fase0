@@ -262,7 +262,6 @@ export function createAmountInput(name) {
   input.name = name;
   input.inputMode = 'decimal';
   input.autocomplete = 'off';
-  // Only amounts show a hint of what to type; text fields show none.
   input.placeholder = '0,00';
   return input;
 }
@@ -431,6 +430,7 @@ export function renderCategoryPicker(container, { categories, selectedId = null,
     const search = document.createElement('input');
     search.className = 'field-input category-search';
     search.type = 'search';
+    search.placeholder = texts.search;
     search.setAttribute('aria-label', texts.search);
     search.hidden = true;
     const empty = document.createElement('p');

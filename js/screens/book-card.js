@@ -138,6 +138,7 @@ function renderPeople(section, { fileId, canShare, t }) {
   const form = section.querySelector('.book-share');
   form.hidden = false;
   const { email } = form.elements;
+  email.placeholder = t.sharePlaceholder;
   const error = form.querySelector('.form-error');
   const done = form.querySelector('.book-share-done');
   const submit = form.querySelector('.book-share-submit');

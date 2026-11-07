@@ -376,6 +376,7 @@ export const es = {
     peopleOffline: 'Sin conexión: no se pueden ver las personas.',
     sharedWithYou: 'Este libro lo compartieron contigo.',
     shareEmail: 'Compartir con',
+    sharePlaceholder: 'email@gmail.com',
     share: 'Compartir',
     sharing: 'Compartiendo…',
     shared: 'Compartido con {email}. Drive le avisa por email; lo abre en su Cartos desde Ajustes → Libros → «Abrir un libro compartido conmigo».',
