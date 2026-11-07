@@ -12,9 +12,10 @@ import { toIsoDate } from '../domain/movement.js';
 import {
   queueContribution, queueContributionDelete, queueContributionEdit, queueGoalDelete,
 } from '../data/goals.js';
-import {
-  createAmountInput, el, errorText, fillTexts, renderChoices, renderDatePicker, setBusy, twoTap,
-} from '../ui/components.js';
+import { el, fillTexts, progressBar, renderChoices } from '../ui/dom.js';
+import { errorText, setBusy, twoTap } from '../ui/feedback.js';
+import { createAmountInput } from '../ui/inputs.js';
+import { renderDatePicker } from '../ui/pickers.js';
 import { formatAmountInput, formatDate, formatEuros, formatShortDate, labelOf } from '../ui/format.js';
 import { SECTION_HASH } from '../ui/router.js';
 import { renderNavbar } from '../ui/navbar.js';
@@ -67,10 +68,7 @@ export function renderGoal(root, {
   // --- Where it stands
   const progress = goalProgress(goal, book.contributions, day);
   const box = root.querySelector('.goal-progress');
-  const bar = el('span', 'stat-bar goal-bar');
-  const fill = el('span', 'stat-bar-fill');
-  fill.style.width = `${Math.min(progress.progress, 100)}%`;
-  bar.appendChild(fill);
+  const bar = progressBar(progress.progress, { className: 'goal-bar' });
   box.append(
     el('p', 'goal-saved', t.savedOf.replace('{saved}', formatEuros(progress.saved)).replace('{target}', formatEuros(goal.targetAmount))),
     bar,

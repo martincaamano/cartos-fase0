@@ -4,7 +4,7 @@
 
 import { currentUserSub } from './auth.js';
 import { assertValid } from './errors.js';
-import { addPending, addPendingAcross } from '../storage/outbox.js';
+import { outboxStore } from './outbox-store.js';
 import { rankCategories } from '../domain/category.js';
 import {
   activeGoals, completeGoal, createContribution, createGoal, editContribution, editGoal, validateContribution, validateGoal,
@@ -12,18 +12,11 @@ import {
 import { activeIds } from '../domain/active.js';
 import { createMovement, markDeleted, validateMovement } from '../domain/movement.js';
 
-const defaults = { add: addPending, addAcross: addPendingAcross };
-let store = defaults;
+let store = outboxStore();
 
 // Lets the tests swap the IndexedDB outbox for an in-memory one.
-// A fake `add` alone also stands in for `addAcross`, one entry at a time.
 export function configureGoals(overrides = {}) {
-  store = { ...defaults, ...overrides };
-  if (overrides.add && !overrides.addAcross) {
-    store.addAcross = async (items, sub) => {
-      for (const { fileId, sheet, record } of items) await overrides.add(fileId, [record], sub, sheet);
-    };
-  }
+  store = outboxStore(overrides);
 }
 
 const save = (fileId, sheet, records) => store.add(fileId, records, currentUserSub(), sheet);

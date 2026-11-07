@@ -4,7 +4,8 @@
 
 import { es } from '../../i18n/es.js';
 import { addAccount, updateAccount } from '../data/book.js';
-import { fillTexts, renderAccountForm } from '../ui/components.js';
+import { fillTexts } from '../ui/dom.js';
+import { renderAccountForm } from '../ui/inputs.js';
 import { labelOf } from '../ui/format.js';
 import { SECTION_HASH } from '../ui/router.js';
 import { renderNavbar } from '../ui/navbar.js';

@@ -8,10 +8,9 @@
 
 import { currentUserSub } from './auth.js';
 
-import { ApiError } from './errors.js';
 import { append, batchGet, batchUpdateValues } from './sheets.js';
 import { GOAL_SHEETS, rowRange, rowsById, toRow } from './rows.js';
-import { addTabs } from './tabs.js';
+import { readWithGoalTabs } from './tabs.js';
 import { OUTBOX_SHEETS, planSync, recordsOf } from '../storage/outbox-logic.js';
 import { listPending, removePending } from '../storage/outbox.js';
 import { logEvent } from '../storage/logs.js';
@@ -28,16 +27,10 @@ export function configureSync(overrides = {}) {
 }
 
 // Column A of each tab. A book read before tarea 25 by another device may
-// lack the goal tabs (Sheets answers 400): they are added, then read again.
-async function readIds(fileId, sheets) {
+// lack the goal tabs: when something goes to them, they are added first.
+function readIds(fileId, sheets) {
   const ranges = sheets.map((sheet) => `${sheet}!A:A`);
-  try {
-    return await batchGet(fileId, ranges);
-  } catch (err) {
-    if (!(err instanceof ApiError && err.status === 400) || !sheets.some((sheet) => GOAL_SHEETS.includes(sheet))) throw err;
-    await addTabs(fileId, GOAL_SHEETS);
-    return batchGet(fileId, ranges);
-  }
+  return sheets.some((sheet) => GOAL_SHEETS.includes(sheet)) ? readWithGoalTabs(fileId, ranges) : batchGet(fileId, ranges);
 }
 
 async function run(fileId) {

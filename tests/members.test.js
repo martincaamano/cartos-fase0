@@ -3,6 +3,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
+  otherMemberName,
   normalizeEmail, validateShareEmail, createMember, isMember, memberName, isSharedBookFile,
 } from '../js/domain/members.js';
 
@@ -135,4 +136,16 @@ test('isSharedBookFile: personal books, other apps and missing data are false', 
     undefined,
   ];
   for (const file of cases) assert.equal(isSharedBookFile(file), false, JSON.stringify(file));
+});
+
+// --- otherMemberName (tarea 25e, moved to domain in tarea 30) ---
+
+test('otherMemberName names the one other person of a book of two, by email', () => {
+  const me = { email: 'Martin@Example.com', name: 'Martín' };
+  const ana = { email: 'ana@example.com', name: 'Ana Pérez' };
+  assert.equal(otherMemberName([me, ana], 'martin@example.com'), 'Ana');
+  assert.equal(otherMemberName([me], 'martin@example.com'), '');
+  assert.equal(otherMemberName([], 'martin@example.com'), '');
+  assert.equal(otherMemberName([me, ana, { email: 'eva@example.com', name: 'Eva' }], 'martin@example.com'), '');
+  assert.equal(otherMemberName([me, { email: 'ana@example.com', name: '' }], 'martin@example.com'), 'ana@example.com');
 });

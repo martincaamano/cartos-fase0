@@ -15,9 +15,9 @@ import { queueCategoryMove } from '../data/category-move.js';
 import { forgetExcluded } from '../storage/analysis-exclude.js';
 import { replaceTransferCategory } from '../storage/transfer-categories.js';
 import { addCategory, removeCategory, updateCategory } from '../data/book.js';
-import {
-  errorText, failureText, fillTexts, renderChoices, setBusy, setupEmojiPicker, twoTap,
-} from '../ui/components.js';
+import { fillTexts, renderChoices } from '../ui/dom.js';
+import { errorText, failureText, reportFailure, setBusy, twoTap } from '../ui/feedback.js';
+import { setupEmojiPicker } from '../ui/inputs.js';
 import { labelOf } from '../ui/format.js';
 import { SECTION_HASH } from '../ui/router.js';
 import { renderNavbar } from '../ui/navbar.js';
@@ -105,7 +105,7 @@ export function renderCategoryCard(root, {
   }
 
   const failed = (err) => {
-    console.warn('Category change failed', err);
+    reportFailure('categoryChange', err);
     error.textContent = failureText(t.failed, t.offline);
   };
   const offline = () => {
@@ -183,7 +183,7 @@ export function renderCategoryCard(root, {
         before,
         work: move(remove),
         fails: (err) => {
-          console.warn('Moving a category failed', err);
+          reportFailure('categoryMove', err);
           moveError.textContent = t.failed;
         },
       });

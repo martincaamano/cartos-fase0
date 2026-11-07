@@ -5,7 +5,8 @@
 
 import { es } from '../../i18n/es.js';
 import { setUpPersonalBook } from '../data/books.js';
-import { fillTexts, renderAccountForm } from '../ui/components.js';
+import { fillTexts } from '../ui/dom.js';
+import { renderAccountForm } from '../ui/inputs.js';
 import { renderImport } from './import.js';
 
 export function renderOnboarding(root, { fileId = null, onDone }) {

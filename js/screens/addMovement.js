@@ -18,10 +18,10 @@ import {
 } from '../data/movements.js';
 import { loadTransferCategories, saveTransferCategories } from '../storage/transfer-categories.js';
 import { loadLastAccount, saveLastAccount } from '../storage/last-account.js';
-import {
-  createAmountInput, errorText, fillTexts, renderCategoryPicker, renderChoices, renderDatePicker, renderSuggestions, showBookBanner,
-  twoTap,
-} from '../ui/components.js';
+import { fillTexts, renderChoices, showBookBanner } from '../ui/dom.js';
+import { errorText, twoTap } from '../ui/feedback.js';
+import { createAmountInput } from '../ui/inputs.js';
+import { renderCategoryPicker, renderDatePicker, renderSuggestions } from '../ui/pickers.js';
 import { formatAmountInput, formatEuros, labelOf } from '../ui/format.js';
 import { SECTION_HASH } from '../ui/router.js';
 import { renderNavbar } from '../ui/navbar.js';

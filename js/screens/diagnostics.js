@@ -6,7 +6,7 @@ import { es } from '../../i18n/es.js';
 import { readLogs } from '../storage/logs.js';
 import { formatLogLine } from '../ui/format.js';
 import { SECTION_HASH } from '../ui/router.js';
-import { fillTexts } from '../ui/components.js';
+import { fillTexts } from '../ui/dom.js';
 import { renderNavbar } from '../ui/navbar.js';
 
 // Safari only lets the page write to the clipboard from a tap; older

@@ -8,13 +8,13 @@
 import { SECTIONS, SECTION_HASH } from './ui/router.js';
 import { findEntry } from './domain/history.js';
 import { activeGoals } from './domain/goals.js';
-import { memberName, normalizeEmail } from './domain/members.js';
+import { otherMemberName } from './domain/members.js';
 import { readMembers } from './data/members.js';
 import { getCurrentUser } from './data/auth.js';
 import { es } from '../i18n/es.js';
 import { cachedBook } from './data/books.js';
 import { loadAmountsHidden, saveAmountsHidden } from './storage/amounts-visibility.js';
-import { showToast } from './ui/components.js';
+import { showToast } from './ui/feedback.js';
 import { renderDashboard } from './screens/dashboard.js';
 import { renderAddMovement } from './screens/addMovement.js';
 import { renderHistory } from './screens/history.js';
@@ -43,8 +43,7 @@ const isShared = (state) => state.bookInfo?.bookType === 'shared';
 // of two (Members keeps emails, not Google ids); «Otra persona» otherwise.
 function personNamer(members) {
   const me = getCurrentUser();
-  const others = members.filter((member) => normalizeEmail(member.email) !== normalizeEmail(me?.email));
-  const other = others.length === 1 ? memberName(others[0]) : es.goals.someoneElse;
+  const other = otherMemberName(members, me?.email) || es.goals.someoneElse;
   return (createdBy) => (createdBy === me?.sub ? es.goals.you : other);
 }
 

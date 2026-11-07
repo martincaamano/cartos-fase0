@@ -3,10 +3,10 @@
 
 import { es } from '../../i18n/es.js';
 import { createSpreadsheetFile } from './drive.js';
-import { ApiError, assertValid, ValidationError } from './errors.js';
+import { assertValid, ValidationError } from './errors.js';
 import { append, batchClear, batchGet, batchUpdate, batchUpdateValues } from './sheets.js';
 import { findRowById, GOAL_SHEETS, HEADERS, rowRange, SHEET_NAMES, toRow, rowsToObjects } from './rows.js';
-import { addTabs, writeHeaders } from './tabs.js';
+import { readWithGoalTabs, writeHeaders } from './tabs.js';
 import { createAccount, editAccount, validateAccount } from '../domain/account.js';
 import {
   buildDefaultCategories, canRemoveCategory, createCategory, editCategory, validateCategory, validateCategoryEdit,
@@ -39,21 +39,9 @@ export async function createBook({ name = 'Personal', bookType = 'personal', cat
   return { fileId: file.id, bookId, name, bookType };
 }
 
-// All the tabs in one request. A book from before tarea 25 lacks the goal
-// tabs (Sheets answers 400): they are added once, then it is read again.
-async function readTabs(fileId) {
-  const ranges = [...SHEET_NAMES, ...GOAL_SHEETS];
-  try {
-    return await batchGet(fileId, ranges);
-  } catch (err) {
-    if (!(err instanceof ApiError && err.status === 400)) throw err;
-    await addTabs(fileId, GOAL_SHEETS);
-    return batchGet(fileId, ranges);
-  }
-}
-
 export async function readBook(fileId) {
-  const [accounts, categories, movements, goals, contributions] = await readTabs(fileId);
+  // All the tabs in one request (the goal tabs added to an older book).
+  const [accounts, categories, movements, goals, contributions] = await readWithGoalTabs(fileId, [...SHEET_NAMES, ...GOAL_SHEETS]);
   // A goal tab cut off before its header was written gets it now.
   const headless = GOAL_SHEETS.filter((sheet, i) => [goals, contributions][i].length === 0);
   if (headless.length > 0) await writeHeaders(fileId, headless);

@@ -7,21 +7,14 @@
 
 import { currentUserSub } from './auth.js';
 import { assertValid } from './errors.js';
-import { addPendingAcross } from '../storage/outbox.js';
+import { outboxStore } from './outbox-store.js';
 import { moveCategory, validateMove } from '../domain/category.js';
 
-const defaults = { addAcross: addPendingAcross };
-let store = defaults;
+let store = outboxStore();
 
-// Lets the tests swap the IndexedDB outbox for an in-memory one. A fake
-// `add` alone stands in for `addAcross`, one entry at a time.
+// Lets the tests swap the IndexedDB outbox for an in-memory one.
 export function configureCategoryMove(overrides = {}) {
-  store = { ...defaults, ...overrides };
-  if (overrides.add && !overrides.addAcross) {
-    store.addAcross = async (items, sub) => {
-      for (const { fileId, sheet, record } of items) await overrides.add(fileId, [record], sub, sheet);
-    };
-  }
+  store = outboxStore(overrides);
 }
 
 // origin, target: categories of `book`. remove: origin is removed too.

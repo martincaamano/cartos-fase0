@@ -10,7 +10,9 @@ import { readMembers, shareBook } from '../data/members.js';
 import { ValidationError } from '../data/errors.js';
 import { memberName } from '../domain/members.js';
 import { receiptLine } from '../ui/receipt.js';
-import { errorText, failureText, fillTexts, renderAccountForm, setBusy } from '../ui/components.js';
+import { fillTexts } from '../ui/dom.js';
+import { errorText, failureText, reportFailure, setBusy } from '../ui/feedback.js';
+import { renderAccountForm } from '../ui/inputs.js';
 import { SECTION_HASH } from '../ui/router.js';
 import { renderNavbar } from '../ui/navbar.js';
 
@@ -98,7 +100,7 @@ export function renderBookEdit(root, { books, fileId, onRenamed }) {
     error.textContent = '';
     const restore = setBusy(submit, t.renaming);
     renameBook(fileId, name.value, books).then(onRenamed).catch((err) => {
-      console.warn('Book rename failed', err);
+      reportFailure('bookRename', err);
       error.textContent = failureText(t.failed, t.offline);
       restore();
     });
@@ -124,7 +126,7 @@ function renderPeople(section, { fileId, canShare, t }) {
   if (navigator.onLine) {
     note(t.peopleLoading);
     readMembers(fileId).then(paint).catch((err) => {
-      console.warn('Members read failed', err);
+      reportFailure('members', err);
       note(t.peopleOffline);
     });
   } else {
@@ -154,7 +156,7 @@ function renderPeople(section, { fileId, canShare, t }) {
       done.textContent = t.shared.replace('{email}', address);
       email.value = '';
     }).catch((err) => {
-      console.warn('Book share failed', err);
+      reportFailure('share', err);
       error.textContent = err instanceof ValidationError ? errorText(err.errors, EMAIL_ERRORS, t) : failureText(t.shareFailed, t.shareOffline);
     }).finally(restore);
   });

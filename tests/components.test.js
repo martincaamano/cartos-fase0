@@ -2,8 +2,12 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createAccount, validateAccount } from '../js/domain/account.js';
 
-// Static import: it would throw here if the module touched `document` on load.
-import { accountErrorText } from '../js/ui/components.js';
+// Static imports: they would throw here if a module touched `document` on load.
+import { accountErrorText } from '../js/ui/inputs.js';
+import * as dom from '../js/ui/dom.js';
+import * as motion from '../js/ui/motion.js';
+import * as feedback from '../js/ui/feedback.js';
+import * as pickers from '../js/ui/pickers.js';
 
 const texts = { nameRequired: 'A', nameTaken: 'B', balanceInvalid: 'C' };
 
@@ -12,9 +16,10 @@ const deps = { now: () => new Date('2026-10-25T10:00:00.000Z'), newId: () => `ac
 const existing = [createAccount({ name: 'Abanca', emoji: '🏦', initialBalance: 100 }, deps)];
 const errorFor = (fields) => accountErrorText(validateAccount(createAccount(fields, deps), existing), texts);
 
-test('importing js/ui/components.js in Node does not touch document', () => {
+test('importing the shared ui modules in Node does not touch document', () => {
   assert.equal(typeof globalThis.document, 'undefined');
   assert.equal(typeof accountErrorText, 'function');
+  for (const module of [dom, motion, feedback, pickers]) assert.ok(Object.keys(module).length > 0);
 });
 
 test('no errors gives null', () => {

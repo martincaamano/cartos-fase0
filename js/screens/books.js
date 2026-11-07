@@ -8,9 +8,10 @@ import { openSharedBook } from '../data/books.js';
 import { PickerError, pickSpreadsheet } from '../data/picker.js';
 import { ValidationError } from '../data/errors.js';
 import { receiptLine } from '../ui/receipt.js';
-import { fillTexts } from '../ui/components.js';
+import { fillTexts } from '../ui/dom.js';
 import { SECTION_HASH } from '../ui/router.js';
 import { renderNavbar } from '../ui/navbar.js';
+import { reportFailure } from '../ui/feedback.js';
 
 // books: the user's books (state.books); fileId: the book open.
 // onOpen(fileId): another book was tapped. onShared(result): a book shared
@@ -69,7 +70,7 @@ export function renderBooks(root, { books, fileId, onOpen, onShared }) {
       label.textContent = t.openingShared;
       onShared(await openSharedBook(picked, books));
     } catch (err) {
-      console.warn('Opening a shared book failed', err);
+      reportFailure('openShared', err);
       if (err instanceof PickerError) error.textContent = err.code === 'not_configured' ? t.pickerNotConfigured : t.pickerUnavailable;
       else if (err instanceof ValidationError) error.textContent = t.notSharedBook;
       else error.textContent = t.openSharedFailed;

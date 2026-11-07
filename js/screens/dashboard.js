@@ -11,7 +11,8 @@ import { activeGoals, available, completedGoals, goalProgress, totalSaved } from
 import { toIsoDate } from '../domain/movement.js';
 import { formatDate, formatEuros, labelOf } from '../ui/format.js';
 import { receiptLine } from '../ui/receipt.js';
-import { el, fillTexts, showBookBanner, showSeenAmount } from '../ui/components.js';
+import { el, fillTexts, progressBar, showBookBanner } from '../ui/dom.js';
+import { showSeenAmount } from '../ui/motion.js';
 import { renderNavbar } from '../ui/navbar.js';
 import { SECTION_HASH } from '../ui/router.js';
 
@@ -129,10 +130,7 @@ export function renderDashboard(root, {
     const line = receiptLine(goal.name, revealed
       ? `${formatEuros(progress.saved)} / ${formatEuros(goal.targetAmount)}`
       : t.hidden, { href: `${SECTION_HASH.goal}?id=${encodeURIComponent(goal.id)}`, className: 'dashboard-goal' });
-    const bar = el('span', 'stat-bar goal-bar');
-    const fill = el('span', 'stat-bar-fill');
-    fill.style.width = `${Math.min(progress.progress, 100)}%`;
-    bar.appendChild(fill);
+    const bar = progressBar(progress.progress, { className: 'goal-bar' });
     const state = progress.status === 'onTrack' ? t.until.replace('{date}', formatDate(goal.targetDate)) : t[progress.status];
     // Inside the link, above its dashed rule.
     line.querySelector('.dashboard-goal').append(bar, el('small', 'goal-state text-muted', state));

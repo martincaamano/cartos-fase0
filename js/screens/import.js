@@ -7,7 +7,8 @@ import { es } from '../../i18n/es.js';
 import { buildImport, countDuplicates, summarizeImport, validateImport } from '../domain/import.js';
 import { locateErrors, parseImportFile } from '../domain/import-csv.js';
 import { importIntoBook, importPersonalBook, startingBook } from '../data/books.js';
-import { failureText, fillTexts, setBusy } from '../ui/components.js';
+import { fillTexts } from '../ui/dom.js';
+import { failureText, reportFailure, setBusy } from '../ui/feedback.js';
 import { formatDate, formatEuros, labelOf } from '../ui/format.js';
 import { receiptLine } from '../ui/receipt.js';
 
@@ -136,7 +137,7 @@ export function renderImport(root, { book = null, fileId = null, onDone, onBack 
     (adding ? importIntoBook(fileId, data) : importPersonalBook({ fileId, data }))
       .then(onDone)
       .catch((err) => {
-        console.warn('Import failed', err);
+        reportFailure('import', err);
         failed.textContent = failureText(t.failed, t.offline);
         restore();
       });

@@ -4,25 +4,18 @@
 
 import { currentUserSub } from './auth.js';
 import { assertValid } from './errors.js';
-import { addPending, addPendingAcross } from '../storage/outbox.js';
+import { outboxStore } from './outbox-store.js';
 import { createMovement, editMovement, markDeleted, validateMovement } from '../domain/movement.js';
 import {
   buildCrossBookTransfer, buildTransfer, deleteTransfer, editTransfer, validateTransfer,
 } from '../domain/transfer.js';
 import { activeIds } from '../domain/active.js';
 
-const defaults = { add: addPending, addAcross: addPendingAcross };
-let store = defaults;
+let store = outboxStore();
 
-// Lets the tests swap the IndexedDB outbox for an in-memory one. A fake
-// `add` alone also stands in for `addAcross`, one book after the other.
+// Lets the tests swap the IndexedDB outbox for an in-memory one.
 export function configureMovements(overrides = {}) {
-  store = { ...defaults, ...overrides };
-  if (overrides.add && !overrides.addAcross) {
-    store.addAcross = async (items, sub) => {
-      for (const { fileId, record } of items) await overrides.add(fileId, [record], sub);
-    };
-  }
+  store = outboxStore(overrides);
 }
 
 // The accounts and categories a movement may use: the active ones.

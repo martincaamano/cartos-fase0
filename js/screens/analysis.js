@@ -19,7 +19,8 @@ import {
 } from '../ui/format.js';
 import { appendFolded, linkRow, receiptLine } from '../ui/receipt.js';
 import { SECTION_HASH } from '../ui/router.js';
-import { el, fillTexts, foldAway, renderChoices, toggleChip, unfold } from '../ui/components.js';
+import { el, fillTexts, progressBar, renderChoices, toggleChip } from '../ui/dom.js';
+import { toggleFold } from '../ui/motion.js';
 import { renderNavbar } from '../ui/navbar.js';
 import { barChart, lineChart, paceChart, sparkline } from '../ui/charts.js';
 import { loadExcluded, saveExcluded } from '../storage/analysis-exclude.js';
@@ -154,18 +155,7 @@ export function renderAnalysis(root, {
       paint();
     })));
   };
-  excludeToggle.addEventListener('click', () => {
-    if (excludeChips.hidden) {
-      excludeChips.hidden = false;
-      paintExclude();
-      unfold(excludeChips);
-      return;
-    }
-    foldAway(excludeChips).then(() => {
-      excludeChips.hidden = true;
-      paintExclude();
-    });
-  });
+  excludeToggle.addEventListener('click', () => toggleFold(excludeChips, paintExclude));
 
   // --- Sections
   const body = root.querySelector('.stat-body');
@@ -255,22 +245,12 @@ export function renderAnalysis(root, {
       }));
       detail.appendChild(list);
       wrap.appendChild(detail);
-      head.addEventListener('click', () => {
-        if (detail.hidden) {
-          state.openDeviations.add(row.categoryId);
-          detail.hidden = false;
-          head.setAttribute('aria-expanded', 'true');
-          head.querySelector('.tree-twisty').textContent = '▾';
-          unfold(detail);
-          return;
-        }
-        foldAway(detail).then(() => {
-          state.openDeviations.delete(row.categoryId);
-          detail.hidden = true;
-          head.setAttribute('aria-expanded', 'false');
-          head.querySelector('.tree-twisty').textContent = '▸';
-        });
-      });
+      head.addEventListener('click', () => toggleFold(detail, (open) => {
+        if (open) state.openDeviations.add(row.categoryId);
+        else state.openDeviations.delete(row.categoryId);
+        head.setAttribute('aria-expanded', String(open));
+        head.querySelector('.tree-twisty').textContent = open ? '▾' : '▸';
+      }));
       block.appendChild(wrap);
     }
   }
@@ -382,16 +362,9 @@ export function renderAnalysis(root, {
       const badge = changeBadge(row.change);
       if (badge) right.append(' ', badge);
       const item = receiptLine(categoryName(row.categoryId), right, { className: 'stat-category' });
-      const bar = el('span', 'stat-bar');
-      const fill = el('span', 'stat-bar-fill');
-      fill.style.width = `${Math.max(1, Math.round((row.amount / largest) * 100))}%`;
-      bar.appendChild(fill);
-      if (row.previous) {
-        const mark = el('span', 'stat-bar-mark');
-        mark.style.left = `${Math.round((row.previous / largest) * 100)}%`;
-        bar.appendChild(mark);
-      }
-      item.appendChild(bar);
+      item.appendChild(progressBar(Math.max(1, Math.round((row.amount / largest) * 100)), {
+        mark: row.previous ? Math.round((row.previous / largest) * 100) : null,
+      }));
       return item;
     };
     appendFolded(list, rows, { shown: SHOWN_CATEGORIES, line, moreText: t.more, className: 'link-button stat-more' });
