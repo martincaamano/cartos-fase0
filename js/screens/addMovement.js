@@ -11,7 +11,7 @@ import { queuePurchase } from '../data/goals.js';
 import { parseAmountInput } from '../domain/money.js';
 import { rankCategories } from '../domain/category.js';
 import { activeOnly } from '../domain/active.js';
-import { startingAccounts } from '../domain/movement.js';
+import { startingAccounts, toIsoDate } from '../domain/movement.js';
 import {
   queueCrossBookTransfer, queueDelete, queueEdit, queueMovement, queueTransfer, queueTransferEdit,
 } from '../data/movements.js';
@@ -184,8 +184,10 @@ export function renderAddMovement(root, {
     date: null,
   };
 
+  // Categories ranked by their use up to today (tarea 28).
+  const day = toIsoDate(today);
   const categoryChoices = () => {
-    const ranked = rankCategories(book.categories, book.movements, state.type);
+    const ranked = rankCategories(book.categories, book.movements, state.type, day);
     // A removed category (or Transferencia on a loose half) stays selectable
     // for the movement that already uses it.
     const keptId = original?.categoryId ?? goal?.categoryId;
@@ -200,7 +202,7 @@ export function renderAddMovement(root, {
       categories: categoryChoices(),
       selectedId: original?.categoryId ?? goal?.categoryId ?? null,
       onSelect: (category) => { state.categoryId = category.id; },
-      texts: { seeAll: t.seeAll, search: t.search, empty: t.noMatches },
+      texts: { seeAll: t.seeAll, seeLess: t.seeLess, search: t.search, empty: t.noMatches },
     });
   };
 
@@ -226,8 +228,8 @@ export function renderAddMovement(root, {
     cross.hidden = !other;
     if (!other) return;
     const remembered = loadTransferCategories(storage, toSelect.value);
-    fillCategories(expenseCategory, rankCategories(book.categories, book.movements, 'expense'), remembered?.expenseCategoryId);
-    fillCategories(incomeCategory, rankCategories(other.book.categories, other.book.movements, 'income'), remembered?.incomeCategoryId);
+    fillCategories(expenseCategory, rankCategories(book.categories, book.movements, 'expense', day), remembered?.expenseCategoryId);
+    fillCategories(incomeCategory, rankCategories(other.book.categories, other.book.movements, 'income', day), remembered?.incomeCategoryId);
   };
   toSelect.addEventListener('change', paintCross);
 

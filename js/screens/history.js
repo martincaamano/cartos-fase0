@@ -57,7 +57,7 @@ export function renderHistory(root, {
   const { movements } = book;
   const lookups = lookupsOf(book);
   const accounts = activeOnly(book.accounts);
-  const categories = rankAllCategories(book.categories, movements);
+  const categories = rankAllCategories(book.categories, movements, toIsoDate(today));
 
   // What is on screen. Filters start empty every time (tarea 20).
   const state = {
