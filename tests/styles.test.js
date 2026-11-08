@@ -11,6 +11,8 @@ const read = (file) => readFileSync(resolve(root, file), 'utf8');
 const stripComments = (css) => css.replace(/\/\*[\s\S]*?\*\//g, '');
 
 const TOKENS = 'styles/tokens.css';
+// The other themes (tarea 32): token blocks only, like tokens.css.
+const THEMES = 'styles/themes.css';
 
 function privacyStyle() {
   const match = read('privacy.html').match(/<style>([\s\S]*?)<\/style>/);
@@ -26,7 +28,7 @@ const sources = [
   { file: 'privacy.html <style>', css: stripComments(privacyStyle()) },
 ];
 const tokensCss = sources.find((source) => source.file === TOKENS).css;
-const others = sources.filter((source) => source.file !== TOKENS);
+const others = sources.filter((source) => source.file !== TOKENS && source.file !== THEMES);
 
 // Declarations inside the innermost { } blocks, so selectors (#id, a:hover)
 // never count as values.
@@ -50,6 +52,21 @@ test('the expected stylesheets are analysed', () => {
   const files = sources.map((source) => source.file);
   for (const file of [TOKENS, 'styles/base.css', 'styles/components.css', 'styles/screens.css']) {
     assert.ok(files.includes(file), `missing ${file}`);
+  }
+});
+
+test('themes.css only redefines tokens, one html[data-palette] block per theme', () => {
+  const css = sources.find((source) => source.file === THEMES).css;
+  const blocks = [...css.matchAll(/([^{}]+)\{([^{}]*)\}/g)];
+  assert.ok(blocks.length > 0, 'no theme');
+  for (const [, selector, body] of blocks) {
+    assert.match(selector.trim(), /^html\[data-palette="[a-z]+"\]$/, `selector ${selector.trim()}`);
+    for (const { property } of declarations(`{${body}}`)) assert.match(property, /^--/, `${selector.trim()}: ${property}`);
+  }
+  // Light and dark go together: every colour is light-dark() or a token.
+  for (const { property, value } of declarations(css)) {
+    if (!property.startsWith('--palette-') || !/#/.test(value)) continue;
+    assert.ok(value.startsWith('light-dark(') || /^#[0-9A-Fa-f]{6}$/.test(value), `${property}: ${value}`);
   }
 });
 

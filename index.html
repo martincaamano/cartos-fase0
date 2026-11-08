@@ -11,6 +11,18 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Cartos">
 <link rel="stylesheet" href="styles/tokens.css">
+<link rel="stylesheet" href="styles/themes.css">
+<script>
+  // The theme saved on this iPhone, before anything is painted, so the app
+  // never opens in another one for an instant (tarea 32). js/ui/theme.js
+  // checks the values again and keeps them up to date.
+  try {
+    const palette = localStorage.getItem('cartos.palette');
+    const mode = localStorage.getItem('cartos.theme');
+    if (palette && palette !== 'cartos') document.documentElement.setAttribute('data-palette', palette);
+    if (mode === 'light' || mode === 'dark') document.documentElement.setAttribute('data-theme', mode);
+  } catch {}
+</script>
 <link rel="stylesheet" href="styles/base.css">
 <link rel="stylesheet" href="styles/components.css">
 <link rel="stylesheet" href="styles/screens.css">

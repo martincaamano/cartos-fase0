@@ -1,0 +1,57 @@
+/* Cartos — themes other than the default one (tokens.css), tarea 32. Each
+   is one block that redefines tokens, chosen with data-palette on <html>
+   (js/ui/theme.js). Light and dark go together in light-dark(), so the
+   mode (Sistema · Claro · Oscuro) works the same in every theme.
+
+   To add one: a block here, its name in PALETTES (js/ui/theme.js) and its
+   text in i18n/es.js (themeScreen). Screens never change for a theme. */
+
+/* Libreta: a personal notebook rather than a receipt. Pastels (beige,
+   dusty pink, sage), Apple's own font, rounded shapes, soft fills instead
+   of dashed lines, headings in sentence case. */
+html[data-palette="libreta"] {
+  --palette-paper: light-dark(#FAF6F0, #1C1917);
+  --palette-ink: light-dark(#3D3631, #F1EBE4);
+  --palette-ink-soft: light-dark(#8F857C, #A39A91);
+  --palette-rule: light-dark(#EAE2D8, #34302C);
+  --palette-terracotta: light-dark(#B5655C, #E3A49B);
+  --palette-green: light-dark(#6B8F5E, #A8C79A);
+  --palette-beige: light-dark(#F1E9DF, #2A2522);
+  --palette-blush: light-dark(#F2DCD3, #3A2E2B);
+  --palette-rose: light-dark(#E8C6BE, #C99B93);
+  --palette-cocoa: #3D3631;
+
+  --color-bar: var(--palette-rose);
+  --color-bar-track: var(--palette-beige);
+  --color-primary: var(--palette-rose);
+  --color-on-primary: var(--palette-cocoa);
+  --color-selected: var(--palette-rose);
+  --color-on-selected: var(--palette-cocoa);
+  --color-surface: var(--palette-beige);
+  --color-card: var(--palette-blush);
+  --color-mark: var(--palette-rose);
+
+  --rule: 1px solid var(--color-line);
+  --rule-strong: 1px solid var(--color-line);
+  --rule-box: 1px solid transparent;
+  --rule-selected: 1px solid transparent;
+  --rule-total: none;
+
+  --font-body: -apple-system, BlinkMacSystemFont, 'SF Pro Text', system-ui, sans-serif;
+  --label-case: none;
+  --heading-case: lowercase;
+  --weight-heading: 600;
+  --text-navbar: var(--text-sm);
+  --tracking-tight: 0;
+  --tracking: 0;
+  --tracking-wide: 0;
+  --tracking-wider: 0.01em;
+
+  --radius: 14px;
+  --radius-pill: 999px;
+  --radius-card: 18px;
+  --radius-total: 20px;
+  --card-pad: var(--space-3);
+  --mark-height: 4px;
+  --radius-mark: 4px;
+}

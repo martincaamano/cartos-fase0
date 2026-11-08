@@ -3,13 +3,14 @@
 // antiguas de la app (aprendido en la Fase 0, donde cache-first daba problemas
 // de staleness al actualizar código).
 
-const CACHE_NAME = 'cartos-v47';
+const CACHE_NAME = 'cartos-v48';
 
 const APP_SHELL = [
   './',
   './index.html',
   './manifest.json',
   './styles/tokens.css',
+  './styles/themes.css',
   './styles/base.css',
   './styles/components.css',
   './styles/screens.css',

@@ -7,7 +7,7 @@ import { activeOnly } from '../domain/active.js';
 import { SECTION_HASH } from '../ui/router.js';
 import { fillTexts } from '../ui/dom.js';
 import { renderNavbar } from '../ui/navbar.js';
-import { loadTheme, THEME_TEXT } from '../ui/theme.js';
+import { loadPalette, loadTheme, THEME_TEXT } from '../ui/theme.js';
 import { linkRow } from '../ui/receipt.js';
 
 // user: { email } of the signed-in account. book: the book open; bookName:
@@ -38,7 +38,11 @@ export function renderSettings(root, { user = null, book, bookName = '', pending
   const signOut = signOutItem.querySelector('button');
   const signOutText = signOut.firstChild;
   root.querySelector('.settings-app').append(
-    linkRow({ label: t.theme, value: t[THEME_TEXT[loadTheme()]], hash: SECTION_HASH.theme }),
+    linkRow({
+      label: t.theme,
+      value: `${es.themeScreen.palettes[loadPalette()]} · ${t[THEME_TEXT[loadTheme()]]}`,
+      hash: SECTION_HASH.theme,
+    }),
     linkRow({ label: t.diagnostics, hash: SECTION_HASH.diagnostics }),
     signOutItem,
   );
