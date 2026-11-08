@@ -36,7 +36,7 @@ test('the navbar reaches every section and marks the one on view', async ({ page
 test('Ajustes links lead to each screen and back, and say where they stand', async ({ page, app }) => {
   await app.open('#/settings', '.settings-list');
   await expect(page.locator('.settings-link', { hasText: 'Cuentas' })).toContainText('2 ›');
-  await expect(page.locator('.settings-link', { hasText: 'Tema' })).toContainText('Sistema ›');
+  await expect(page.locator('.settings-link', { hasText: 'Tema' })).toContainText('Cartos · Sistema ›');
   const links = [['Libros', 'LIBROS'], ['Cuentas', 'CUENTAS'], ['Categorías', 'CATEGORÍAS'], ['Datos', 'DATOS'],
     ['Tema', 'TEMA'], ['Diagnóstico', 'DIAGNÓSTICO']];
   for (const [link, title] of links) {

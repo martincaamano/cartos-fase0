@@ -14,8 +14,14 @@
   justify-content: space-between;
   align-items: baseline;
   gap: var(--space-3);
-  padding: var(--space-4) 0;
-  border-bottom: var(--rule-strong);
+  padding: var(--space-4) var(--card-pad);
+  border-bottom: var(--rule-total);
+  border-radius: var(--radius-total);
+  background: var(--color-card);
+}
+
+.receipt-total-text {
+  display: inline-block;
 }
 
 .receipt-total-label {
@@ -390,8 +396,19 @@ button.settings-link {
   border: none;
   background: none;
   font-size: var(--text-2xl);
-  font-weight: 600;
+  font-weight: 300;
+  letter-spacing: var(--tracking-numbers);
   font-variant-numeric: tabular-nums;
+}
+
+/* A long amount gets smaller instead of being cut (tarea 31): fitAmount
+   (ui/inputs.js) sets data-fit while it does not fit. */
+.amount-row .amount-input[data-fit="1"] {
+  font-size: var(--text-xl);
+}
+
+.amount-row .amount-input[data-fit="2"] {
+  font-size: var(--text-lg);
 }
 
 .line-pick {
@@ -417,7 +434,7 @@ button.settings-link {
   font-size: var(--text-sm);
   letter-spacing: var(--tracking-wide);
   color: var(--color-ink-muted);
-  text-transform: uppercase;
+  text-transform: var(--label-case);
 }
 
 /* A <select> that reads as text: "🏦 Abanca ▾". */
@@ -506,8 +523,9 @@ button.settings-link {
 
 .stat-periods {
   display: flex;
+  overflow: hidden;
   border: var(--rule-strong);
-  border-radius: var(--radius);
+  border-radius: var(--radius-pill);
 }
 
 .stat-period {
@@ -518,8 +536,8 @@ button.settings-link {
 }
 
 .stat-period.is-selected {
-  background: var(--color-ink);
-  color: var(--color-bg);
+  background: var(--color-primary);
+  color: var(--color-on-primary);
 }
 
 .stat-exclude {
@@ -550,8 +568,9 @@ button.settings-link {
   flex-direction: column;
   gap: var(--space-1);
   padding: var(--space-3);
-  border: var(--rule);
-  border-radius: var(--radius);
+  border: var(--rule-box);
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
 }
 
 .stat-tile-key {
@@ -591,7 +610,7 @@ button.settings-link {
 }
 
 .chart text {
-  font-family: var(--font-mono);
+  font-family: var(--font-body);
 }
 
 .chart-hit {
@@ -756,4 +775,24 @@ button.settings-link {
 .card-move-keep {
   display: block;
   margin-top: var(--space-3);
+}
+
+/* Headings written in capitals in i18n/es.js (tarea 32): a theme with
+   --heading-case: lowercase shows them as «Cuentas»; Cartos keeps them. */
+.receipt-heading,
+.stat-title,
+.form-title,
+.navbar-item,
+.tab,
+.receipt-total-text,
+.tree-total .tree-label,
+.tree-month .tree-label,
+.stat-tile-key,
+.month-label {
+  text-transform: var(--heading-case);
+}
+
+:is(.receipt-heading, .stat-title, .form-title, .navbar-item, .tab, .receipt-total-text,
+  .tree-total .tree-label, .tree-month .tree-label, .stat-tile-key, .month-label)::first-letter {
+  text-transform: uppercase;
 }

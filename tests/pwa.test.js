@@ -43,7 +43,7 @@ test('every file listed in the service worker app shell exists', () => {
   }
 });
 
-const STYLESHEETS = ['styles/tokens.css', 'styles/base.css', 'styles/components.css', 'styles/screens.css'];
+const STYLESHEETS = ['styles/tokens.css', 'styles/themes.css', 'styles/base.css', 'styles/components.css', 'styles/screens.css'];
 const stripComments = (css) => css.replace(/\/\*[\s\S]*?\*\//g, '');
 
 test('theme tokens exist for light and dark mode', () => {

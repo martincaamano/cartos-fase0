@@ -84,7 +84,8 @@ export function progressBar(percent, { mark = null, className = '' } = {}) {
 
 // A section heading of Análisis, with an optional hint on its right.
 export function sectionHeading(title, hint = '') {
-  const head = el('h2', 'receipt-heading stat-heading', title);
+  const head = el('h2', 'receipt-heading stat-heading');
+  head.appendChild(el('span', 'stat-title', title));
   if (hint) head.appendChild(el('small', 'stat-hint', hint));
   return head;
 }

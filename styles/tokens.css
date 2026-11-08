@@ -7,23 +7,23 @@
    - Semantic (--color-*): what a colour is for. Components and screens
      only ever use these.
 
-   A new palette is one more block that redefines the --palette-* values:
+   - Style (--font-body, --radius-*, --rule-*, --heading-case...): the
+     shape of things, also per theme.
 
-     html[data-palette="sepia"] {
-       --palette-paper: light-dark(#F6F0E4, #1B1814);
-       ...
-     }
-
-   and data-palette="sepia" on <html>. Nothing else changes. */
+   This file is the default theme, Cartos: a receipt. Other themes live in
+   themes.css, one block each, html[data-palette="name"] { ... }, that
+   redefines --palette-* and, if it wants, the style tokens below; plus the
+   name in PALETTES (js/ui/theme.js) and its text in i18n/es.js. Nothing
+   else changes (tarea 32). */
 
 :root {
   color-scheme: light dark;
 
   /* Default palette: receipt paper, near-black ink, muted accents */
-  --palette-paper: light-dark(#FAFAF8, #14181C);
-  --palette-ink: light-dark(#14181C, #FAFAF8);
-  --palette-ink-soft: light-dark(#6B7278, #9A9FA4);
-  --palette-rule: light-dark(#D8D7D2, #2C3238);
+  --palette-paper: light-dark(#FAFAF8, #000000);
+  --palette-ink: light-dark(#14181C, #F5F5F2);
+  --palette-ink-soft: light-dark(#6B7278, #8E9196);
+  --palette-rule: light-dark(#D8D7D2, #2A2A2A);
   --palette-terracotta: #B3492D;
   --palette-green: #3E7A52;
 
@@ -36,13 +36,31 @@
   --color-income: var(--palette-green);
   --color-bar: var(--palette-ink-soft);
   --color-bar-track: var(--palette-rule);
+  /* Filled pieces: the main button, what is chosen, boxes and the total */
+  --color-primary: var(--color-ink);
+  --color-on-primary: var(--color-bg);
+  --color-selected: transparent;
+  --color-on-selected: var(--color-ink);
+  --color-surface: transparent;
+  --color-card: transparent;
+  --color-mark: var(--color-ink);
 
   /* Lines of the receipt */
   --rule: 1px dashed var(--color-line);
   --rule-strong: 2px solid var(--color-ink);
+  --rule-box: var(--rule); /* the edge of a chip, a category or a tile */
+  --rule-selected: 1px solid var(--color-ink);
+  --rule-total: var(--rule-strong);
 
   /* Type */
   --font-mono: 'SFMono-Regular', ui-monospace, 'Menlo', 'Consolas', monospace;
+  --font-body: var(--font-mono);
+  /* Labels written in capitals by CSS (field and line labels), and the
+     case of headings written in capitals in i18n/es.js: Cartos keeps them,
+     a theme may set lowercase (their first letter stays a capital). */
+  --label-case: uppercase;
+  --heading-case: none;
+  --weight-heading: 400;
   --text-2xs: 11px;
   --text-xs: 12px;
   --text-sm: 13px;
@@ -51,6 +69,8 @@
   --text-lg: 22px;
   --text-xl: 28px;
   --text-2xl: 32px;
+  --text-navbar: var(--text-2xs);
+  --tracking-numbers: -0.04em; /* big amounts: digits a little closer */
   --tracking-tight: 0.02em;
   --tracking: 0.04em;
   --tracking-wide: 0.06em;
@@ -75,6 +95,12 @@
   --slide-shift: 48px;
   --navbar-room: 72px; /* space left at the bottom for the fixed navbar */
   --radius: 2px;
+  --radius-pill: var(--radius); /* chips and the main button */
+  --radius-card: var(--radius); /* tiles and the total */
+  --radius-total: 0px;
+  --card-pad: 0px; /* inner side room of the total */
+  --mark-height: 1px; /* the line under the active section */
+  --radius-mark: 0px;
   --opacity-disabled: 0.5;
   --opacity-faint: 0.4;
 }

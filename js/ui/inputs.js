@@ -61,6 +61,24 @@ export function createAmountInput(name) {
   return input;
 }
 
+// A big amount that gets smaller instead of being cut (tarea 31): after
+// each change, while the text is wider than the field, one step smaller
+// (data-fit 1, 2; the sizes are in styles/screens.css). It measures what
+// the text really takes, so it holds with any font or account name; a
+// ResizeObserver also catches a value set by code and a field that narrows.
+export function fitAmount(input, steps = ['1', '2']) {
+  const fit = () => {
+    delete input.dataset.fit;
+    for (const step of steps) {
+      if (input.scrollWidth <= input.clientWidth) return;
+      input.dataset.fit = step;
+    }
+  };
+  input.addEventListener('input', fit);
+  if (typeof ResizeObserver !== 'undefined') new ResizeObserver(fit).observe(input);
+  return fit;
+}
+
 // The text for the first account error, or null when the account is valid.
 // texts: { nameRequired, nameTaken, balanceInvalid }.
 export function accountErrorText(errors, texts) {

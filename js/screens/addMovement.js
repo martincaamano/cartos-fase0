@@ -20,7 +20,7 @@ import { loadTransferCategories, saveTransferCategories } from '../storage/trans
 import { loadLastAccount, saveLastAccount } from '../storage/last-account.js';
 import { fillTexts, renderChoices, showBookBanner } from '../ui/dom.js';
 import { errorText, twoTap } from '../ui/feedback.js';
-import { createAmountInput } from '../ui/inputs.js';
+import { createAmountInput, fitAmount } from '../ui/inputs.js';
 import { renderCategoryPicker, renderDatePicker, renderSuggestions } from '../ui/pickers.js';
 import { formatAmountInput, formatEuros, labelOf } from '../ui/format.js';
 import { SECTION_HASH } from '../ui/router.js';
@@ -138,6 +138,7 @@ export function renderAddMovement(root, {
   submit.textContent = t.save;
   const amount = createAmountInput('amount');
   root.querySelector('.amount-field').appendChild(amount);
+  fitAmount(amount);
   root.querySelector('.category-picker').setAttribute('aria-label', t.category);
   root.querySelector('.date-picker').setAttribute('aria-label', t.date);
 

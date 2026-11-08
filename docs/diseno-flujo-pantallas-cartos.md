@@ -19,9 +19,10 @@ Estética minimalista tipo recibo o ticket de compra, con inspiración en el len
 
 ### 1.2. Estilos, tokens y paletas (tarea 12)
 
-Los estilos están en cuatro archivos, enlazados en este orden desde `index.html`:
+Los estilos están en cinco archivos, enlazados en este orden desde `index.html`:
 
-- `styles/tokens.css`: el único archivo con valores escritos a mano (colores, tamaños de letra, espaciados, zona táctil, radio, opacidades).
+- `styles/tokens.css`: el tema por defecto (Cartos) y, junto con `themes.css`, el único sitio con valores escritos a mano (colores, tamaños de letra, espaciados, zona táctil, radio, opacidades).
+- `styles/themes.css`: los demás temas, un bloque de tokens cada uno (tarea 32).
 - `styles/base.css`: elementos HTML y utilidades (`.text-muted`, `.amount-expense`, `[hidden]`...).
 - `styles/components.css`: piezas compartidas (pantallas, botones, formularios, líneas de recibo, barra inferior, pestañas, chips, selector de categoría).
 - `styles/screens.css`: solo lo propio de una pantalla.
@@ -31,9 +32,31 @@ Los colores tienen dos niveles:
 - **Paleta** (`--palette-paper`, `--palette-ink`, `--palette-ink-soft`, `--palette-rule`, `--palette-terracotta`, `--palette-green`): qué colores son. Cada uno se escribe una vez como `light-dark(claro, oscuro)`, y `color-scheme` elige el valor según el sistema o el tema forzado desde Ajustes (`data-theme`). Necesita iOS 17.5 o posterior.
 - **Semánticos** (`--color-bg`, `--color-ink`, `--color-ink-muted`, `--color-line`, `--color-expense`, `--color-income`, `--color-bar`, `--color-bar-track`): para qué se usa cada color. Componentes y pantallas solo usan estos.
 
-**Añadir una paleta** es escribir en `tokens.css` un bloque `html[data-palette="nombre"] { --palette-…: light-dark(…, …); }` con los seis colores, y poner `data-palette="nombre"` en `<html>`. Nada más cambia. Elegir paleta desde Ajustes queda para el futuro.
+Además de los colores, hay **tokens de estilo** que un tema puede cambiar:
+- letra (`--font-body`);
+- radios (`--radius`, `--radius-pill`, `--radius-card`, `--radius-total`);
+- líneas (`--rule`, `--rule-strong`, `--rule-box`, `--rule-selected`, `--rule-total`);
+- rellenos (`--color-primary`, `--color-selected`, `--color-surface`, `--color-card`, `--color-mark`);
+- mayúsculas de etiquetas y títulos (`--label-case`, `--heading-case`).
 
-Tamaños de letra: `--text-2xs` (11 px) … `--text-2xl` (32 px). Un test (`tests/styles.test.js`) impide colores escritos a mano fuera de `tokens.css`, variables sin definir y tamaños de letra fuera de la escala.
+Con sus valores de Cartos, todo se ve como siempre.
+
+**Temas (tarea 32).** En Ajustes → Tema se eligen el **estilo** (Cartos · Libreta) y el **modo** (Sistema · Claro · Oscuro). Los dos se guardan en el iPhone (`cartos.palette`, `cartos.theme`) y un script en `index.html` los aplica antes de pintar, así la app abre siempre con el último elegido.
+- **Cartos:** el ticket de siempre. En oscuro, fondo negro puro.
+- **Libreta:** una libreta personal.
+  - Tonos pastel: crema, beige, rosa palo, salvia.
+  - Letra del sistema de Apple (SF Pro).
+  - Formas redondeadas y rellenos suaves en vez de líneas discontinuas.
+  - Títulos como «Cuentas».
+
+**Añadir un tema** son tres pasos, sin tocar pantallas:
+1. Un bloque `html[data-palette="nombre"] { … }` en `themes.css` que redefine los `--palette-*` (siempre `light-dark(claro, oscuro)`) y los tokens de estilo que quiera.
+2. Su nombre en `PALETTES` (`js/ui/theme.js`).
+3. Su texto en `es.themeScreen.palettes`.
+
+Un test comprueba que cada tema de la lista tiene su bloque, y que `themes.css` solo redefine tokens.
+
+Tamaños de letra: `--text-2xs` (11 px) … `--text-2xl` (32 px). Un test (`tests/styles.test.js`) impide colores escritos a mano fuera de `tokens.css` y `themes.css`, variables sin definir y tamaños de letra fuera de la escala.
 
 ## 2. Navegación
 

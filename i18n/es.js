@@ -315,7 +315,10 @@ export const es = {
   themeScreen: {
     title: 'TEMA',
     back: '← Ajustes',
+    style: 'ESTILO',
     mode: 'MODO',
+    // One per style in PALETTES (js/ui/theme.js).
+    palettes: { cartos: 'Cartos', libreta: 'Libreta' },
   },
   diagnostics: {
     title: 'DIAGNÓSTICO',
