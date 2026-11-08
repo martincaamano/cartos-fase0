@@ -167,3 +167,23 @@ test('«Otra…» saves another day and shows it on the chip', async ({ page, ap
   await app.settle();
   expect(google.movements().at(-1).date).toBe('2026-10-05');
 });
+
+// Tarea 31: a long amount gets smaller instead of being cut.
+test('a long amount fits in Añadir, getting smaller as it grows and back when shortened', async ({ page, app, google }) => {
+  google.rows.Accounts[1][1] = 'Cuenta nómina compartida';
+  await app.open('#/add?type=expense', '.amount-input');
+  const amount = page.locator('.amount-input');
+  const fits = () => amount.evaluate((input) => input.scrollWidth <= input.clientWidth);
+  const size = () => amount.evaluate((input) => parseFloat(getComputedStyle(input).fontSize));
+
+  await amount.fill('12,50');
+  expect(await fits()).toBe(true);
+  const big = await size();
+  for (const value of ['1250,50', '12345,67', '123456,78']) {
+    await amount.fill(value);
+    await expect.poll(fits).toBe(true);
+  }
+  expect(await size()).toBeLessThan(big);
+  await amount.fill('9,99');
+  await expect.poll(size).toBe(big);
+});

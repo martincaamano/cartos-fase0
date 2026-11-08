@@ -51,6 +51,7 @@
   --text-lg: 22px;
   --text-xl: 28px;
   --text-2xl: 32px;
+  --tracking-numbers: -0.04em; /* big amounts: digits a little closer */
   --tracking-tight: 0.02em;
   --tracking: 0.04em;
   --tracking-wide: 0.06em;
