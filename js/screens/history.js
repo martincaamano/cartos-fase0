@@ -19,7 +19,8 @@ import { isMonth } from '../domain/stats.js';
 import { formatEuros, formatMonth, formatMonthRange, formatShortMonth, formatSums, labelOf } from '../ui/format.js';
 import { isPendingEntry, lookupsOf, movementLine, sumLine } from '../ui/receipt.js';
 import { SECTION_HASH } from '../ui/router.js';
-import { el, fillTexts, foldAway, renderChoices, showAmount, toggleChip, unfold } from '../ui/components.js';
+import { el, fillTexts, renderChoices, toggleChip } from '../ui/dom.js';
+import { foldAway, showAmount, toggleFold, unfold } from '../ui/motion.js';
 import { renderNavbar } from '../ui/navbar.js';
 import { HISTORY_VIEWS, loadHistoryView, saveHistoryView } from '../storage/history-view.js';
 
@@ -329,21 +330,14 @@ export function renderHistory(root, {
     }, SEARCH_WAIT_MS);
   });
 
-  toggle.addEventListener('click', () => {
-    if (!panel.hidden) {
-      foldAway(panel).then(() => {
-        panel.hidden = true;
-        paintFilters();
-      });
-      return;
-    }
-    panel.hidden = false;
+  toggle.addEventListener('click', () => toggleFold(panel, (open) => {
     paintFilters();
-    unfold(panel);
     // The current month is on the right; start there.
-    const months = root.querySelector('.history-months');
-    months.scrollLeft = months.scrollWidth;
-  });
+    if (open) {
+      const months = root.querySelector('.history-months');
+      months.scrollLeft = months.scrollWidth;
+    }
+  }));
   clear.addEventListener('click', () => {
     state.range = null;
     state.accountIds.clear();

@@ -204,7 +204,7 @@ const cross = {
 
 function recordingStore() {
   const calls = [];
-  configureMovements({ add: async (fileId, movements) => { calls.push({ fileId, movements }); } });
+  configureMovements({ add: async ({ fileId, records: movements }) => { calls.push({ fileId, movements }); } });
   return calls;
 }
 
@@ -290,7 +290,7 @@ function subStore() {
   const adds = [];
   const across = [];
   configureMovements({
-    add: async (fileId, movements, sub) => { adds.push({ fileId, movements, sub }); },
+    add: async ({ fileId, records: movements, sub }) => { adds.push({ fileId, movements, sub }); },
     addAcross: async (items, sub) => { across.push({ items, sub }); },
   });
   return { adds, across };
@@ -335,7 +335,7 @@ test('queueCrossBookTransfer invalid: addAcross is never called', async () => {
 
 test('configureMovements with only add: addAcross falls back to add per book, with the sub', async () => {
   const calls = [];
-  configureMovements({ add: async (fileId, movements, sub) => { calls.push({ fileId, movements, sub }); } });
+  configureMovements({ add: async ({ fileId, records: movements, sub }) => { calls.push({ fileId, movements, sub }); } });
   const [out, inc] = await queueCrossBookTransfer(here, there, cross);
   assert.deepEqual(calls, [
     { fileId: 'file-mine', movements: [out], sub: 'user-1' },

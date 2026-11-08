@@ -13,13 +13,14 @@ import {
   periodMonths, weekdayPattern,
 } from '../domain/analysis.js';
 import { rankAllCategories } from '../domain/category.js';
-import { monthDeviations, yearDeviations } from '../domain/deviations.js';
 import {
-  formatEuros, formatMonth, formatMonthName, formatMonthRange, formatShortDate, formatShortMonth, formatSums, formatWholeEuros, labelOf,
+  formatEuros, formatMonth, formatShortDate, formatShortMonth, formatSums, formatWholeEuros, labelOf,
 } from '../ui/format.js';
-import { appendFolded, linkRow, receiptLine } from '../ui/receipt.js';
+import { appendFolded, receiptLine } from '../ui/receipt.js';
 import { SECTION_HASH } from '../ui/router.js';
-import { el, fillTexts, foldAway, renderChoices, toggleChip, unfold } from '../ui/components.js';
+import { el, fillTexts, progressBar, renderChoices, sectionHeading, toggleChip } from '../ui/dom.js';
+import { paintDeviationMonths, paintDeviations } from './analysis-deviations.js';
+import { toggleFold } from '../ui/motion.js';
 import { renderNavbar } from '../ui/navbar.js';
 import { barChart, lineChart, paceChart, sparkline } from '../ui/charts.js';
 import { loadExcluded, saveExcluded } from '../storage/analysis-exclude.js';
@@ -27,16 +28,6 @@ import { loadExcluded, saveExcluded } from '../storage/analysis-exclude.js';
 const PERIODS = ['month', 'year', 'all'];
 // Categories shown in "¿En qué?" before "+ N más".
 const SHOWN_CATEGORIES = 6;
-// Months the deviations list shows before "+ N más".
-const SHOWN_MONTHS = 12;
-// Categories the deviations sentence names ("sobre todo por Ocio y Hogar").
-const NAMED_DEVIATIONS = 2;
-
-// "Ocio", "Ocio y Hogar", "Ocio, Hogar y Ropa".
-function joinNames(names, and) {
-  return names.length < 2 ? names.join('') : `${names.slice(0, -1).join(', ')}${and}${names.at(-1)}`;
-}
-
 // "▲ 12 %" (more spending, in the expense colour) or "▼ 5 %".
 function changeBadge(percent) {
   if (percent === null || percent === 0) return null;
@@ -50,12 +41,6 @@ function tile(key, value, detail) {
   line.append(detail);
   box.appendChild(line);
   return box;
-}
-
-function heading(title, hint = '') {
-  const head = el('h2', 'receipt-heading stat-heading', title);
-  if (hint) head.appendChild(el('small', 'stat-hint', hint));
-  return head;
 }
 
 // book: movements already include the pending ones (mergePending).
@@ -87,7 +72,8 @@ export function renderAnalysis(root, {
 
   const { categories } = book;
   const categoryById = new Map(categories.map((category) => [category.id, category]));
-  const categoryName = (id) => labelOf(categoryById.get(id)) || id;
+  // With emoji, or plain (in a sentence).
+  const categoryName = (id, { plain = false } = {}) => (plain ? categoryById.get(id)?.name : labelOf(categoryById.get(id))) || id;
   const day = toIsoDate(today);
   const { first, last } = monthRange(book.movements, day);
   const validMonth = (month) => isMonth(month) && month >= first && month <= last;
@@ -154,18 +140,7 @@ export function renderAnalysis(root, {
       paint();
     })));
   };
-  excludeToggle.addEventListener('click', () => {
-    if (excludeChips.hidden) {
-      excludeChips.hidden = false;
-      paintExclude();
-      unfold(excludeChips);
-      return;
-    }
-    foldAway(excludeChips).then(() => {
-      excludeChips.hidden = true;
-      paintExclude();
-    });
-  });
+  excludeToggle.addEventListener('click', () => toggleFold(excludeChips, paintExclude));
 
   // --- Sections
   const body = root.querySelector('.stat-body');
@@ -196,130 +171,10 @@ export function renderAnalysis(root, {
     return figures;
   }
 
-  // Why the month went off its average (tarea 24): a sentence, then the
-  // categories that went up, each opening on its movements.
-  function paintDeviations(movements) {
-    const result = monthDeviations(movements, state.month, day);
-    body.appendChild(heading(t.deviations, result.inProgress ? t.inProgress : t.deviationsHint));
-    const block = el('div', 'stat-deviations');
-    body.appendChild(block);
-    if (result.status === 'insufficient') {
-      block.appendChild(el('p', 'text-muted stat-deviation-summary', t.notEnough));
-      return;
-    }
-    const up = result.difference > 0;
-    const sentence = result.difference === 0 ? t.same : up ? t.above : t.below;
-    const [before, after = ''] = sentence.replace('{month}', formatMonthName(state.month))
-      .replace('{n}', result.baselineMonths).split('{amount}');
-    const names = result.categories.slice(0, NAMED_DEVIATIONS).map((c) => categoryById.get(c.categoryId)?.name ?? c.categoryId);
-    let tail = t.noneOut;
-    if (names.length) {
-      const although = names.length > 1 ? t.althoughMany : t.althoughOne;
-      tail = (up ? t.mostlyBy : although).replace('{names}', joinNames(names, t.and));
-    }
-    const summary = el('p', 'stat-deviation-summary');
-    summary.append(before);
-    if (result.difference !== 0) {
-      summary.append(el('strong', up ? 'amount-expense' : 'amount-income', `${up ? '+' : ''}${formatWholeEuros(result.difference)}`));
-    }
-    summary.append(after + tail);
-    block.appendChild(summary);
-
-    for (const row of result.categories) {
-      const isOpen = state.openDeviations.has(row.categoryId);
-      const wrap = el('div', 'tree-node stat-deviation');
-      const head = el('button', 'tree-head');
-      head.type = 'button';
-      head.setAttribute('aria-expanded', String(isOpen));
-      const label = el('span', 'tree-label', categoryName(row.categoryId));
-      if (row.isNew) label.append(' ', el('small', 'stat-deviation-new', t.isNew));
-      head.append(
-        el('span', 'tree-twisty', isOpen ? '▾' : '▸'),
-        label,
-        el('span', 'tree-value amount-expense', `+${formatWholeEuros(row.excess)}`),
-      );
-      wrap.appendChild(head);
-      const detail = el('div', 'tree-body');
-      detail.hidden = !isOpen;
-      detail.appendChild(el('p', 'text-muted stat-deviation-sums', t.spentVsAverage
-        .replace('{spent}', formatEuros(row.spent)).replace('{average}', formatEuros(row.average))));
-      const list = el('ul', 'receipt-list');
-      for (const movement of row.movements) {
-        list.appendChild(receiptLine(formatShortDate(movement.date), formatEuros(-movement.amount), { tone: 'expense', note: movement.note }));
-      }
-      list.appendChild(linkRow({
-        label: t.seeInHistory,
-        hash: `${SECTION_HASH.history}?month=${state.month}&category=${encodeURIComponent(row.categoryId)}`,
-        className: 'stat-deviation-link',
-        end: '',
-      }));
-      detail.appendChild(list);
-      wrap.appendChild(detail);
-      head.addEventListener('click', () => {
-        if (detail.hidden) {
-          state.openDeviations.add(row.categoryId);
-          detail.hidden = false;
-          head.setAttribute('aria-expanded', 'true');
-          head.querySelector('.tree-twisty').textContent = '▾';
-          unfold(detail);
-          return;
-        }
-        foldAway(detail).then(() => {
-          state.openDeviations.delete(row.categoryId);
-          detail.hidden = true;
-          head.setAttribute('aria-expanded', 'false');
-          head.querySelector('.tree-twisty').textContent = '▸';
-        });
-      });
-      block.appendChild(wrap);
-    }
-  }
-
-  // The months of the period against their averages (tarea 24c), newest
-  // first; a tap opens the month's deviations. Months without enough
-  // history are left out.
-  function paintDeviationMonths(movements, months) {
-    body.appendChild(heading(t.deviations, t.deviationsHint));
-    const block = el('div', 'stat-deviations');
-    body.appendChild(block);
-    const rows = yearDeviations(movements, months, day).filter((row) => row.status !== 'insufficient').reverse();
-    if (rows.length === 0) {
-      block.appendChild(el('p', 'text-muted stat-deviation-summary', t.notEnough));
-      return;
-    }
-    const line = (row) => {
-      const month = formatMonthRange({ from: row.month, to: row.month });
-      const current = row.month === last ? ` ${t.current}` : '';
-      const reason = row.top ? categoryName(row.top.categoryId) : t.withinUsual;
-      const value = el('span', row.difference > 0 ? 'receipt-amount amount-expense' : 'receipt-amount amount-income',
-        `${row.difference > 0 ? '+' : ''}${formatWholeEuros(row.difference)}`);
-      if (row.difference === 0) value.className = 'receipt-amount';
-      const item = el('li', 'receipt-line');
-      const button = el('button', 'receipt-row stat-deviation-month');
-      button.type = 'button';
-      const label = el('span', 'receipt-label', `${month}${current} · `);
-      label.appendChild(el(row.top ? 'span' : 'small', row.top ? '' : 'text-muted', reason));
-      button.append(label, value);
-      button.addEventListener('click', () => {
-        state.period = 'month';
-        state.month = row.month;
-        state.openDeviations.clear();
-        remember();
-        paint();
-        root.querySelector('.stat-deviations')?.previousElementSibling?.scrollIntoView?.({ block: 'start' });
-      });
-      item.appendChild(button);
-      return item;
-    };
-    const list = el('ul', 'receipt-list stat-deviation-months');
-    appendFolded(list, rows, { shown: SHOWN_MONTHS, line, moreText: t.more, className: 'link-button stat-more' });
-    block.appendChild(list);
-  }
-
   function paintEvolution(movements, months) {
     const chartMonths = months.length > 1 ? months : periodMonths('year', { today: `${state.month}-01` });
     const series = monthlySeries(movements, chartMonths);
-    body.appendChild(heading(t.evolution, t.tapMonth));
+    body.appendChild(sectionHeading(t.evolution, t.tapMonth));
     const wrap = el('div', 'stat-chart');
     const draw = () => {
       wrap.replaceChildren(lineChart({
@@ -372,7 +227,7 @@ export function renderAnalysis(root, {
     // before; the same rule as the key figures (the movements that count).
     const compare = state.period !== 'all' && canCompare(movements, months);
     const rows = categoryChanges(movements, months, { compare });
-    body.appendChild(heading(t.onWhat, compare ? t.markBefore : ''));
+    body.appendChild(sectionHeading(t.onWhat, compare ? t.markBefore : ''));
     const list = el('ul', 'receipt-list stat-categories');
     if (rows.length === 0) list.appendChild(el('li', 'receipt-empty text-muted', t.noSpending));
     const largest = Math.max(...rows.map((r) => Math.max(r.amount, r.previous ?? 0)), 1);
@@ -382,16 +237,9 @@ export function renderAnalysis(root, {
       const badge = changeBadge(row.change);
       if (badge) right.append(' ', badge);
       const item = receiptLine(categoryName(row.categoryId), right, { className: 'stat-category' });
-      const bar = el('span', 'stat-bar');
-      const fill = el('span', 'stat-bar-fill');
-      fill.style.width = `${Math.max(1, Math.round((row.amount / largest) * 100))}%`;
-      bar.appendChild(fill);
-      if (row.previous) {
-        const mark = el('span', 'stat-bar-mark');
-        mark.style.left = `${Math.round((row.previous / largest) * 100)}%`;
-        bar.appendChild(mark);
-      }
-      item.appendChild(bar);
+      item.appendChild(progressBar(Math.max(1, Math.round((row.amount / largest) * 100)), {
+        mark: row.previous ? Math.round((row.previous / largest) * 100) : null,
+      }));
       return item;
     };
     appendFolded(list, rows, { shown: SHOWN_CATEGORIES, line, moreText: t.more, className: 'link-button stat-more' });
@@ -402,7 +250,7 @@ export function renderAnalysis(root, {
     const months = periodMonths('year', { today: day });
     const trends = categoryTrends(movements, months);
     if (trends.length === 0) return;
-    body.appendChild(heading(t.howChanges, t.last12));
+    body.appendChild(sectionHeading(t.howChanges, t.last12));
     const grid = el('div', 'stat-trends');
     for (const trend of trends) {
       const box = el('div', 'stat-trend');
@@ -419,7 +267,7 @@ export function renderAnalysis(root, {
   // usual: a usual month, or null when the book has no month before.
   function paintPace(movements, usual) {
     const pace = monthPace(movements, day, usual ?? 0);
-    body.appendChild(heading(t.when, t.cumulative));
+    body.appendChild(sectionHeading(t.when, t.cumulative));
     const peakDay = pace.peak ? dayOf(pace.peak.date) : null;
     const peakLabel = pace.peak ? `${formatShortDate(pace.peak.date)} ${pace.peak.note || categoryName(pace.peak.categoryId)}` : '';
     body.appendChild(el('div', 'stat-chart')).appendChild(paceChart({
@@ -434,14 +282,14 @@ export function renderAnalysis(root, {
   }
 
   function paintWeekdays(movements, months) {
-    body.appendChild(heading(t.whichDays, t.perWeekday));
+    body.appendChild(sectionHeading(t.whichDays, t.perWeekday));
     body.appendChild(el('div', 'stat-chart')).appendChild(barChart(weekdayPattern(movements, months, day), t.weekdays, t.whichDays, { animate: drawing }));
   }
 
   function paintFixed(movements, average) {
     const fixed = fixedCosts(movements, day);
     if (fixed.length === 0) return;
-    body.appendChild(heading(t.fixed, t.fixedHint));
+    body.appendChild(sectionHeading(t.fixed, t.fixedHint));
     const list = el('ul', 'receipt-list stat-fixed');
     for (const cost of fixed) {
       const label = `${labelOf({ ...categoryById.get(cost.categoryId), name: cost.note })} · ${t.day} ${cost.day}`;
@@ -455,7 +303,7 @@ export function renderAnalysis(root, {
   function paintLargest(movements, months) {
     const { items, averageWithout } = largestExpenses(movements, months);
     if (items.length === 0) return;
-    body.appendChild(heading(t.largest, t.periods[state.period].toLowerCase()));
+    body.appendChild(sectionHeading(t.largest, t.periods[state.period].toLowerCase()));
     const list = el('ul', 'receipt-list stat-largest');
     for (const movement of items) {
       const label = `${formatShortDate(movement.date)}  ${categoryName(movement.categoryId)}`;
@@ -476,8 +324,22 @@ export function renderAnalysis(root, {
     const movements = countable(book.movements, state.excluded);
     const months = periodMonths(state.period, { today: day, first, month: state.month });
     const figures = paintKeyFigures(movements, months);
-    if (state.period === 'month') paintDeviations(movements);
-    else paintDeviationMonths(movements, months);
+    // Why a month went off its average (tarea 24).
+    const deviations = { body, state, day, last, categoryName };
+    if (state.period === 'month') paintDeviations(movements, deviations);
+    else {
+      paintDeviationMonths(movements, months, {
+        ...deviations,
+        openMonth: (month) => {
+          state.period = 'month';
+          state.month = month;
+          state.openDeviations.clear();
+          remember();
+          paint();
+          root.querySelector('.stat-deviations')?.previousElementSibling?.scrollIntoView?.({ block: 'start' });
+        },
+      });
+    }
     paintEvolution(movements, months);
     paintCategories(movements, months);
     paintTrends(movements);

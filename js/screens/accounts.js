@@ -6,7 +6,7 @@ import { accountBalance } from '../domain/balance.js';
 import { activeOnly } from '../domain/active.js';
 import { formatEuros, labelOf } from '../ui/format.js';
 import { receiptLine } from '../ui/receipt.js';
-import { fillTexts } from '../ui/components.js';
+import { fillTexts } from '../ui/dom.js';
 import { SECTION_HASH } from '../ui/router.js';
 import { renderNavbar } from '../ui/navbar.js';
 

@@ -10,6 +10,7 @@
 import { TokenExpiredError } from './data/auth.js';
 import { ApiError } from './data/errors.js';
 import { enqueue, mergePending, recordsOf } from './storage/outbox-logic.js';
+import { failureResult } from './storage/logs.js';
 
 const UNKNOWN = Object.freeze({ status: 'unknown', fileId: null, book: null });
 
@@ -73,7 +74,7 @@ export function createBookState(deps) {
 
   const logSyncError = (err) => {
     // Only the error name and code: never the data being synced.
-    deps.logEvent({ type: 'error', result: `sync:${err?.name ?? 'Error'}${err?.status ? `:${err.status}` : ''}` });
+    deps.logEvent({ type: 'error', result: failureResult('sync', err) });
     console.warn('Sync failed', err);
   };
 
@@ -140,6 +141,13 @@ export function createBookState(deps) {
     }
   }
 
+  // Changes of several tabs saved together (tarea 29: a category, its
+  // movements and goals): [{ sheet, record }], counted at once, one upload.
+  function savedAcross(entries) {
+    for (const entry of entries) pending = enqueue(pending, entry);
+    sync();
+  }
+
   return {
     on: (listener) => listeners.add(listener),
     get status() { return current.status; },
@@ -154,6 +162,7 @@ export function createBookState(deps) {
       const merged = (sheet, records = []) => mergePending(records, recordsOf(pending, sheet));
       return {
         ...current.book,
+        accounts: merged('Accounts', current.book.accounts),
         categories: merged('Categories', current.book.categories),
         movements: merged('Movements', current.book.movements),
         goals: merged('Goals', current.book.goals),
@@ -172,14 +181,9 @@ export function createBookState(deps) {
     // contribution: records of the tab `sheet`) is counted at once; the
     // upload follows.
     saved(records, sheet = 'Movements') {
-      this.savedAcross([records].flat().map((record) => ({ sheet, record })));
+      savedAcross([records].flat().map((record) => ({ sheet, record })));
     },
-    // Changes of several tabs saved together (tarea 29: a category, its
-    // movements and goals): [{ sheet, record }], one upload.
-    savedAcross(entries) {
-      for (const entry of entries) pending = enqueue(pending, entry);
-      sync();
-    },
+    savedAcross,
     // Onboarding created the personal book, or Ajustes → Libros a new one
     // (with the new list of books).
     setUp(result) {

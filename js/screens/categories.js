@@ -8,7 +8,7 @@ import { rankCategories, TRANSFER_CATEGORY_ID } from '../domain/category.js';
 import { toIsoDate } from '../domain/movement.js';
 import { labelOf } from '../ui/format.js';
 import { appendFolded, receiptLine } from '../ui/receipt.js';
-import { fillTexts } from '../ui/components.js';
+import { fillTexts } from '../ui/dom.js';
 import { SECTION_HASH } from '../ui/router.js';
 import { renderNavbar } from '../ui/navbar.js';
 

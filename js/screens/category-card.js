@@ -1,10 +1,9 @@
 // A category's card (Ajustes → Categorías, tarea 20c): name, emoji and type,
 // to create a category or edit a saved one; "Quitar" on top (two taps). The
-// type only changes while no movement uses the category. Goes straight to
-// the Sheet, so it needs a connection. A category with movements is not
-// removed from the top: its movements first go to another category
-// (tarea 29), removing it or keeping it empty, through the outbox, so that
-// works offline.
+// type only changes while no movement uses the category. A category with
+// movements is not removed from the top: its movements first go to another
+// category (tarea 29), removing it or keeping it empty. Everything goes
+// through the outbox (tarea 30c), so it works offline.
 
 import { es } from '../../i18n/es.js';
 import {
@@ -14,10 +13,10 @@ import { toIsoDate } from '../domain/movement.js';
 import { queueCategoryMove } from '../data/category-move.js';
 import { forgetExcluded } from '../storage/analysis-exclude.js';
 import { replaceTransferCategory } from '../storage/transfer-categories.js';
-import { addCategory, removeCategory, updateCategory } from '../data/book.js';
-import {
-  errorText, failureText, fillTexts, renderChoices, setBusy, setupEmojiPicker, twoTap,
-} from '../ui/components.js';
+import { queueCategory, queueCategoryEdit, queueCategoryRemove } from '../data/book-items.js';
+import { fillTexts, renderChoices } from '../ui/dom.js';
+import { errorText, reportFailure, setBusy, twoTap } from '../ui/feedback.js';
+import { setupEmojiPicker } from '../ui/inputs.js';
 import { labelOf } from '../ui/format.js';
 import { SECTION_HASH } from '../ui/router.js';
 import { renderNavbar } from '../ui/navbar.js';
@@ -105,13 +104,8 @@ export function renderCategoryCard(root, {
   }
 
   const failed = (err) => {
-    console.warn('Category change failed', err);
-    error.textContent = failureText(t.failed, t.offline);
-  };
-  const offline = () => {
-    if (navigator.onLine) return false;
-    error.textContent = t.offline;
-    return true;
+    reportFailure('categoryChange', err);
+    error.textContent = t.failed;
   };
 
   form.addEventListener('submit', (event) => {
@@ -121,10 +115,10 @@ export function renderCategoryCard(root, {
       ? validateCategoryEdit(editCategory(category, fields), category, book)
       : validateCategory(createCategory(fields), book.categories);
     error.textContent = errorText(errors, ERROR_TEXT, t);
-    if (error.textContent || offline()) return;
+    if (error.textContent) return;
 
     const restore = setBusy(submit, category ? t.saving : t.creating);
-    (category ? updateCategory(fileId, category, fields, book) : addCategory(fileId, fields, book.categories))
+    (category ? queueCategoryEdit(fileId, category, fields, book) : queueCategory(fileId, fields, book.categories))
       .then(onDone)
       .catch((err) => {
         failed(err);
@@ -183,7 +177,7 @@ export function renderCategoryCard(root, {
         before,
         work: move(remove),
         fails: (err) => {
-          console.warn('Moving a category failed', err);
+          reportFailure('categoryMove', err);
           moveError.textContent = t.failed;
         },
       });
@@ -197,8 +191,7 @@ export function renderCategoryCard(root, {
     twoTap(remove, {
       confirm: t.confirmRemove,
       busy: t.removing,
-      before: () => !offline(),
-      work: () => removeCategory(fileId, category).then(onDone),
+      work: () => queueCategoryRemove(fileId, category, book.movements).then(onDone),
       fails: failed,
     });
   }

@@ -4,7 +4,7 @@
 
 import { es } from '../../i18n/es.js';
 import { SECTION_HASH } from '../ui/router.js';
-import { fillTexts, renderChoices } from '../ui/components.js';
+import { fillTexts, renderChoices } from '../ui/dom.js';
 import { renderNavbar } from '../ui/navbar.js';
 import { applyTheme, loadTheme, saveTheme, THEME_TEXT, THEMES } from '../ui/theme.js';
 

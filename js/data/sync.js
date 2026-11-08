@@ -1,17 +1,20 @@
-// Uploads the outbox (filled by js/data/movements.js and js/data/goals.js)
-// to the tabs of the book: Movements, Goals, Contributions, in that order.
-// Reads the ids already in those tabs first: new records are appended,
-// edited or deleted ones are written over the row found by id, so a retry
-// after a lost answer never duplicates a row. One run at a time per book: a
-// call for the same book while one is running waits for it and gets one
-// more run after it, so a change saved meanwhile is uploaded too.
+// Uploads the outbox (filled by js/data/movements.js, goals.js,
+// category-move.js and book-items.js) to the tabs of the book. Reads the
+// ids already in those tabs first: new records are appended, edited or
+// deleted ones are written over the row found by id, so a retry after a
+// lost answer never duplicates a row. New rows go first, tab by tab in
+// OUTBOX_SHEETS order (Accounts, Categories, Movements, Goals,
+// Contributions), then all the edits in one write: a row never reaches the
+// Sheet before the account, category or goal it points at. One run at a
+// time per book: a call for the same book while one is running waits for
+// it and gets one more run after it, so a change saved meanwhile is
+// uploaded too.
 
 import { currentUserSub } from './auth.js';
 
-import { ApiError } from './errors.js';
 import { append, batchGet, batchUpdateValues } from './sheets.js';
 import { GOAL_SHEETS, rowRange, rowsById, toRow } from './rows.js';
-import { addTabs } from './tabs.js';
+import { readWithGoalTabs } from './tabs.js';
 import { OUTBOX_SHEETS, planSync, recordsOf } from '../storage/outbox-logic.js';
 import { listPending, removePending } from '../storage/outbox.js';
 import { logEvent } from '../storage/logs.js';
@@ -28,16 +31,10 @@ export function configureSync(overrides = {}) {
 }
 
 // Column A of each tab. A book read before tarea 25 by another device may
-// lack the goal tabs (Sheets answers 400): they are added, then read again.
-async function readIds(fileId, sheets) {
+// lack the goal tabs: when something goes to them, they are added first.
+function readIds(fileId, sheets) {
   const ranges = sheets.map((sheet) => `${sheet}!A:A`);
-  try {
-    return await batchGet(fileId, ranges);
-  } catch (err) {
-    if (!(err instanceof ApiError && err.status === 400) || !sheets.some((sheet) => GOAL_SHEETS.includes(sheet))) throw err;
-    await addTabs(fileId, GOAL_SHEETS);
-    return batchGet(fileId, ranges);
-  }
+  return sheets.some((sheet) => GOAL_SHEETS.includes(sheet)) ? readWithGoalTabs(fileId, ranges) : batchGet(fileId, ranges);
 }
 
 async function run(fileId) {
@@ -51,10 +48,10 @@ async function run(fileId) {
     range: rowRange(sheet, row),
     values: [toRow(sheet, record)],
   })));
-  if (updates.length > 0) await batchUpdateValues(fileId, updates);
   for (const { sheet, toAppend } of plans) {
     if (toAppend.length > 0) await append(fileId, sheet, toAppend.map((record) => toRow(sheet, record)));
   }
+  if (updates.length > 0) await batchUpdateValues(fileId, updates);
   const appended = plans.reduce((sum, plan) => sum + plan.toAppend.length, 0);
   await store.remove(plans.flatMap(({ toAppend, toUpdate }) => [...toUpdate.map(({ record }) => record), ...toAppend]));
   logEvent({ type: 'sync', result: `ok:${appended}:${updates.length}` });

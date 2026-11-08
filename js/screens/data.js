@@ -6,10 +6,11 @@ import { es } from '../../i18n/es.js';
 import { bookToCsv, templateCsv } from '../domain/import-csv.js';
 import { toIsoDate } from '../domain/movement.js';
 import { SECTION_HASH } from '../ui/router.js';
-import { fillTexts } from '../ui/components.js';
+import { fillTexts } from '../ui/dom.js';
 import { linkRow } from '../ui/receipt.js';
 import { saveFile } from '../ui/download.js';
 import { renderNavbar } from '../ui/navbar.js';
+import { reportFailure } from '../ui/feedback.js';
 
 // book: what "Descargar mis datos" saves.
 export function renderData(root, { book }) {
@@ -31,7 +32,7 @@ export function renderData(root, { book }) {
   const download = (name, text) => () => {
     problem.hidden = true;
     saveFile(name, text()).catch((err) => {
-      console.warn('Save failed', err);
+      reportFailure('download', err);
       problem.hidden = false;
     });
   };

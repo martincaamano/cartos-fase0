@@ -3,7 +3,7 @@
 // of a line changes in one place. Touches the DOM only when called.
 
 import { es } from '../../i18n/es.js';
-import { unfold } from './components.js';
+import { unfold } from './motion.js';
 import { formatEuros, formatShortDate, formatSums, labelOf } from './format.js';
 
 // What a movement line says, without the DOM. entry: from groupEntries or

@@ -3,8 +3,8 @@
 // is already there (two devices at once, a retry) is harmless.
 
 import { ApiError } from './errors.js';
-import { batchUpdate, batchUpdateValues } from './sheets.js';
-import { HEADERS } from './rows.js';
+import { batchGet, batchUpdate, batchUpdateValues } from './sheets.js';
+import { GOAL_SHEETS, HEADERS } from './rows.js';
 
 // sheets: the tab names, maybe some already there. Writes every header row
 // (the same text, so rewriting one that was there changes nothing).
@@ -24,4 +24,17 @@ export async function addTabs(fileId, sheets) {
 // one and writing its header).
 export function writeHeaders(fileId, sheets) {
   return batchUpdateValues(fileId, sheets.map((sheet) => ({ range: `${sheet}!A1`, values: [HEADERS[sheet]] })));
+}
+
+// Reads `ranges`; a book from before tarea 25 lacks the goal tabs (Sheets
+// answers 400 for a range on a tab that does not exist): they are added
+// once, then read again.
+export async function readWithGoalTabs(fileId, ranges) {
+  try {
+    return await batchGet(fileId, ranges);
+  } catch (err) {
+    if (!(err instanceof ApiError && err.status === 400)) throw err;
+    await addTabs(fileId, GOAL_SHEETS);
+    return batchGet(fileId, ranges);
+  }
 }

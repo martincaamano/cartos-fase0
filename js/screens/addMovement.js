@@ -12,16 +12,16 @@ import { suggestNotes } from '../domain/noteSuggestions.js';
 import { parseAmountInput } from '../domain/money.js';
 import { rankCategories } from '../domain/category.js';
 import { activeOnly } from '../domain/active.js';
-import { startingAccounts, toIsoDate } from '../domain/movement.js';
+import { saveAction, startingAccounts, toIsoDate } from '../domain/movement.js';
 import {
   queueCrossBookTransfer, queueDelete, queueEdit, queueMovement, queueTransfer, queueTransferEdit,
 } from '../data/movements.js';
 import { loadTransferCategories, saveTransferCategories } from '../storage/transfer-categories.js';
 import { loadLastAccount, saveLastAccount } from '../storage/last-account.js';
-import {
-  createAmountInput, errorText, fillTexts, renderCategoryPicker, renderChoices, renderDatePicker, renderSuggestions, showBookBanner,
-  twoTap,
-} from '../ui/components.js';
+import { fillTexts, renderChoices, showBookBanner } from '../ui/dom.js';
+import { errorText, twoTap } from '../ui/feedback.js';
+import { createAmountInput } from '../ui/inputs.js';
+import { renderCategoryPicker, renderDatePicker, renderSuggestions } from '../ui/pickers.js';
 import { formatAmountInput, formatEuros, labelOf } from '../ui/format.js';
 import { SECTION_HASH } from '../ui/router.js';
 import { renderNavbar } from '../ui/navbar.js';
@@ -349,35 +349,32 @@ export function renderAddMovement(root, {
     const transfer = { ...common, fromAccountId: fromSelect.value, toAccountId: toSelect.value };
     const single = { ...common, accountId: accountSelect.value, type: state.type, categoryId: state.categoryId };
     const other = state.type === 'transfer' ? otherBookOf(toSelect.value) : null;
-    let saving;
     let undo = null;
-    if (other) {
-      const categories = { expenseCategoryId: expenseCategory.value, incomeCategoryId: incomeCategory.value };
+    const action = saveAction({
+      type: state.type, toOtherBook: Boolean(other), goal: Boolean(goal), editingTransfer: Boolean(halves), editing: Boolean(original),
+    });
+    const saving = {
       // Only the half of this book is counted here; the other one waits in
       // its own book's outbox and is uploaded with it.
-      saving = queueCrossBookTransfer({ fileId, book }, other, { ...transfer, ...categories })
-        .then(([outgoing, incoming]) => {
+      crossBook: () => {
+        const categories = { expenseCategoryId: expenseCategory.value, incomeCategoryId: incomeCategory.value };
+        return queueCrossBookTransfer({ fileId, book }, other, { ...transfer, ...categories }).then(([outgoing, incoming]) => {
           saveTransferCategories(storage, transfer.toAccountId, categories);
           // Undoing takes back both halves, each in its book.
           undo = () => queueDelete(other.fileId, [incoming]).then(() => queueDelete(fileId, [outgoing]));
           return outgoing;
         });
-    } else if (goal) {
+      },
       // The purchase and the goal it completes, together.
-      return queuePurchase(fileId, single, goal, book)
-        .then(([movement, completed]) => onPurchased(movement, completed))
-        .catch((err) => {
-          error.textContent = errorText(err.errors ?? [], ERROR_TEXT, t) || t.failed;
-          submit.disabled = false;
-          remove.disabled = false;
-          submit.textContent = t.save;
-        });
-    } else if (halves) saving = queueTransferEdit(fileId, halves, transfer, book);
-    else if (original) saving = queueEdit(fileId, original, single, book);
-    else if (state.type === 'transfer') saving = queueTransfer(fileId, transfer, book);
-    else saving = queueMovement(fileId, single, book);
+      purchase: () => queuePurchase(fileId, single, goal, book),
+      transferEdit: () => queueTransferEdit(fileId, halves, transfer, book),
+      edit: () => queueEdit(fileId, original, single, book),
+      transfer: () => queueTransfer(fileId, transfer, book),
+      movement: () => queueMovement(fileId, single, book),
+    }[action]();
     saving
       .then((saved) => {
+        if (action === 'purchase') return onPurchased(...saved);
         if (entry) return onSaved(saved);
         saveLastAccount(storage, fileId, state.type === 'transfer' ? transfer.fromAccountId : single.accountId);
         // A new one: what was saved, and how to take it back.

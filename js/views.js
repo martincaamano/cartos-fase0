@@ -8,13 +8,13 @@
 import { SECTIONS, SECTION_HASH } from './ui/router.js';
 import { findEntry } from './domain/history.js';
 import { activeGoals } from './domain/goals.js';
-import { memberName, normalizeEmail } from './domain/members.js';
+import { otherMemberName } from './domain/members.js';
 import { readMembers } from './data/members.js';
 import { getCurrentUser } from './data/auth.js';
 import { es } from '../i18n/es.js';
 import { cachedBook } from './data/books.js';
 import { loadAmountsHidden, saveAmountsHidden } from './storage/amounts-visibility.js';
-import { showToast } from './ui/components.js';
+import { showToast } from './ui/feedback.js';
 import { renderDashboard } from './screens/dashboard.js';
 import { renderAddMovement } from './screens/addMovement.js';
 import { renderHistory } from './screens/history.js';
@@ -43,8 +43,7 @@ const isShared = (state) => state.bookInfo?.bookType === 'shared';
 // of two (Members keeps emails, not Google ids); «Otra persona» otherwise.
 function personNamer(members) {
   const me = getCurrentUser();
-  const others = members.filter((member) => normalizeEmail(member.email) !== normalizeEmail(me?.email));
-  const other = others.length === 1 ? memberName(others[0]) : es.goals.someoneElse;
+  const other = otherMemberName(members, me?.email) || es.goals.someoneElse;
   return (createdBy) => (createdBy === me?.sub ? es.goals.you : other);
 }
 
@@ -52,11 +51,11 @@ function personNamer(members) {
 // is more than one book.
 const bookName = (state) => (state.books.length > 1 ? state.bookInfo?.name ?? '' : '');
 
-// After a card saved to the Sheet: back to its list, which repaints once
-// the book is read again.
-const savedTo = (state, redirect, hash) => () => {
+// After a card saved to the outbox (an account or a category, tarea 30c):
+// counted at once, uploaded; back to its list.
+const savedTo = (state, redirect, hash, sheet) => (record) => {
+  state.saved([record], sheet);
   redirect(hash);
-  state.reloadBook();
 };
 
 // The other books with a copy on the device: where a transfer can go.
@@ -143,7 +142,7 @@ export const VIEWS = Object.freeze({
   [SECTIONS.CATEGORIES]: ({ root, state }) => renderCategories(root, { book: state.book }),
 
   [SECTIONS.CATEGORY_NEW]: ({ root, state, redirect }) =>
-    renderCategoryCard(root, { book: state.book, fileId: state.fileId, onDone: savedTo(state, redirect, SECTION_HASH.categories) }),
+    renderCategoryCard(root, { book: state.book, fileId: state.fileId, onDone: savedTo(state, redirect, SECTION_HASH.categories, 'Categories') }),
 
   [SECTIONS.CATEGORY_EDIT]: ({ root, state, params, redirect }) => {
     const category = state.book.categories.find((item) => item.id === params.id && !item.deleted);
@@ -153,7 +152,7 @@ export const VIEWS = Object.freeze({
       fileId: state.fileId,
       category,
       shared: isShared(state),
-      onDone: savedTo(state, redirect, SECTION_HASH.categories),
+      onDone: savedTo(state, redirect, SECTION_HASH.categories, 'Categories'),
       // Its movements moved to another one (tarea 29): counted at once, one
       // upload; back to the list.
       onMoved: ({ categories, movements, goals }) => {
@@ -170,13 +169,13 @@ export const VIEWS = Object.freeze({
   [SECTIONS.ACCOUNTS]: ({ root, state }) => renderAccounts(root, { book: state.book }),
 
   [SECTIONS.ACCOUNT_NEW]: ({ root, state, redirect }) =>
-    renderAccountCard(root, { book: state.book, fileId: state.fileId, onDone: savedTo(state, redirect, SECTION_HASH.accounts) }),
+    renderAccountCard(root, { book: state.book, fileId: state.fileId, onDone: savedTo(state, redirect, SECTION_HASH.accounts, 'Accounts') }),
 
   [SECTIONS.ACCOUNT_EDIT]: ({ root, state, params, redirect }) => {
     const account = state.book.accounts.find((item) => item.id === params.id && !item.deleted);
     if (!account) return redirect(SECTION_HASH.accounts);
     return renderAccountCard(root, {
-      book: state.book, fileId: state.fileId, account, onDone: savedTo(state, redirect, SECTION_HASH.accounts),
+      book: state.book, fileId: state.fileId, account, onDone: savedTo(state, redirect, SECTION_HASH.accounts, 'Accounts'),
     });
   },
 

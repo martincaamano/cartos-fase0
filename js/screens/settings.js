@@ -5,7 +5,7 @@
 import { es } from '../../i18n/es.js';
 import { activeOnly } from '../domain/active.js';
 import { SECTION_HASH } from '../ui/router.js';
-import { fillTexts } from '../ui/components.js';
+import { fillTexts } from '../ui/dom.js';
 import { renderNavbar } from '../ui/navbar.js';
 import { loadTheme, THEME_TEXT } from '../ui/theme.js';
 import { linkRow } from '../ui/receipt.js';

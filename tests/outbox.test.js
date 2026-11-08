@@ -522,8 +522,8 @@ test('editing a movement that was never uploaded ends in a single append of the 
 
 // --- upgradeEntry / recordsOf / OUTBOX_SHEETS (tarea 25) ---
 
-test('OUTBOX_SHEETS uploads Categories, then Movements, Goals and Contributions', () => {
-  assert.deepEqual(OUTBOX_SHEETS, ['Categories', 'Movements', 'Goals', 'Contributions']);
+test('OUTBOX_SHEETS uploads Accounts and Categories, then Movements, Goals and Contributions', () => {
+  assert.deepEqual(OUTBOX_SHEETS, ['Accounts', 'Categories', 'Movements', 'Goals', 'Contributions']);
 });
 
 test('upgradeEntry turns an entry from before tarea 25 into a Movements entry', () => {

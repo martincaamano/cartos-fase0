@@ -7,9 +7,10 @@ import { parseAmountInput } from '../domain/money.js';
 import { rankCategories } from '../domain/category.js';
 import { toIsoDate } from '../domain/movement.js';
 import { queueGoal, queueGoalEdit } from '../data/goals.js';
-import {
-  createAmountInput, errorText, fillTexts, renderCategoryPicker, setBusy,
-} from '../ui/components.js';
+import { fillTexts } from '../ui/dom.js';
+import { errorText, setBusy } from '../ui/feedback.js';
+import { createAmountInput } from '../ui/inputs.js';
+import { renderCategoryPicker } from '../ui/pickers.js';
 import { formatAmountInput } from '../ui/format.js';
 import { SECTION_HASH } from '../ui/router.js';
 import { renderNavbar } from '../ui/navbar.js';

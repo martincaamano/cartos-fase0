@@ -49,3 +49,11 @@ export function memberName(member) {
 export function isSharedBookFile(file) {
   return file?.appProperties?.app === 'cartos' && file.appProperties.bookType !== 'personal';
 }
+
+// The one other person of a book of two (tarea 25e): the member whose email
+// is not `ownEmail`, named as memberName does; '' when there is not exactly
+// one (nobody joined yet, or more people).
+export function otherMemberName(members, ownEmail) {
+  const others = members.filter((member) => normalizeEmail(member.email) !== normalizeEmail(ownEmail));
+  return others.length === 1 ? memberName(others[0]) : '';
+}

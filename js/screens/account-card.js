@@ -1,15 +1,17 @@
 // An account's card (Ajustes → Cuentas, tarea 20c): name, emoji and initial
-// balance, to create a new account or edit a saved one. Goes straight to
-// the Sheet, so it needs a connection.
+// balance, to create a new account or edit a saved one. Goes to the outbox
+// (tarea 30c), so it works offline.
 
 import { es } from '../../i18n/es.js';
-import { addAccount, updateAccount } from '../data/book.js';
-import { fillTexts, renderAccountForm } from '../ui/components.js';
+import { queueAccount, queueAccountEdit } from '../data/book-items.js';
+import { fillTexts } from '../ui/dom.js';
+import { renderAccountForm } from '../ui/inputs.js';
 import { labelOf } from '../ui/format.js';
 import { SECTION_HASH } from '../ui/router.js';
 import { renderNavbar } from '../ui/navbar.js';
 
-// account: the account to edit, or null for a new one. onDone: after saving.
+// account: the account to edit, or null for a new one. onDone(account):
+// once saved to the outbox (it works offline).
 export function renderAccountCard(root, { book, fileId, account = null, onDone }) {
   const t = es.accountAdmin;
   root.innerHTML = `
@@ -31,10 +33,9 @@ export function renderAccountCard(root, { book, fileId, account = null, onDone }
       submit: account ? t.save : t.create,
       creating: account ? t.saving : t.creating,
     },
-    needsConnection: true,
     onSubmit: (fields) => (account
-      ? updateAccount(fileId, account, fields, book.accounts)
-      : addAccount(fileId, fields, book.accounts)).then(onDone),
+      ? queueAccountEdit(fileId, account, fields, book.accounts)
+      : queueAccount(fileId, fields, book.accounts)).then(onDone),
   });
 
   renderNavbar(root, { active: 'settings' });

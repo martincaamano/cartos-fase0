@@ -52,7 +52,7 @@ cartos-fase0/
 │   │
 │   └── ui/               (piezas compartidas; no tocan el DOM al importarse)
 │       ├── router.js     (tabla de pantallas y decisión de ruta)
-│       ├── navbar.js, receipt.js, components.js, charts.js
+│       ├── navbar.js, receipt.js, charts.js, dom.js, motion.js, feedback.js, inputs.js, pickers.js
 │       └── format.js, theme.js, download.js
 │
 ├── tests/                (node:test, uno por módulo; Google siempre simulado)
